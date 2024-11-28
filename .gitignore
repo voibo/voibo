@@ -1,0 +1,11 @@
+.env
+/out/
+/venv/
+/wav/
+/node_modules/
+/.vscode/
+/.idea/
+/dist/
+/built/
+.DS_Store
+```

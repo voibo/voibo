@@ -1,0 +1,3 @@
+[submodule "desktop-audio-capture"]
+	path = third_party/desktop-audio-capture
+	url = https://github.com/SpiralMindJP/desktop-audio-capture

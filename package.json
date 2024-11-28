@@ -1,0 +1,150 @@
+{
+  "name": "Voibo",
+  "description": "Collaborative Meeting Intelligence Platform",
+  "author": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+  "license": "Apache-2.0",
+  "version": "0.0.0",
+  "main": "dist/main.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "npm run clean:webpack && run-p watch:webpack run:electron",
+    "run:electron": "wait-on ./dist/index.html ./dist/main.mjs && electronmon .",
+    "build:webpack:dev": "cross-env NODE_ENV=\"development\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
+    "build:webpack:release": "cross-env NODE_ENV=\"production\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
+    "build:electron:windows": "electron-builder",
+    "build:electron:mac": "electron-builder --mac --arm64",
+    "watch:webpack": "cross-env NODE_ENV=\"development\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress --watch",
+    "release:mac": "run-s clean build:webpack:release build:electron:mac",
+    "clean": "run-p clean:webpack clean:electron",
+    "clean:webpack": "rimraf dist",
+    "clean:electron": "rimraf built",
+    "add-license": "node scripts/add-license.cjs"
+  },
+  "keywords": [],
+  "electronmon": {
+    "patterns": [
+      "dist/**/*"
+    ]
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.5.0",
+    "@types/bindings": "^1.5.5",
+    "@types/node": "^20.4.8",
+    "@types/react": "^18.2.18",
+    "@types/react-dom": "^18.2.7",
+    "autoprefixer": "^10.4.14",
+    "cross-env": "^7.0.3",
+    "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
+    "electron": "^30.0.8",
+    "electron-builder": "^24.9.1",
+    "electronmon": "^2.0.2",
+    "html-webpack-plugin": "^5.5.3",
+    "mini-css-extract-plugin": "^2.7.6",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.27",
+    "postcss-loader": "^7.3.3",
+    "rimraf": "^5.0.1",
+    "ts-loader": "^9.4.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.1.6",
+    "wait-on": "^7.0.1",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "worker-loader": "^3.0.8"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@google-cloud/speech": "^6.5.0",
+    "@google/generative-ai": "^0.1.1",
+    "@grpc/grpc-js": "^1.9.9",
+    "@grpc/proto-loader": "^0.7.10",
+    "@langchain/anthropic": "^0.2.1",
+    "@langchain/core": "^0.2.32",
+    "@langchain/google-genai": "^0.0.17",
+    "@langchain/groq": "^0.0.12",
+    "@langchain/langgraph": "^0.2.2",
+    "@langchain/openai": "^0.1.2",
+    "@monaco-editor/react": "^4.6.0",
+    "@mui/icons-material": "^5.15.4",
+    "@mui/lab": "^5.0.0-alpha.155",
+    "@mui/material": "^5.14.20",
+    "@mui/x-date-pickers": "^7.12.1",
+    "@ricky0123/vad-react": "^0.0.21",
+    "@ricky0123/vad-web": "^0.0.16",
+    "@types/file-saver": "^2.0.7",
+    "@types/wav": "^1.0.4",
+    "@xyflow/react": "^12.0.0",
+    "bindings": "^1.5.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "dayjs": "^1.11.12",
+    "dify-client": "^2.3.2",
+    "domhandler": "^5.0.3",
+    "dotenv": "^16.4.5",
+    "duck-duck-scrape": "^2.2.5",
+    "electron-log": "^5.1.5",
+    "electron-store": "^8.1.0",
+    "file-saver": "^2.0.5",
+    "google-protobuf": "^3.21.2",
+    "htmlparser2": "^9.1.0",
+    "idb": "^8.0.0",
+    "idb-keyval": "^6.2.1",
+    "immer": "^10.1.1",
+    "jszip": "^3.10.1",
+    "langchain": "^0.2.19",
+    "mermaid": "^10.8.0",
+    "monaco-editor": "^0.50.0",
+    "monaco-editor-webpack-plugin": "^7.1.0",
+    "openai": "^4.8.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.45.4",
+    "react-indexed-db-hook": "^1.0.14",
+    "react-jsx-parser": "^2.0.0",
+    "react-markdown": "^9.0.1",
+    "react-router-dom": "^6.21.3",
+    "remark-gfm": "^4.0.0",
+    "tailwindcss": "^3.3.3",
+    "uuid": "^9.0.1",
+    "wav": "^1.0.2",
+    "write-file-webpack-plugin": "^4.5.1",
+    "zod": "^3.22.4",
+    "zustand": "^4.5.4"
+  },
+  "build": {
+    "productName": "Voibo",
+    "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
+    "copyright": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+    "files": [
+      "dist/**/*"
+    ],
+    "directories": {
+      "output": "built"
+    },
+    "mac": {
+      "appId": "org.voibo.app.v0",
+      "target": [
+        "dmg"
+      ],
+      "entitlements": "./resources/entitlements.mac.plist",
+      "entitlementsInherit": "./resources/entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "identity": "506844D720927340EA2C8E67F45C0F1795FF52A6",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Please give us access to your microphone",
+        "com.apple.security.device.audio-input": true
+      },
+      "icon": "resources/icon.png",
+      "asarUnpack": [
+        "./dist/desktop-audio-capture/bin/darwin/Release/addon.node"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}
