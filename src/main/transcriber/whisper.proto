@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+option go_package = "github.com/SpiralMindJP/whisper-server/pb";
+
+package spiralmind.va.whisper;
+
+
+// オーディオフォーマット。
+//
+//  + Reserved
+//  |   + Encoding (0: PCM, 1: Opus)
+//  |   |    + Type (0: undefined, 1: signed int, 2: unsigned int, 3: float)
+//  |   |    |     + Number of bit (0: undefined, 1: 8bits, 2: 16bits, 3: 24bits, 4: 32bits, 5: 64bits)
+//  |   |    |     |   + Endian (0: big-endian, 1: little-endian)
+//  |   |    |     |   |
+// -------+----+-----+---+
+//  0 | 0 | 01 | 010 | 1 | PCM 16 bits little-endian
+enum AudioFormat {
+  option allow_alias = true;
+
+  UNDEFINED = 0;
+
+  ENCODING_MASK      = 64; // 1 00 000 0
+  TYPE_MASK          = 48; // 0 11 000 0
+  NUMBER_OF_BIT_MASK = 14; // 0 00 111 0
+  ENDIAN_MASK        =  1; // 0 00 000 1
+
+  SIGNED_INT   = 16; // 0 01 000 0
+  UNSIGNED_INT = 32; // 0 10 000 0
+  FLOAT        = 48; // 0 11 000 0
+
+  NUMBER_OF_BIT8  =  2; // 0 00 001 0
+  NUMBER_OF_BIT16 =  4; // 0 00 010 0
+  NUMBER_OF_BIT24 =  6; // 0 00 011 0
+  NUMBER_OF_BIT32 =  8; // 0 00 100 0
+  NUMBER_OF_BIT64 = 10; // 0 00 101 0
+
+  PCM_S8    = 18; // 0 01 001 0
+  PCM_S16BE = 20; // 0 01 010 0
+  PCM_S16LE = 21; // 0 01 010 1
+  PCM_S24BE = 22; // 0 01 011 0
+  PCM_S24LE = 23; // 0 01 011 1
+  PCM_S32BE = 24; // 0 01 100 0
+  PCM_S32LE = 25; // 0 01 100 1
+  PCM_S64BE = 26; // 0 01 101 0
+  PCM_S64LE = 27; // 0 01 101 1
+
+  PCM_U8    = 34; // 0 10 001 0
+  PCM_U16BE = 36; // 0 10 010 0
+  PCM_U16LE = 37; // 0 10 010 1
+  PCM_U24BE = 38; // 0 10 011 0
+  PCM_U24LE = 39; // 0 10 011 1
+  PCM_U32BE = 40; // 0 10 100 0
+  PCM_U32LE = 41; // 0 10 100 1
+  PCM_U64BE = 42; // 0 10 101 0
+  PCM_U64LE = 43; // 0 10 101 1
+
+  PCM_F32BE = 56; // 0 11 100 0
+  PCM_F32LE = 57; // 0 11 100 1
+  PCM_F64BE = 58; // 0 11 101 0
+  PCM_F64LE = 59; // 0 11 101 1
+
+  OPUS      = 64; // 1 00 000 0
+}
+
+// オーディオパラメーター。
+message AudioParameters {
+  AudioFormat format      = 1;
+  uint32      channels    = 2; 
+  uint32      sample_rate = 3;
+  uint32      frame_size  = 4;
+}
+
+// オーディオデータ。
+message AudioData {
+  bytes data = 1;
+}
+
+// 文字起こしのオプション。
+message TranscribeOptions {
+  bool   translate      = 1; // true を指定すると、ソース言語から英語への翻訳を行う。
+  string language       = 2; // ソース言語。
+  int32  max_length     = 3; // セグメントの最大文字数。
+  string initial_prompt = 4; // 初期プロンプト。
+}
+
+// 文字起し初期化。
+message TranscribeInit {
+  // 任意のタイムスタンプ。
+  // 以降、このタイムスタンプを基準に、各種タイムスタンプが計算される。
+  double timestamp = 1;
+  // 文字起こしのオプション。
+  // 省略するとデフォルトのパラメーターが使用される。
+  TranscribeOptions options = 2;
+  // オーディオパラメーター。
+  AudioParameters audio_parameters = 3; 
+}
+
+// 文字起こしデータ。
+message TranscribeData {
+  AudioData audio_data = 1;
+}
+
+// 文字起しリクエスト。
+message TranscribeRequest {
+  oneof request {
+    TranscribeInit init = 1; // 文字起し初期化。ストリームの最初のリクエストは必須。
+    TranscribeData data = 2; // 文字起こしデータ。
+  }
+}
+
+// セグメント。
+message Segment {
+  double timestamp = 1;
+  double length    = 2;
+  string text      = 3;
+}
+
+message TranscribeResult {
+  repeated Segment segments = 1;
+}
+
+service WhisperService {
+  rpc Transcribe(stream TranscribeRequest) returns (stream TranscribeResult) {}
+}
