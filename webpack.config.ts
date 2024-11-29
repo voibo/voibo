@@ -60,12 +60,12 @@ const main: Configuration = {
     new CopyFilePlugin({
       patterns: [
         {
-          context: "./",
+          context: "./resources",
           from: "./entitlements.mac.plist",
           to: "./entitlements.mac.plist",
         },
         {
-          context: "./",
+          context: "./resources",
           from: "./icon.png",
           to: "./icon.png",
         },

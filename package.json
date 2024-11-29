@@ -124,8 +124,8 @@
       "target": [
         "dmg"
       ],
-      "entitlements": "entitlements.mac.plist",
-      "entitlementsInherit": "entitlements.mac.plist",
+      "entitlements": "./resources/entitlements.mac.plist",
+      "entitlementsInherit": "./resources/entitlements.mac.plist",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "identity": "506844D720927340EA2C8E67F45C0F1795FF52A6",
@@ -133,7 +133,7 @@
         "NSMicrophoneUsageDescription": "Please give us access to your microphone",
         "com.apple.security.device.audio-input": true
       },
-      "icon": "built/icon.png",
+      "icon": "resources/icon.png",
       "asarUnpack": [
         "./dist/desktop-audio-capture/bin/darwin/Release/addon.node"
       ]
