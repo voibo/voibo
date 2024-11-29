@@ -80,7 +80,7 @@ const main: Configuration = {
           to: "./whisper.proto",
         },
         {
-          context: "./",
+          context: "./third_party",
           from: "./desktop-audio-capture/bin",
           to: "./desktop-audio-capture/bin",
         },
