@@ -26,7 +26,7 @@ import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
 import { ChunkSplitter } from "../audio/chunkSplitter.js";
 import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
-import { Segment } from "../spiralmind/vf/whisper/Segment.js"; // va/whisper/Segment　は過去との連続性に問題があるので、まずは vf/whisper/Segment で実装
+import { Segment } from "../../../common/Segment.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
 
 let module_root = "";

@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// Original file: src/server/lib/frontend.proto
 
-
-export interface Audio {
-}
-
-export interface Audio__Output {
+export interface Text {
+  'timestamp'?: (number | string);
+  'length'?: (number | string);
+  'text'?: (string);
 }

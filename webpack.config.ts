@@ -70,16 +70,6 @@ const main: Configuration = {
           to: "./icon.png",
         },
         {
-          context: "./src/main",
-          from: "./transcriber/frontend.proto",
-          to: "./frontend.proto",
-        },
-        {
-          context: "./src/main",
-          from: "./transcriber/whisper.proto",
-          to: "./whisper.proto",
-        },
-        {
           context: "./third_party",
           from: "./desktop-audio-capture/bin",
           to: "./desktop-audio-capture/bin",

@@ -21,7 +21,7 @@ import {
   GENERAL_ASSISTANT_NAME,
   TopicSchema,
 } from "../../../main/agent/agentManagerDefinition.js";
-import { Segment } from "../../../main/transcriber/spiralmind/vf/whisper/Segment.js";
+import { Segment } from "../../../common/Segment.js";
 import { CaptureClient } from "../../lib/capture.js";
 import { formatTimestamp } from "../../util.js";
 import { AIConfig } from "../common/aiConfig.jsx";

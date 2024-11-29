@@ -11,7 +11,6 @@
     "build": "cross-env NODE_ENV=\"production\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
     "dev:webpack": "cross-env NODE_OPTIONS=--max_old_space_size=4096 NODE_ENV=\"development\" webpack --progress",
     "dev:electron": "wait-on ./dist/index.html ./dist/main.mjs && electronmon .",
-    "gen-proto-types": "npx proto-loader-gen-types --outDir=./src/server/lib --grpcLib=@grpc/grpc-js --keepCase=false --longs=String --enums=String --defaults=true --oneofs=true ./src/server/lib/*.proto",
     "electron-builder": "electron-builder",
     "build-mac": "rimraf built && rimraf dist && cross-env NODE_ENV=\"production\" webpack --progress && electron-builder --mac --arm64",
     "add-license": "node add-license.cjs"

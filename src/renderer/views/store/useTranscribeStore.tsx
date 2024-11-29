@@ -17,7 +17,7 @@ import { MicVAD, utils } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
-import { Segment } from "../../../main/transcriber/spiralmind/vf/whisper/Segment.js";
+import { Segment } from "../../../common/Segment.js";
 import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";

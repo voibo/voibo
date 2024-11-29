@@ -19,8 +19,8 @@ import * as os from 'os';
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
-import { Segment } from "../spiralmind/vf/whisper/Segment.js";
-import { Text } from "../spiralmind/vf/whisper/Text.js";
+import { Segment } from "../../../common/Segment.js";
+import { Text } from "../../../common/Text.js";
 
 // ==== For Server Side Only ====
 

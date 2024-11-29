@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Segment } from "../../../main/transcriber/spiralmind/vf/whisper/Segment.js";
+import { Segment } from "../../../common/Segment.js";
 
 export type DiscussionSegment = {
   timestamp: string | number;
