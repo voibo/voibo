@@ -110,7 +110,7 @@
     "wav": "^1.0.2",
     "write-file-webpack-plugin": "^4.5.1",
     "zod": "^3.22.4",
-    "zustand": "^4.5.4"
+    "zustand": "^5.0.1"
   },
   "build": {
     "productName": "Voibo",
