@@ -42,17 +42,15 @@ type TargetFocuserOption = {
 };
 
 export const TargetFocuser = () => {
-  const startTimestamp = useVFStore((state) => state.startTimestamp) ?? 0;
+  const startTimestamp = useVFStore.getState().startTimestamp ?? 0;
 
   const systemList: Array<TargetFocuserOption> = [
     { type: "system", label: "All nodes", id: "all_nodes" },
     { type: "system", label: "First topic", id: "first_topic" },
     { type: "system", label: "Last topic", id: "last_topic" },
   ];
-  const agendaList = useAgendaStore((state) => state.getAllAgendas());
-  const groupList = useMinutesGroupStore(startTimestamp)((state) =>
-    state.getAllGroup()
-  );
+  const agendaList = useAgendaStore.getState().getAllAgendas();
+  const groupList = useMinutesGroupStore(startTimestamp).getState().getAllGroup();
 
   const options: Array<TargetFocuserOption> = [
     ...systemList,
