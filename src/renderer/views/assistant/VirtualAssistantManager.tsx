@@ -22,7 +22,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { MouseEventHandler, useReducer } from "react";
+import { MouseEventHandler, ReactNode, useReducer, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { GENERAL_ASSISTANT_NAME } from "../../../main/agent/agentManagerDefinition.js";
 import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
@@ -32,6 +32,7 @@ import {
   VirtualAssistantConfDialogMode,
 } from "./VirtualAssistantConfDialog.jsx";
 import { AIAssistantAvatar } from "./message/AIAssistantAvatar.jsx";
+import { AssistantTemplateDialog } from "./AssistantTemplateDialog.jsx";
 
 function createCommonAssistantConfTemple(): VirtualAssistantConf {
   return {
@@ -64,15 +65,15 @@ export type AssistantConfigState = {
 
 export type AssistantConfigAction =
   | {
-    type: "open";
-    payload: {
-      assistantConfig: VirtualAssistantConf;
-      mode: VirtualAssistantConfDialogMode;
-    };
-  }
+      type: "open";
+      payload: {
+        assistantConfig: VirtualAssistantConf;
+        mode: VirtualAssistantConfDialogMode;
+      };
+    }
   | {
-    type: "close";
-  };
+      type: "close";
+    };
 
 export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   const { handleClose } = props;
@@ -83,7 +84,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   const vfDispatch = useVFStore((state) => state.vfDispatch);
 
   // VA conf dialog
-  const [dialogState, dialogDispatch] = useReducer(
+  const [vfConfDialogState, vaConfDialogDispatch] = useReducer(
     (state: AssistantConfigState, action: AssistantConfigAction) => {
       switch (action.type) {
         case "open":
@@ -107,19 +108,41 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
     }
   );
 
-  const handleVAConfDialog: MouseEventHandler<HTMLButtonElement> = (event) => {
+  const handleEditVAConf: MouseEventHandler<HTMLButtonElement> = (event) => {
     const assistantId = event.currentTarget.value;
     const assistantConfig = vfState.assistants.find((assistantConfig) => {
       return assistantConfig.assistantId === assistantId;
     });
     if (!assistantConfig) return;
-    dialogDispatch({
+    console.log("handleEditVAConf", assistantConfig);
+    vaConfDialogDispatch({
       type: "open",
       payload: {
         assistantConfig: assistantConfig,
         mode: "edit",
       },
     });
+  };
+
+  const handleAddAssistantDialog: MouseEventHandler<HTMLButtonElement> = (
+    event
+  ) => {
+    vaConfDialogDispatch({
+      type: "open",
+      payload: {
+        assistantConfig: createCommonAssistantConfTemple(),
+        mode: "create",
+      },
+    });
+  };
+
+  // Assistant Template Dialog
+  const [assistantTemplateDialogOpen, setAssistantTemplateDialogOpen] =
+    useState(false);
+  const handleAssistantTemplateDialog: MouseEventHandler<HTMLButtonElement> = (
+    event
+  ) => {
+    setAssistantTemplateDialogOpen(true);
   };
 
   const avatarIconStyle = { width: "1.5rem", height: "1.5rem" };
@@ -136,22 +159,23 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
           <div className="text-2xl">Assistant</div>
         </div>
         <div className="ml-auto">
-          {assistants.length < 4 && (
-            <Button
-              variant="outlined"
-              className="text-white border-white"
-              onClick={() => {
-                dialogDispatch({
-                  type: "open",
-                  payload: {
-                    assistantConfig: createCommonAssistantConfTemple(),
-                    mode: "create",
-                  },
-                });
-              }}
-            >
-              <Add sx={avatarIconStyle} className="mr-2" /> Add
-            </Button>
+          {assistants.length < 10 && (
+            <>
+              <Button
+                variant="outlined"
+                className="text-white border-white mr-2"
+                onClick={handleAssistantTemplateDialog}
+              >
+                <Add sx={avatarIconStyle} className="mr-2" /> Select
+              </Button>
+              <Button
+                variant="outlined"
+                className="text-white border-white"
+                onClick={handleAddAssistantDialog}
+              >
+                <Add sx={avatarIconStyle} className="mr-2" /> Create
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -161,9 +185,8 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
             <TableRow>
               <TableCell></TableCell>
               <TableCell>Name</TableCell>
-              <TableCell>Mode</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Classification</TableCell>
+              <TableCell>Target</TableCell>
+              <TableCell>Agent</TableCell>
               <TableCell></TableCell>
             </TableRow>
           </TableHead>
@@ -174,19 +197,20 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
                   <AIAssistantAvatar
                     label={assistantConfig.label}
                     icon={assistantConfig.icon}
-                  //sx={avatarIconStyle}
+                    //sx={avatarIconStyle}
                   />
                 </TableCell>
                 <TableCell>{assistantConfig.label}</TableCell>
-                <TableCell>{assistantConfig.updateMode}</TableCell>
-                <TableCell>{assistantConfig.targetCategory}</TableCell>
-                <TableCell>{assistantConfig.targetClassification}</TableCell>
+                <TableCell>
+                  <TargetLabel assistantConf={assistantConfig} />
+                </TableCell>
+                <TableCell>Agent</TableCell>
                 <TableCell>
                   <Button
                     value={assistantConfig.assistantId}
                     key={index}
                     className="min-w-0 min-h-0 border-0"
-                    onClick={handleVAConfDialog}
+                    onClick={handleEditVAConf}
                   >
                     <Edit sx={{ fontSize: "1rem" }} />
                   </Button>
@@ -200,9 +224,65 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
       <VirtualAssistantConfDialog
         vfState={vfState}
         vfDispatch={vfDispatch}
-        dialogState={dialogState}
-        dialogDispatch={dialogDispatch}
+        dialogState={vfConfDialogState}
+        dialogDispatch={vaConfDialogDispatch}
       />
+
+      <AssistantTemplateDialog
+        open={assistantTemplateDialogOpen}
+        closeDialog={setAssistantTemplateDialogOpen}
+      />
+    </div>
+  );
+};
+
+export const TargetLabel = (props: { assistantConf: VirtualAssistantConf }) => {
+  const { assistantConf } = props;
+
+  let categoryLabel: ReactNode | undefined =
+    assistantConf.targetCategory !== "Unknown"
+      ? assistantConf.targetCategory
+      : undefined;
+  let classificationLabel: ReactNode | undefined =
+    assistantConf.targetClassification !== "all"
+      ? assistantConf.targetClassification
+      : undefined;
+
+  let triggerTargetLabel: ReactNode | undefined = undefined;
+  let triggerActLabel: ReactNode = "";
+  switch (assistantConf.updateMode) {
+    case "at_agenda_completed":
+      triggerTargetLabel = "Agenda";
+      triggerActLabel = "Completed";
+      break;
+    case "at_agenda_updated":
+      triggerTargetLabel = "Agenda";
+      triggerActLabel = "Updated";
+      break;
+    case "at_topic_updated":
+      triggerTargetLabel = "Topic";
+      triggerActLabel = "Updated";
+      break;
+    case "manual":
+      triggerTargetLabel = undefined;
+      triggerActLabel = "Manual";
+      break;
+  }
+  return (
+    <div className="rounded-full bg-black/5 py-1 px-1 flex items-center justify-center">
+      {triggerTargetLabel && (
+        <div className="rounded-full bg-black/5 py-1 px-1 flex items-center justify-center">
+          <div className="mx-2">{triggerTargetLabel}</div>
+          {(categoryLabel || classificationLabel) && (
+            <div className="rounded-full bg-black/5 py-1 px-4 text-[0.65rem]">
+              {categoryLabel}
+              {categoryLabel && classificationLabel && " & "}
+              {classificationLabel}
+            </div>
+          )}
+        </div>
+      )}
+      <div className="mx-2">{triggerActLabel}</div>
     </div>
   );
 };

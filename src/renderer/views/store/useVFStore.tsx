@@ -40,6 +40,8 @@ import {
 } from "../topic/DiscussionSplitter.jsx";
 import { Topic } from "../topic/Topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
+import { SystemDefaultTemplate } from "../assistant/AssistantTemplates.js";
+import { v4 as uuidv4 } from "uuid";
 
 // ==== VF Core ====
 
@@ -153,166 +155,166 @@ export const initVFState = (): VFState => {
 export type VFAction =
   //| VAConfAction
   | {
-    type: "savedOnDB";
-    payload: {
-      db: string;
-      key: string | undefined;
+      type: "savedOnDB";
+      payload: {
+        db: string;
+        key: string | undefined;
+      };
+    }
+  | {
+      type: "updateMinutesTitle";
+      payload: {
+        minutesTitle: string;
+      };
+    }
+  | {
+      type: "createNewMinutes";
+    }
+  | {
+      type: "setMinutesLines";
+      payload: {
+        minutes: DiscussionSegment[];
+      };
+    }
+  | {
+      type: "setAudioFolder";
+      payload: {
+        audioFolder: string;
+      };
+    }
+  | {
+      type: "openMinutes";
+      payload: Minutes;
+    }
+  | {
+      type: "reTranscribeAll";
+      payload: {
+        startTimestamp: number;
+        client: CaptureClient | null;
+        stream: MediaStream | null;
+        vad: MicVAD | null;
+      };
+    }
+  | {
+      type: "changeVADDialogOpen";
+    }
+  | {
+      type: "openHomeMenu";
+    }
+  | {
+      type: "deleteMinutes";
+      payload: {
+        startTimestamp: number;
+      };
+    }
+  | {
+      type: "setTopic";
+      payload: {
+        topics: Topic[];
+      };
+    }
+  | {
+      type: "removeTopic";
+      payload: {
+        topicID: string;
+      };
+    }
+  | {
+      type: "updateMinutesText";
+      payload: {
+        segmentIndex: number;
+        segmentTextIndex: number;
+        content: string;
+      };
+    }
+  | {
+      type: "removeMinutesText";
+      payload: {
+        segmentIndex: number;
+        segmentTextIndex: number;
+      };
+    }
+  | {
+      type: "splitMinutesText";
+      payload: {
+        segmentIndex: number;
+        segmentTextIndex: number;
+      };
+    }
+  | {
+      type: "mergeUpMinutesText";
+      payload: {
+        segmentIndex: number;
+        segmentTextIndex: number;
+      };
+    }
+  | {
+      type: "changeTopicStartedPoint";
+      payload: {
+        segmentIndex: number;
+      };
+    }
+  | {
+      type: "changeTopicAIConfig";
+      payload: {
+        aiConfig: AIConfig;
+      };
+    }
+  | {
+      type: "togglePlayWavMute";
+    }
+  | {
+      type: "deleteAllTopic";
+    }
+  | {
+      type: "selectTopic";
+      payload: {
+        topicID: string;
+        selected: boolean;
+      };
+    }
+  | {
+      type: "deselectAllTopic";
+    }
+  | {
+      type: "selectAllTopic";
+    }
+  | {
+      type: "addVirtualAssistantConf";
+      payload: {
+        assistant: VirtualAssistantConf;
+      };
+    }
+  | {
+      type: "setVirtualAssistantConf";
+      payload: {
+        assistant: VirtualAssistantConf;
+      };
+    }
+  | {
+      type: "removeVirtualAssistantConf";
+      payload: {
+        assistantId: string;
+      };
+    }
+  | {
+      type: "updateInterimSegment";
+      payload: {
+        segment: Segment;
+      };
+    }
+  | {
+      type: "changeDiscussionSplitterConf";
+      payload: {
+        splitterConf: DiscussionSplitterConf;
+      };
+    }
+  | {
+      type: "updateTopic";
+      payload: {
+        topic: Topic;
+      };
     };
-  }
-  | {
-    type: "updateMinutesTitle";
-    payload: {
-      minutesTitle: string;
-    };
-  }
-  | {
-    type: "createNewMinutes";
-  }
-  | {
-    type: "setMinutesLines";
-    payload: {
-      minutes: DiscussionSegment[];
-    };
-  }
-  | {
-    type: "setAudioFolder";
-    payload: {
-      audioFolder: string;
-    };
-  }
-  | {
-    type: "openMinutes";
-    payload: Minutes;
-  }
-  | {
-    type: "reTranscribeAll";
-    payload: {
-      startTimestamp: number;
-      client: CaptureClient | null;
-      stream: MediaStream | null;
-      vad: MicVAD | null;
-    };
-  }
-  | {
-    type: "changeVADDialogOpen";
-  }
-  | {
-    type: "openHomeMenu";
-  }
-  | {
-    type: "deleteMinutes";
-    payload: {
-      startTimestamp: number;
-    };
-  }
-  | {
-    type: "setTopic";
-    payload: {
-      topics: Topic[];
-    };
-  }
-  | {
-    type: "removeTopic";
-    payload: {
-      topicID: string;
-    };
-  }
-  | {
-    type: "updateMinutesText";
-    payload: {
-      segmentIndex: number;
-      segmentTextIndex: number;
-      content: string;
-    };
-  }
-  | {
-    type: "removeMinutesText";
-    payload: {
-      segmentIndex: number;
-      segmentTextIndex: number;
-    };
-  }
-  | {
-    type: "splitMinutesText";
-    payload: {
-      segmentIndex: number;
-      segmentTextIndex: number;
-    };
-  }
-  | {
-    type: "mergeUpMinutesText";
-    payload: {
-      segmentIndex: number;
-      segmentTextIndex: number;
-    };
-  }
-  | {
-    type: "changeTopicStartedPoint";
-    payload: {
-      segmentIndex: number;
-    };
-  }
-  | {
-    type: "changeTopicAIConfig";
-    payload: {
-      aiConfig: AIConfig;
-    };
-  }
-  | {
-    type: "togglePlayWavMute";
-  }
-  | {
-    type: "deleteAllTopic";
-  }
-  | {
-    type: "selectTopic";
-    payload: {
-      topicID: string;
-      selected: boolean;
-    };
-  }
-  | {
-    type: "deselectAllTopic";
-  }
-  | {
-    type: "selectAllTopic";
-  }
-  | {
-    type: "addVirtualAssistantConf";
-    payload: {
-      assistant: VirtualAssistantConf;
-    };
-  }
-  | {
-    type: "setVirtualAssistantConf";
-    payload: {
-      assistant: VirtualAssistantConf;
-    };
-  }
-  | {
-    type: "removeVirtualAssistantConf";
-    payload: {
-      assistantId: string;
-    };
-  }
-  | {
-    type: "updateInterimSegment";
-    payload: {
-      segment: Segment;
-    };
-  }
-  | {
-    type: "changeDiscussionSplitterConf";
-    payload: {
-      splitterConf: DiscussionSplitterConf;
-    };
-  }
-  | {
-    type: "updateTopic";
-    payload: {
-      topic: Topic;
-    };
-  };
 
 const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
   switch (action.type) {
@@ -497,7 +499,12 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         mainMenuOpen: false,
         needToSaveOnDB: "createNewMinutes" as VFNeedToSaveMode,
         needToScrollMinutes: true,
-        assistants: [],
+        assistants: SystemDefaultTemplate.map((template) => {
+          return {
+            ...template.config,
+            assistantId: uuidv4(),
+          };
+        }),
       };
     case "openHomeMenu":
       return {
