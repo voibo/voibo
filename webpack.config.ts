@@ -74,6 +74,7 @@ const main: Configuration = {
   externals: {
     "@protobufjs/inquire": "node-commonjs @protobufjs/inquire",
     "@voibo/desktop-audio-capture": "module @voibo/desktop-audio-capture",
+    "@voibo/voibo-plugin": "module @voibo/voibo-plugin",
   },
   experiments: {
     outputModule: true,
