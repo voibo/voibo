@@ -121,7 +121,7 @@ export class RecognizeStream extends Transform {
     this.#stream = this.#client
       ._streamingRecognize()
       .on("error", (err) => {
-        if (getErrorCode(err) === 11) {
+        if (getErrorCode(err) === 11 || getErrorCode(err) === 10) {
           this.#restartStream();
         } else {
           this.emit("error", err);
