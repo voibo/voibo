@@ -87,16 +87,16 @@ export type TargetMode = "manualSelected" | "systemFiltered" | "latest";
 
 export type InvokeAssistantAttachOption =
   | {
-    attachment: "none";
-  }
+      attachment: "none";
+    }
   | {
-    attachment: "topic";
-    target: TargetMode;
-  }
+      attachment: "topic";
+      target: TargetMode;
+    }
   | {
-    attachment: "discussion";
-    target: TargetMode;
-  };
+      attachment: "discussion";
+      target: TargetMode;
+    };
 
 export type VirtualAssistantType = "va-custom" | "va-general";
 
@@ -153,46 +153,46 @@ export const initAssistantState = (
 
 export type AssistantAction =
   | {
-    type: "invokeAssistant";
-    payload: {
-      queue: Array<Message>;
-    };
-  }
+      type: "invokeAssistant";
+      payload: {
+        queue: Array<Message>;
+      };
+    }
   | {
-    type: "processRejected";
-  }
+      type: "processRejected";
+    }
   | {
-    type: "appendFunctionalMessage";
-    payload: {
-      message: Message;
-      startTimestamp: number;
-      assistantName: string;
-    };
-  }
+      type: "appendFunctionalMessage";
+      payload: {
+        message: Message;
+        startTimestamp: number;
+        assistantName: string;
+      };
+    }
   | {
-    type: "appendMessage";
-    payload: {
-      message: Message;
-      startTimestamp: number;
-      assistantName: string;
-    };
-  }
+      type: "appendMessage";
+      payload: {
+        message: Message;
+        startTimestamp: number;
+        assistantName: string;
+      };
+    }
   | {
-    type: "initialize";
-    payload: {
-      startTimestamp: number;
-      assistantName: string;
-    };
-  }
+      type: "initialize";
+      payload: {
+        startTimestamp: number;
+        assistantName: string;
+      };
+    }
   | {
-    type: "changeMinutes";
-    payload: {
-      startTimestamp: number;
-      assistantName: string;
-      messages?: Array<Message>; // LangChain で記録されているメッセージ。
-      messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
-    };
-  }
+      type: "changeMinutes";
+      payload: {
+        startTimestamp: number;
+        assistantName: string;
+        messages?: Array<Message>; // LangChain で記録されているメッセージ。
+        messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
+      };
+    }
   | { type: "removeMessage"; payload: { messageId: string } }
   | { type: "clearAll" }
   | { type: "setAttachment"; payload: { attachmentMode: AttachmentMode } }
@@ -423,10 +423,11 @@ export function makeInvokeParam({
           }
           break;
         case "topic":
-          context = `${context}\n\n#${message.title}\n${message.topic instanceof Array
-            ? message.topic.join("\n")
-            : message.topic
-            }\n`;
+          context = `${context}\n\n#${message.title}\n${
+            message.topic instanceof Array
+              ? message.topic.join("\n")
+              : message.topic
+          }\n`;
           break;
         case "none":
         default:
@@ -459,12 +460,12 @@ export function makeInvokeParam({
   ) {
     if (agendas.length > 0 && !withoutAgenda) {
       agendaContext = agendas.reduce(
-        (acc, agenda) => `${acc}\n\n${agenda.title}\n`,
+        (acc, agenda) => `${acc}\n\n${agenda.title}\n${agenda.detail ?? ""}\n`,
         ""
       );
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Agenda\n${agendaContext} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `While considering the following agenda, process the following content according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Agenda\n${agendaContext} \n"""\n\n"""##Content\n${context} \n"""`;
     } else {
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `Process the following contents according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Content\n${context} \n"""`;
     }
   } else {
     prompt = basePrompt;
@@ -548,7 +549,8 @@ export function makeTopicOrientedInvokeParam({
       filteredTopics = topics.filter(defaultFilter);
       context = filteredTopics.reduce(
         (acc, topic) =>
-          `${acc}\n\n#${topic.title}\n${topic.topic instanceof Array ? topic.topic.join("\n") : topic.topic
+          `${acc}\n\n#${topic.title}\n${
+            topic.topic instanceof Array ? topic.topic.join("\n") : topic.topic
           }\n`,
         ""
       );
@@ -579,12 +581,12 @@ export function makeTopicOrientedInvokeParam({
   ) {
     if (agendas.length > 0 && !withoutAgenda) {
       agendaContext = agendas.reduce(
-        (acc, agenda) => `${acc}\n\n${agenda.title}\n`,
+        (acc, agenda) => `${acc}\n\n${agenda.title}\n${agenda.detail ?? ""}\n`,
         ""
       );
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Agenda\n${agendaContext} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `While considering the following agenda, process the following content according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Agenda\n${agendaContext} \n"""\n\n"""##Content\n${context} \n"""`;
     } else {
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `Process the following contents according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Content\n${context} \n"""`;
     }
   }
 
@@ -814,8 +816,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                     topic.classification
                       ? state.vaConfig.targetClassification
                         ? state.vaConfig.targetClassification === "all" ||
-                        topic.classification ===
-                        state.vaConfig.targetClassification
+                          topic.classification ===
+                            state.vaConfig.targetClassification
                         : true // topic.classification があるのに topicClassification がないものは全て対象
                       : state.vaConfig.targetClassification === "all" // topic に classification がないものは all 設定以外は対象外
                 )
@@ -825,7 +827,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                     topic.category
                       ? state.vaConfig.targetCategory
                         ? state.vaConfig.targetCategory === "Unknown" ||
-                        topic.category === state.vaConfig.targetCategory
+                          topic.category === state.vaConfig.targetCategory
                         : true // topic.category があるのに topicCategory がないものは全て対象
                       : state.vaConfig.targetCategory === "Unknown" // topic に category がないものは Unknown 設定以外は対象外
                 );
@@ -901,8 +903,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                       agenda.classification
                         ? state.vaConfig.targetClassification
                           ? state.vaConfig.targetClassification === "all" ||
-                          agenda.classification ===
-                          state.vaConfig.targetClassification
+                            agenda.classification ===
+                              state.vaConfig.targetClassification
                           : true // topic.classification があるのに topicClassification がないものは全て対象
                         : state.vaConfig.targetClassification === "all" // topic に classification がないものは all 設定以外は対象外
                   )
@@ -912,7 +914,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                       agenda.category
                         ? state.vaConfig.targetCategory
                           ? state.vaConfig.targetCategory === "Unknown" ||
-                          agenda.category === state.vaConfig.targetCategory
+                            agenda.category === state.vaConfig.targetCategory
                           : true // topic.category があるのに topicCategory がないものは全て対象
                         : state.vaConfig.targetCategory === "Unknown" // topic に category がないものは Unknown 設定以外は対象外
                   )
@@ -1092,8 +1094,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                         agenda.classification
                           ? state.vaConfig.targetClassification
                             ? state.vaConfig.targetClassification === "all" ||
-                            agenda.classification ===
-                            state.vaConfig.targetClassification
+                              agenda.classification ===
+                                state.vaConfig.targetClassification
                             : true // topic.classification があるのに topicClassification がないものは全て対象
                           : state.vaConfig.targetClassification === "all" // topic に classification がないものは all 設定以外は対象外
                     )
@@ -1103,7 +1105,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                         agenda.category
                           ? state.vaConfig.targetCategory
                             ? state.vaConfig.targetCategory === "Unknown" ||
-                            agenda.category === state.vaConfig.targetCategory
+                              agenda.category === state.vaConfig.targetCategory
                             : true // topic.category があるのに topicCategory がないものは全て対象
                           : state.vaConfig.targetCategory === "Unknown" // topic に category がないものは Unknown 設定以外は対象外
                     )
@@ -1530,3 +1532,11 @@ useVFStore.subscribe(
     },
   }
 );
+
+// == Assistant Template ==
+export type AssistantTemplate = {
+  templateId: string;
+  description: string;
+  author: string;
+  config: VirtualAssistantConf;
+};
