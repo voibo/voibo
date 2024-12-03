@@ -15,10 +15,7 @@ limitations under the License.
 */
 import { protos, v2 } from "@google-cloud/speech";
 import { SpeechClient } from "@google-cloud/speech/build/src/v2";
-import bindings from "bindings";
 import Store from "electron-store";
-import { EventEmitter } from "events";
-import * as os from "os";
 import path from "path";
 import { Readable } from "stream";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
@@ -28,20 +25,7 @@ import { ChunkSplitter } from "../audio/chunkSplitter.js";
 import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/Segment.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
-
-let module_root = "";
-if (os.platform() == "win32") {
-  module_root = "./desktop-audio-capture/bin/win32";
-} else {
-  module_root = "./desktop-audio-capture/bin/darwin";
-}
-
-const AudioCapture = bindings({
-  bindings: "addon",
-  module_root: path.join(__dirname, module_root),
-}).AudioCapture;
-
-Object.setPrototypeOf(AudioCapture.prototype, EventEmitter.prototype);
+import { AudioCapture } from "@voibo/desktop-audio-capture";
 
 export type TranscribeFromStreamRequiredParams = Required<{
   webContents: Electron.WebContents;

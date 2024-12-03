@@ -68,16 +68,12 @@ const main: Configuration = {
           from: "./icon.png",
           to: "./icon.png",
         },
-        {
-          context: "./third_party",
-          from: "./desktop-audio-capture/bin",
-          to: "./desktop-audio-capture/bin",
-        },
       ],
     }),
   ],
   externals: {
     "@protobufjs/inquire": "node-commonjs @protobufjs/inquire",
+    "@voibo/desktop-audio-capture": "module @voibo/desktop-audio-capture",
   },
   experiments: {
     outputModule: true,
