@@ -460,12 +460,12 @@ export function makeInvokeParam({
   ) {
     if (agendas.length > 0 && !withoutAgenda) {
       agendaContext = agendas.reduce(
-        (acc, agenda) => `${acc}\n\n${agenda.title}\n`,
+        (acc, agenda) => `${acc}\n\n${agenda.title}\n${agenda.detail ?? ""}\n`,
         ""
       );
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Agenda\n${agendaContext} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `While considering the following agenda, process the following content according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Agenda\n${agendaContext} \n"""\n\n"""##Content\n${context} \n"""`;
     } else {
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `Process the following contents according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Content\n${context} \n"""`;
     }
   } else {
     prompt = basePrompt;
@@ -581,12 +581,12 @@ export function makeTopicOrientedInvokeParam({
   ) {
     if (agendas.length > 0 && !withoutAgenda) {
       agendaContext = agendas.reduce(
-        (acc, agenda) => `${acc}\n\n${agenda.title}\n`,
+        (acc, agenda) => `${acc}\n\n${agenda.title}\n${agenda.detail ?? ""}\n`,
         ""
       );
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Agenda\n${agendaContext} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `While considering the following agenda, process the following content according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Agenda\n${agendaContext} \n"""\n\n"""##Content\n${context} \n"""`;
     } else {
-      prompt = `Process the following contents according to the following instructions.\n\n"""Instructions\n${basePrompt} \n"""\n\n"""Content\n${context} \n"""`;
+      prompt = `Process the following contents according to the following instructions.\n\n"""##Instructions\n${basePrompt} \n"""\n\n"""##Content\n${context} \n"""`;
     }
   }
 
