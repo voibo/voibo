@@ -869,7 +869,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               });
 
               if (reqQueue.length > 0) {
-                console.log("enqueueTopicRelatedInvoke: at updated", reqQueue);
+                //console.log("enqueueTopicRelatedInvoke: at updated", reqQueue);
                 dispatch({
                   type: "invokeAssistant",
                   payload: {
@@ -1004,10 +1004,13 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                     lastDiscussedTime,
                   ])
               );
+
+              /*
               console.log(
                 "enqueueTopicRelatedInvoke: at_agenda_completed: agendaEndTimeMap",
                 agendaEndTimeMap
               );
+              */
 
               // FIXME:
               // 以下のロジックはTopicが生成されていく途中で、Agendaの終了が判定される前なら動作する
@@ -1045,12 +1048,14 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                   agendaIds.forEach((agendaId) => {
                     const agenda = getAgenda(agendaId);
                     const agendaEndTime = agendaEndTimeMap.get(agendaId);
+                    /*
                     console.log(
                       "enqueueTopicRelatedInvoke: at_agenda_completed: last topic: agenda: 1",
                       agenda,
                       agendaEndTime,
                       topic.seedData?.endTimestamp
                     );
+                    */
                     if (
                       agenda &&
                       (agenda.status === "done" ||
@@ -1071,10 +1076,12 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                 }
               });
 
+              /*
               console.log(
                 "enqueueTopicRelatedInvoke: at_agenda_completed: endedAgendaMap",
                 endedAgendaMap
               );
+              */
 
               // 未解決対象の抽出
               const reqQueue: Array<Message> = [];
@@ -1151,10 +1158,12 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               });
 
               if (reqQueue.length > 0) {
+                /*
                 console.log(
                   "enqueueTopicRelatedInvoke: at_agenda_completed: invokeAssistant",
                   reqQueue
                 );
+                */
                 dispatch({
                   type: "invokeAssistant",
                   payload: {

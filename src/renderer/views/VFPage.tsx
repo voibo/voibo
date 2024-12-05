@@ -184,7 +184,7 @@ export const VFPage = () => {
         });
     }
     if (needToUpdateMinutes) {
-      console.log("update minutes: assistants", vfState.assistants);
+      //console.log("update minutes: assistants", vfState.assistants);
       minutesDB
         .update({
           id: vfState.startTimestamp,
@@ -299,8 +299,9 @@ export function useDownloadMinutes(): (targetMinutes: number) => void {
                     assistantData.messages
                       .map((message) => {
                         if ((message as any).type === "ai") {
-                          return `#${(message as any).type}\n\n${(message as any).data.content
-                            }`;
+                          return `#${(message as any).type}\n\n${
+                            (message as any).data.content
+                          }`;
                         }
                       })
                       .join("\n\n")
@@ -320,10 +321,11 @@ export function useDownloadMinutes(): (targetMinutes: number) => void {
                   "topics.md",
                   Array.from(minutes.topics)
                     .map((item) => {
-                      return `# ${item.title}\n\n${item.topic instanceof Array
-                        ? item.topic.join("\n")
-                        : item.topic
-                        }`;
+                      return `# ${item.title}\n\n${
+                        item.topic instanceof Array
+                          ? item.topic.join("\n")
+                          : item.topic
+                      }`;
                     })
                     .join("\n\n\n")
                 )
