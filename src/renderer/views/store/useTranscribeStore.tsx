@@ -69,19 +69,19 @@ export const useTranscribeStore = create<TranscribeStore>()(
           get().client?.close();
 
           // startAudio
-          const unmixedOwnMicStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              deviceId: {
-                exact: settingsData.selectedOwnDeviceId,
+          const unmixedOwnMicStream = await navigator.mediaDevices.getUserMedia(
+            {
+              audio: {
+                deviceId: {
+                  exact: settingsData.selectedOwnDeviceId,
+                },
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
               },
-              channelCount: 1,
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-          });
-
-
+            }
+          );
 
           let newClient = null;
           let vad = null;
@@ -140,7 +140,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
           set({
             client: newClient,
             stream: unmixedOwnMicStream,
-            vad: vad
+            vad: vad,
           });
         }
       } catch (err) {
@@ -189,7 +189,7 @@ function setMinutesLines(segments: Segment[]) {
     appendMinutesList(segments, vfState.discussion, 5),
     vfState.discussionSplitter.duration
   );
-  console.log("setMinutesLines", newMinutes, segments);
+  //console.log("setMinutesLines", newMinutes, segments);
   vfDispatch({
     type: "setMinutesLines",
     payload: {

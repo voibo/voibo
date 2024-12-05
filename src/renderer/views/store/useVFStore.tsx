@@ -600,6 +600,7 @@ export const vfCoreReducer = (state: VFState, action: VFAction): VFState => {
 export type VFDispatchStore = {
   vfDispatch: (action: VFAction) => void;
   mergeSequentialTopics: (topics: Topic[]) => void;
+  updateTopic: (topic: Topic) => void;
 };
 // VFCoreStateストア
 export const useVFStore = create<VFState & VFDispatchStore>()(
@@ -633,6 +634,13 @@ export const useVFStore = create<VFState & VFDispatchStore>()(
             .concat(mergedTopic),
         }));
       }
+    },
+    updateTopic: (topic) => {
+      set({
+        topics: get().topics.map((currentTopic) =>
+          topic.id === currentTopic.id ? topic : currentTopic
+        ),
+      });
     },
   }))
 );

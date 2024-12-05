@@ -42,7 +42,7 @@ import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
 import ContentNode from "./node/ContentNode.jsx";
 import DiscussionNode from "./node/DisscussionNode.jsx";
 import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
-import TopicNode from "./node/TopicNode.jsx";
+import TopicNode, { TopicNode as TopicNodeType } from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 
@@ -114,11 +114,26 @@ const VANodeStageCore = (props: {}) => {
     }
   );
 
+  /*
+
+  // subscribe _layoutTopicsQueue to update GUI
+  const [layoutTopicsQueue, setLayoutTopicsQueue] = useState<
+    Array<TopicNodeType>
+  >([]);
+  useVFReactflowStore.subscribe(
+    (state) => state._layoutTopicsQueue,
+    (layoutTopicsQueue) => setLayoutTopicsQueue(layoutTopicsQueue)
+  );
+
   useEffect(() => {
     if (nodesInitialized) {
-      console.log("VANodeStageCore: nodesInitialized");
+      console.warn("VANodeStageCore: nodesInitialized", layoutTopicsQueue);
+      if (layoutTopicsQueue.length > 0) {
+        layoutTopics();
+      }
     }
   }, [nodesInitialized]);
+  */
 
   // handle lastVFAction
 
@@ -157,7 +172,9 @@ const VANodeStageCore = (props: {}) => {
             });
           });
           break;
+        /*
         case "setTopic": // トピック変更時
+        // FIXME:　setTopicの内部で、Position更新のために updateTopicを読んでしまっているので、Actionの最後が setTopicとならない
           console.log(
             "VANodeStageCore: lastVFAction: setTopic",
             guiState.lastVFAction.payload.topics
@@ -173,10 +190,15 @@ const VANodeStageCore = (props: {}) => {
               ].id;
             const node = reactFlow.getNode(messageId);
             if (node) {
-              reactFlow.fitView({ nodes: [node], maxZoom: 1, minZoom: 0.001 });
+              reactFlow.fitView({
+                nodes: [node],
+                maxZoom: 1,
+                minZoom: ZOOM_MIN,
+              });
             }
           }
           break;
+          */
         default:
           break;
       }

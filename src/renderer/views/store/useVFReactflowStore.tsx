@@ -26,6 +26,7 @@ import {
   OnNodeDrag,
   OnNodesChange,
   OnNodesDelete,
+  useReactFlow,
   Viewport,
 } from "@xyflow/react";
 import { create } from "zustand";
@@ -54,7 +55,10 @@ import {
 import { Topic } from "../topic/Topic.js";
 import { Content } from "./Content.js";
 import { Agenda, useAgendaStore } from "./useAgendaStore.jsx";
-import { AssistantState, useMinutesAssistantStore } from "./useAssistantsStore.jsx";
+import {
+  AssistantState,
+  useMinutesAssistantStore,
+} from "./useAssistantsStore.jsx";
 import { useMinutesContentStore } from "./useContentStore.js";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVFStore } from "./useVFStore.jsx";
@@ -322,6 +326,9 @@ export type VFReactflowState = {
   >;
 
   // # 実体
+  // layout
+  _layoutTopicsQueue: Array<TopicNode>;
+
   // topics
   topicBothEndsNodes: Array<TopicBothEndsNode>;
   topicNodes: TopicNode[];
@@ -368,6 +375,7 @@ export type VFReactflowDispatchStore = {
     TopicNode | AssistantMessageNode | ContentNode
   >;
   layout: (layoutParam: LayoutParam) => void;
+  layoutTopics: (measuredNodes: TopicNode[]) => void;
 
   // Agenda は subscribe で変更できないため
   updatedAgenda: (minutesStartTimestamp: number | null) => void;
@@ -384,6 +392,9 @@ export const DefaultVFReactflowState: VFReactflowState = {
   // subscribe からしか変更してはいけない
   nodes: [],
   edges: [],
+
+  // layout
+  _layoutTopicsQueue: [],
 
   // selected 表示管理
   selectedSequences: [],
@@ -490,16 +501,16 @@ export const useVFReactflowStore = create<
           useMinutesAssistantStore(startTimestamp)
             .getState()
             .assistantDispatch(assistantConfig)({
-              type: "updateMessage",
-              payload: {
-                messages: [
-                  {
-                    ...assistant,
-                    groupIds: groups.map((group) => group.id),
-                  },
-                ],
-              },
-            });
+            type: "updateMessage",
+            payload: {
+              messages: [
+                {
+                  ...assistant,
+                  groupIds: groups.map((group) => group.id),
+                },
+              ],
+            },
+          });
         }
       });
 
@@ -552,16 +563,16 @@ export const useVFReactflowStore = create<
           useMinutesAssistantStore(startTimestamp)
             .getState()
             .assistantDispatch(assistantConfig)({
-              type: "updateMessage",
-              payload: {
-                messages: [
-                  {
-                    ...assistant,
-                    agendaIds: agendas.map((agenda) => agenda.id),
-                  },
-                ],
-              },
-            });
+            type: "updateMessage",
+            payload: {
+              messages: [
+                {
+                  ...assistant,
+                  agendaIds: agendas.map((agenda) => agenda.id),
+                },
+              ],
+            },
+          });
         }
       });
     },
@@ -772,6 +783,64 @@ export const useVFReactflowStore = create<
       });
     },
 
+    /**
+     * TopicNodeとして仮配置して measure されたTopicNodeを、正しい位置に配置する
+     * @param measuredNodes
+     */
+    layoutTopics: (measuredNodes) => {
+      // _layoutTopicsQueue に含まれている　candidate　だけを対象にする
+      const layoutQueue = get()._layoutTopicsQueue;
+      const currentNodes = get().topicNodes;
+      const targetNodes = measuredNodes.filter((candidate) =>
+        layoutQueue.find((target) => target.id === candidate.id)
+      );
+      // targetNodes に含まれていない layoutTopicsQueue
+      const remainedQueue = layoutQueue.filter(
+        (node) => !targetNodes.includes(node)
+      );
+
+      console.log("layoutTopics", targetNodes, measuredNodes);
+      if (targetNodes.length > 0 && currentNodes.length >= targetNodes.length) {
+        // 位置を更新
+        const topicNodes = [...currentNodes.slice(0, -targetNodes.length)]; // 既に　_layoutTopicsQueue　の nodeは存在する。
+        const topicBothEndsNodes = get().topicBothEndsNodes;
+
+        let lastNode =
+          topicNodes.length > 0
+            ? topicNodes[topicNodes.length - 1]
+            : topicBothEndsNodes[0];
+        let lastBounds = {
+          measured: {
+            height: lastNode.measured?.height ?? 0,
+            width: lastNode.measured?.width ?? 0,
+          },
+          position: lastNode.position,
+        };
+
+        for (const topicNode of targetNodes) {
+          const located = locateTopic(topicNode, lastBounds);
+          updateNodePosition(located.updatedTopicNode); // 変更を永続化
+          topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
+          lastBounds = located.bounds;
+        }
+
+        set({
+          _layoutTopicsQueue: remainedQueue,
+          topicNodes: topicNodes,
+          topicBothEndsNodes: relocateTopicBothEndsNodes(
+            topicNodes,
+            topicBothEndsNodes
+          ),
+          topicTreeEdges: makeTopicEdges({
+            nodes: constructTopicTreeNodes({
+              topicNodes,
+              topicBothEndsNodes,
+            }),
+          }),
+        });
+      }
+    },
+
     // agenda
     updatedAgenda: (minutesStartTimestamp) => {
       if (!minutesStartTimestamp) return;
@@ -888,18 +957,23 @@ const initTopicTree = (props: { topics: Topic[] }) => {
 
   // == 1. Construct ==
   const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
+  const topicBothEndsNodes = relocateTopicBothEndsNodes(
+    topicNodes,
+    useVFReactflowStore.getState().topicBothEndsNodes
+  );
   useVFReactflowStore.setState({
     topicNodes,
+    topicBothEndsNodes: relocateTopicBothEndsNodes(
+      topicNodes,
+      topicBothEndsNodes
+    ),
     topicTreeEdges: makeTopicEdges({
       nodes: constructTopicTreeNodes({
         topicNodes,
-        topicBothEndsNodes: useVFReactflowStore.getState().topicBothEndsNodes,
+        topicBothEndsNodes,
       }),
     }),
   });
-
-  // update header and discussion position
-  relocateTopicBothEndsNodes();
 };
 
 const updateNodePosition = (node: Node) => {
@@ -907,16 +981,12 @@ const updateNodePosition = (node: Node) => {
   if (!startTimestamp) return;
   switch (node.type) {
     case "topic":
-      useVFStore.getState().vfDispatch({
-        type: "updateTopic",
-        payload: {
-          topic: {
-            ...(node as TopicNode).data.content,
-            position: {
-              x: node.position.x,
-              y: node.position.y,
-            },
-          },
+      // ここで vfDispatch を経由してはいけない。
+      useVFStore.getState().updateTopic({
+        ...(node as TopicNode).data.content,
+        position: {
+          x: node.position.x,
+          y: node.position.y,
         },
       });
       break;
@@ -975,7 +1045,8 @@ const locateTopic = (
 } => {
   // 直前の topicNode の下に配置
   const topicLayout = getLayoutParam().topic;
-  targetNode.position = {
+  const updatedTopicNode = { ...targetNode }; // 更新したので新オブジェクトを返す
+  updatedTopicNode.position = {
     x:
       /*
       -(targetNode.measured && targetNode.measured.width
@@ -987,7 +1058,6 @@ const locateTopic = (
     y:
       lastBounds.position.y + lastBounds.measured.height + topicLayout.offset.y,
   };
-  const updatedTopicNode = { ...targetNode }; // 更新したので新オブジェクトを返す
   return {
     updatedTopicNode,
     bounds: {
@@ -1072,61 +1142,6 @@ const locateAssistantAt = (
   };
 };
 
-const locateAgenda = () => {
-  const layoutParam = getLayoutParam();
-  const agendaNodes = useVFReactflowStore.getState().agendaNodes;
-  const updateAgendaNodes: AgendaNode[] = [];
-  agendaNodes.forEach((agendaNode, index) => {
-    const agendaFirstTopicNode = useVFReactflowStore
-      .getState()
-      .topicNodes.find((topicNode) =>
-        useVFStore
-          .getState()
-          .topics.find((topic) => topic.id === topicNode.id)
-          ?.seedData?.agendaIdList?.includes(agendaNode.id)
-      );
-
-    if (agendaFirstTopicNode) {
-      // topic に確定的に結びついた agenda
-      agendaNode.position = {
-        x:
-          agendaFirstTopicNode.position.x -
-          layoutParam.agenda.width -
-          layoutParam.agenda.offset.x,
-        y: agendaFirstTopicNode.position.y,
-      };
-
-      // 前の agenda の位置に被らないかを確認
-      if (index > 0) {
-        const lastAgendaNode = agendaNodes[index - 1];
-        if (lastAgendaNode.position.y === agendaNode.position.y) {
-          agendaNode.position = {
-            x: lastAgendaNode.position.x,
-            y: lastAgendaNode.position.y + layoutParam.agenda.offset.y,
-          };
-        }
-      }
-    } else {
-      // まだ topic に確定的に結びついていない agenda
-      // discussion node の左に配置
-      const discussionNode =
-        useVFReactflowStore.getState().topicBothEndsNodes[1]; // discussion node は必ず存在する
-      if (discussionNode) {
-        agendaNode.position = {
-          x:
-            discussionNode.position.x -
-            layoutParam.agenda.width -
-            layoutParam.agenda.offset.x,
-          y: discussionNode.position.y,
-        };
-      }
-    }
-    updateAgendaNodes.push({ ...agendaNode });
-    updateNodePosition(agendaNode); // 永続化
-  });
-  useVFReactflowStore.setState({ agendaNodes: updateAgendaNodes });
-};
-
 // === Subscribe ===
 useVFReactflowStore.subscribe((current, pre) => {
   if (
@@ -1155,10 +1170,39 @@ useVFReactflowStore.subscribe((current, pre) => {
   }
 });
 
+// measured
+useVFReactflowStore.subscribe(
+  (state) => state.nodes,
+  (nodes, prevNodes) => {
+    const newlyMeasuredNodes = nodes.filter(
+      (node) =>
+        node.measured && // measured が存在する
+        !prevNodes.some(
+          (prevNode) => prevNode.id === node.id && prevNode.measured
+        ) // 前回の状態では未計測だった
+    );
+
+    if (newlyMeasuredNodes.length > 0) {
+      // measured が付与されたノードが見つかったら処理を行う
+      console.warn(
+        "useVFReactflowStore.subscribe: Measured node:",
+        newlyMeasuredNodes
+      );
+      // topic nodes
+      useVFReactflowStore
+        .getState()
+        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
+    }
+  }
+);
+
 // VFStore
-export const relocateTopicBothEndsNodes = () => {
-  const topicNodes = useVFReactflowStore.getState().topicNodes;
-  const topicBothEndsNodes = useVFReactflowStore.getState().topicBothEndsNodes;
+const relocateTopicBothEndsNodes = (
+  topicNodes: TopicNode[],
+  topicBothEndsNodes: TopicBothEndsNode[]
+): TopicBothEndsNode[] => {
+  //const topicNodes = useVFReactflowStore.getState().topicNodes;
+  //const topicBothEndsNodes = useVFReactflowStore.getState().topicBothEndsNodes;
   let updatedHeaderNode;
   let updatedDiscussionNode;
   if (topicNodes.length > 0) {
@@ -1196,12 +1240,10 @@ export const relocateTopicBothEndsNodes = () => {
     };
   }
 
-  useVFReactflowStore.setState({
-    topicBothEndsNodes: [
-      updatedHeaderNode ?? topicBothEndsNodes[0],
-      updatedDiscussionNode ?? topicBothEndsNodes[1],
-    ],
-  });
+  return [
+    updatedHeaderNode ?? topicBothEndsNodes[0],
+    updatedDiscussionNode ?? topicBothEndsNodes[1],
+  ];
 };
 
 // dispatch post process
@@ -1209,26 +1251,40 @@ useVFStore.subscribe(
   (state) => state.lastAction,
   (lastAction) => {
     (async () => {
+      let topicNodes: TopicNode[] = [];
+      let topicBothEndsNodes =
+        useVFReactflowStore.getState().topicBothEndsNodes;
       switch (lastAction?.type) {
         // トピックの追加・削除・変更
         case "updateTopic":
+          topicNodes = useVFReactflowStore
+            .getState()
+            .topicNodes.map((node) =>
+              node.id === lastAction.payload.topic.id
+                ? makeTopicNode({ topic: lastAction.payload.topic })
+                : node
+            );
           useVFReactflowStore.setState({
-            topicNodes: useVFReactflowStore
-              .getState()
-              .topicNodes.map((node) =>
-                node.id === lastAction.payload.topic.id
-                  ? makeTopicNode({ topic: lastAction.payload.topic })
-                  : node
-              ),
+            topicNodes,
+            topicBothEndsNodes: relocateTopicBothEndsNodes(
+              topicNodes,
+              topicBothEndsNodes
+            ),
           });
-          relocateTopicBothEndsNodes();
           break;
         case "setTopic":
-          const topicNodes = [...useVFReactflowStore.getState().topicNodes]; // ここにはまだ新しいNodeが追加されていない
+          // Topicを仮配置する。 measure されたあとに正式に配置し直す。
+          const newTopicNodes = lastAction.payload.topics.map((topic) =>
+            makeTopicNode({ topic })
+          );
+          topicNodes = [...useVFReactflowStore.getState().topicNodes];
+          topicBothEndsNodes =
+            useVFReactflowStore.getState().topicBothEndsNodes;
+
           let lastNode =
             topicNodes.length > 0
               ? topicNodes[topicNodes.length - 1]
-              : useVFReactflowStore.getState().topicBothEndsNodes[0];
+              : topicBothEndsNodes[0];
           let lastBounds = {
             measured: {
               height: lastNode.measured?.height ?? 0,
@@ -1236,35 +1292,22 @@ useVFStore.subscribe(
             },
             position: lastNode.position,
           };
-
-          for (const topic of lastAction.payload.topics) {
-            const located = locateTopic(makeTopicNode({ topic }), lastBounds);
-            topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
-            useVFReactflowStore.setState({ topicNodes });
+          const _layoutTopicsQueue: Array<TopicNode> = [];
+          for (const topicNode of newTopicNodes) {
+            const located = locateTopic(topicNode, lastBounds);
             updateNodePosition(located.updatedTopicNode); // 変更を永続化
+            _layoutTopicsQueue.push(located.updatedTopicNode as TopicNode);
+            topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
             lastBounds = located.bounds;
-            // FIXME：　ここで wait して measure が取得できるようにしないと、次の topic の位置がずれる
           }
-
-          // topic tree edge
           useVFReactflowStore.setState({
-            topicTreeEdges: makeTopicEdges({
-              nodes: constructTopicTreeNodes({
-                topicNodes,
-                topicBothEndsNodes:
-                  useVFReactflowStore.getState().topicBothEndsNodes,
-              }),
-            }),
+            _layoutTopicsQueue: _layoutTopicsQueue,
+            topicNodes,
+            topicBothEndsNodes: relocateTopicBothEndsNodes(
+              topicNodes,
+              topicBothEndsNodes
+            ),
           });
-
-          // update header and discussion position
-          relocateTopicBothEndsNodes();
-
-          // agenda
-          useVFReactflowStore
-            .getState()
-            .updatedAgenda(useVFStore.getState().startTimestamp);
-          //locateAgenda();
           break;
         // トピックツリーの初期化
         case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
@@ -1272,7 +1315,6 @@ useVFStore.subscribe(
         case "openMinutes": // minutes open時
         case "deleteAllTopic": // minutes 再構築時
         case "removeTopic": // topic 削除時
-          console.log("useVFReactflowStore: topicTree & agenda: init: 0");
           // topic
           useVFReactflowStore.setState({ ...DefaultVFReactflowState });
           initTopicTree({ topics: useVFStore.getState().topics });
@@ -1280,7 +1322,6 @@ useVFStore.subscribe(
           useVFReactflowStore
             .getState()
             .updatedAgenda(useVFStore.getState().startTimestamp);
-          console.log("useVFReactflowStore: topicTree: agenda: init: 1");
           break;
         // トピックの選択
         case "selectTopic":
@@ -1395,7 +1436,7 @@ useVFStore.subscribe(
                         message.id === targetMessage.id &&
                         message.content === targetMessage.content &&
                         message.connectedMessageIds.length ===
-                        targetMessage.connectedMessageIds.length &&
+                          targetMessage.connectedMessageIds.length &&
                         message.connectedMessageIds.every(
                           (id, index) =>
                             id === targetMessage.connectedMessageIds[index]
@@ -1403,7 +1444,7 @@ useVFStore.subscribe(
                         Array.isArray(message.groupIds) &&
                         Array.isArray(targetMessage.groupIds) &&
                         message.groupIds.length ===
-                        targetMessage.groupIds.length &&
+                          targetMessage.groupIds.length &&
                         message.groupIds.every(
                           (id, index) => id === targetMessage.groupIds[index]
                         )
@@ -1447,7 +1488,7 @@ useVFReactflowStore.subscribe(
               (node) =>
                 node.id ===
                 message.connectedMessageIds[
-                message.connectedMessageIds.length - 1
+                  message.connectedMessageIds.length - 1
                 ]
             );
           if (targetNode) {
