@@ -75,8 +75,8 @@
     "@ricky0123/vad-web": "^0.0.19",
     "@types/file-saver": "^2.0.7",
     "@types/wav": "^1.0.4",
+    "@voibo/desktop-audio-capture": "^1.0.0",
     "@xyflow/react": "^12.3.5",
-    "bindings": "^1.5.0",
     "copy-webpack-plugin": "^12.0.2",
     "dayjs": "^1.11.13",
     "dify-client": "^2.3.2",
@@ -138,7 +138,7 @@
       },
       "icon": "resources/icon.png",
       "asarUnpack": [
-        "./dist/desktop-audio-capture/bin/darwin/Release/addon.node"
+        "./node_modules/@voibo/desktop-audio-capture/build/Release/addon.node"
       ]
     },
     "win": {
