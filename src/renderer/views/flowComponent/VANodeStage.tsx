@@ -120,7 +120,7 @@ const VANodeStageCore = (props: {}) => {
 
   // handle lastVFAction
   useEffect(() => {
-    if (guiState.lastVFAction && nodesInitialized) {
+    if (guiState.lastVFAction && nodesInitialized && flowState.topicNodes) {
       switch (guiState.lastVFAction.type) {
         // トピックツリーの初期化
         case "deleteAllTopic": // minutes 再構築時
@@ -128,25 +128,20 @@ const VANodeStageCore = (props: {}) => {
         case "createNewMinutes": //　minutes 作成時
         case "openMinutes": // minutes open時
           console.warn(
-            "VANodeStageCore: lastVFAction: openMinutes/createNewMinutes//"
+            "VANodeStageCore: lastVFAction: openMinutes/createNewMinutes",
+            flowState.topicNodes
           );
           focusFirstTopic(reactFlow);
-          setGUIState({
-            lastVFAction: null,
-          });
           break;
         case "setTopic": // トピック変更時
           console.warn("VANodeStageCore: lastVFAction: setTopic");
           focusLastTopic({ reactFlow, flowState, windowSize });
-          setGUIState({
-            lastVFAction: null,
-          });
           break;
         default:
           break;
       }
     }
-  }, [guiState.lastVFAction, nodesInitialized]);
+  }, [guiState.lastVFAction, nodesInitialized, flowState.topicNodes]);
 
   // DnD
   const reactFlowWrapper = useRef(null);

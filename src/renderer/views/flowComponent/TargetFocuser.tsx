@@ -180,8 +180,11 @@ export function focusAllNodes(
 export function focusFirstTopic(
   reactFlow: ReturnType<typeof useReactFlow>
 ): void {
-  const layoutRoot = getLayoutParam().initialViewPort;
-  reactFlow.setViewport(layoutRoot, StageTransitionOption);
+  console.log("focusFirstTopic");
+  reactFlow.setViewport(
+    getLayoutParam().initialViewPort,
+    StageTransitionOption
+  );
 }
 
 export function focusLastTopic(props: {

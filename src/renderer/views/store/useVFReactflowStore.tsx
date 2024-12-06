@@ -81,13 +81,6 @@ type LayoutParam = {
       y: number;
     };
   };
-  agenda: {
-    width: number;
-    offset: {
-      x: number;
-      y: number;
-    };
-  };
 };
 
 export const getLayoutParam = (): LayoutParam => {
@@ -107,13 +100,6 @@ export const getLayoutParam = (): LayoutParam => {
     },
     assistant: {
       width: 400,
-      offset: {
-        x: 200,
-        y: offsetY,
-      },
-    },
-    agenda: {
-      width: 600,
       offset: {
         x: 200,
         y: offsetY,
@@ -257,39 +243,6 @@ const makeAssistantMessageEdge = (props: {
   };
 };
 
-// # Agenda
-
-const makeAgendaNode = (props: { agenda: Agenda }): AgendaNode => {
-  const { agenda } = props;
-  return {
-    id: agenda.id,
-    type: "agenda",
-    position: agenda.position,
-    width: getLayoutParam().agenda.width,
-    data: {
-      agendaId: agenda.id,
-    },
-    deletable: false,
-    selectable: false,
-  };
-};
-
-const makeAgendaEdge = (props: { source: string; target: string }): Edge => {
-  const { source, target } = props;
-  return {
-    id: `${source}:${target}`,
-    source: source,
-    target: target,
-    deletable: false,
-    sourceHandle: `right-${source}`,
-    targetHandle: `left-${target}`,
-    style: {
-      strokeWidth: 2,
-      stroke: "#94A3B8", // "#94A3B8_slate400"
-    },
-  };
-};
-
 // Content
 
 export const makeContentNode = (props: { content: Content }): ContentNode => {
@@ -338,10 +291,6 @@ export type VFReactflowState = {
   assistantTreeNodes: AssistantMessageNode[];
   assistantTreeEdges: Edge[];
 
-  // agenda
-  agendaNodes: AgendaNode[];
-  agendaTreeEdges: Edge[];
-
   // content
   contentNodes: ContentNode[];
   contentTreeEdges: Edge[];
@@ -377,9 +326,6 @@ export type VFReactflowDispatchStore = {
   layout: (layoutParam: LayoutParam) => void;
   layoutTopics: (measuredNodes: TopicNode[]) => void;
 
-  // Agenda は subscribe で変更できないため
-  updatedAgenda: (minutesStartTimestamp: number | null) => void;
-
   // selection
   getSequencedSelection: () => Array<Content | Topic | Message>;
   deselectAll: () => void;
@@ -408,9 +354,6 @@ export const DefaultVFReactflowState: VFReactflowState = {
   topicTreeEdges: [],
   assistantTreeNodes: [],
   assistantTreeEdges: [],
-
-  agendaNodes: [],
-  agendaTreeEdges: [],
 
   contentNodes: [],
   contentTreeEdges: [],
@@ -840,48 +783,6 @@ export const useVFReactflowStore = create<
         });
       }
     },
-
-    // agenda
-    updatedAgenda: (minutesStartTimestamp) => {
-      if (!minutesStartTimestamp) return;
-      // agenda node
-      const agendaNodes = useAgendaStore
-        .getState()
-        .getAllAgendas()
-        .filter((agenda) => agenda.status !== "waiting")
-        .map((agenda) => makeAgendaNode({ agenda }));
-
-      // agenda edge
-      // topic を軸にして、agenda を結ぶ
-      const agendaTreeEdges: Edge[] = [];
-      useVFStore.getState().topics.forEach((topic) => {
-        if (topic.seedData?.agendaIdList) {
-          topic.seedData.agendaIdList.forEach((agendaId) => {
-            if (agendaNodes.find((node) => node.data.agendaId === agendaId)) {
-              const edgeNode = makeAgendaEdge({
-                source: agendaId,
-                target: topic.id,
-              });
-              if (!agendaTreeEdges.find((edge) => edge.id === edgeNode.id)) {
-                agendaTreeEdges.push(
-                  makeAgendaEdge({
-                    source: agendaId,
-                    target: topic.id,
-                  })
-                );
-              }
-            }
-          });
-        }
-      });
-
-      console.log(
-        "useVFReactFlowStore: updatedAgenda",
-        agendaNodes,
-        agendaTreeEdges
-      );
-      //set({ agendaNodes, agendaTreeEdges });
-    },
   }))
 );
 
@@ -1147,7 +1048,6 @@ useVFReactflowStore.subscribe((current, pre) => {
   if (
     current.topicNodes !== pre.topicNodes ||
     current.assistantTreeNodes !== pre.assistantTreeNodes ||
-    current.agendaNodes !== pre.agendaNodes ||
     current.contentNodes !== pre.contentNodes
   ) {
     // ノードの変更を検知して、トピックツリーを再構築
@@ -1158,13 +1058,11 @@ useVFReactflowStore.subscribe((current, pre) => {
           topicNodes: useVFReactflowStore.getState().topicNodes,
         }),
         ...useVFReactflowStore.getState().assistantTreeNodes,
-        ...useVFReactflowStore.getState().agendaNodes,
         ...useVFReactflowStore.getState().contentNodes,
       ],
       edges: [
         ...useVFReactflowStore.getState().topicTreeEdges,
         ...useVFReactflowStore.getState().assistantTreeEdges,
-        ...useVFReactflowStore.getState().agendaTreeEdges,
       ],
     });
   }
@@ -1255,8 +1153,7 @@ useVFStore.subscribe(
       let topicBothEndsNodes =
         useVFReactflowStore.getState().topicBothEndsNodes;
       switch (lastAction?.type) {
-        // トピックの追加・削除・変更
-        case "updateTopic":
+        case "updateTopic": // トピックの追加・削除・変更
           topicNodes = useVFReactflowStore
             .getState()
             .topicNodes.map((node) =>
@@ -1272,8 +1169,7 @@ useVFStore.subscribe(
             ),
           });
           break;
-        case "setTopic":
-          // Topicを仮配置する。 measure されたあとに正式に配置し直す。
+        case "setTopic": // Topicを仮配置する。 measure されたあとに正式に配置し直す。
           const newTopicNodes = lastAction.payload.topics.map((topic) =>
             makeTopicNode({ topic })
           );
@@ -1318,10 +1214,6 @@ useVFStore.subscribe(
           // topic
           useVFReactflowStore.setState({ ...DefaultVFReactflowState });
           initTopicTree({ topics: useVFStore.getState().topics });
-          // agenda
-          useVFReactflowStore
-            .getState()
-            .updatedAgenda(useVFStore.getState().startTimestamp);
           break;
         // トピックの選択
         case "selectTopic":
@@ -1507,54 +1399,6 @@ useVFReactflowStore.subscribe(
             node.id === b[index].id && node.measured === b[index].measured
         )
       );
-    },
-  }
-);
-
-// Agenda
-// agenda の変更を検知して、agenda node を再構築
-// 注意： agenda の get は感知しないので、そちらは VFStore 側で処理する
-useAgendaStore.subscribe(
-  (state) => {
-    return {
-      agendas: state.getAllAgendas(),
-      discussingAgenda: state.getDiscussingAgenda(),
-      hydrate: state._hasHydrated,
-    };
-  },
-  (assistantsMap) => {
-    // agenda node
-    //console.log("useAgendaStore.subscribe: changed", assistantsMap);
-    useVFReactflowStore
-      .getState()
-      .updatedAgenda(useVFStore.getState().startTimestamp);
-  },
-  {
-    equalityFn: (a, b) => {
-      const isSameHydrate = a.hydrate === b.hydrate;
-      const isSameDiscussingAgenda =
-        (a.discussingAgenda == undefined && b.discussingAgenda == undefined) ||
-        (a.discussingAgenda != undefined &&
-          b.discussingAgenda != undefined &&
-          a.discussingAgenda.agendaId === b.discussingAgenda.agendaId &&
-          a.discussingAgenda.startUTC === b.discussingAgenda.startUTC);
-      const isSameAgendas =
-        a.agendas.length === b.agendas.length &&
-        a.agendas.every((agenda) => {
-          const target = b.agendas.find((bAgenda) => bAgenda.id === agenda.id);
-          if (target) {
-            return (
-              agenda.title === target.title &&
-              agenda.classification === target.classification &&
-              agenda.category === target.category &&
-              agenda.status === target.status &&
-              // FIXME
-              agenda.discussedTimes.length === target.discussedTimes.length
-            );
-          }
-          return false;
-        });
-      return isSameHydrate && isSameDiscussingAgenda && isSameAgendas;
     },
   }
 );
