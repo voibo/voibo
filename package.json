@@ -18,8 +18,7 @@
     "clean": "run-p clean:webpack clean:electron",
     "clean:webpack": "rimraf dist",
     "clean:electron": "rimraf built",
-    "add-license": "node scripts/add-license.cjs",
-    "replace-license": "node scripts/replace-license.cjs"
+    "add-license": "node scripts/add-license.cjs"
   },
   "keywords": [],
   "electronmon": {
