@@ -16,10 +16,7 @@ limitations under the License.
 import { ZoomIn, ZoomOut } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import { MiniMap, useReactFlow, useViewport } from "@xyflow/react";
-import { Dispatch, SetStateAction } from "react";
-import { VANodeStageGUIState } from "./VANodeStage.jsx";
-
-export const StageTransitionOption = { padding: 0.1, duration: 100 };
+import { StageTransitionOption } from "./TargetFocuser.jsx";
 
 export type ChangeViewMode =
   | "topicStart"
@@ -28,10 +25,7 @@ export type ChangeViewMode =
   | "zoomOut"
   | "fit";
 
-export const CustomMiniMap = (props: {
-  guiState: VANodeStageGUIState;
-  setGUIState: Dispatch<SetStateAction<VANodeStageGUIState>>;
-}) => {
+export const CustomMiniMap = () => {
   const reactFlow = useReactFlow();
   const { zoom } = useViewport();
 
