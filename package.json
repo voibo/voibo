@@ -1,7 +1,7 @@
 {
   "name": "Voibo",
   "description": "Collaborative Meeting Intelligence Platform",
-  "author": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+  "author": "(c) 2024 Voibo",
   "license": "Apache-2.0",
   "version": "0.0.0",
   "main": "dist/main.mjs",
@@ -18,7 +18,8 @@
     "clean": "run-p clean:webpack clean:electron",
     "clean:webpack": "rimraf dist",
     "clean:electron": "rimraf built",
-    "add-license": "node scripts/add-license.cjs"
+    "add-license": "node scripts/add-license.cjs",
+    "replace-license": "node scripts/replace-license.cjs"
   },
   "keywords": [],
   "electronmon": {
@@ -115,7 +116,7 @@
   "build": {
     "productName": "Voibo",
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
-    "copyright": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+    "copyright": "(c) 2024 Voibo",
     "files": [
       "dist/**/*"
     ],
