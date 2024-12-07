@@ -699,9 +699,6 @@ export const useVFReactflowStore = create<
 
       // 反映された topic の位置を元に、assistant の対象位置を更新
 
-      // Agenda
-      // locateAgenda();
-
       // Assistant location
       // Content
       contentNodes.forEach((contentNode) =>
@@ -882,12 +879,26 @@ const updateNodePosition = (node: Node) => {
   if (!startTimestamp) return;
   switch (node.type) {
     case "topic":
-      // ここで vfDispatch を経由してはいけない。
+      /*
+      // ここで vfDispatch を経由してはいけない。 => この方法だと VFStore の永続化は Zustand の middleware が担当していないので、変更できない。
       useVFStore.getState().updateTopic({
         ...(node as TopicNode).data.content,
         position: {
           x: node.position.x,
           y: node.position.y,
+        },
+      });
+      */
+      useVFStore.getState().vfDispatch({
+        type: "updateTopic",
+        payload: {
+          topic: {
+            ...(node as TopicNode).data.content,
+            position: {
+              x: node.position.x,
+              y: node.position.y,
+            },
+          },
         },
       });
       break;
