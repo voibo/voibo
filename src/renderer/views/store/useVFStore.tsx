@@ -575,7 +575,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         ...state,
         discussionSplitter: { ...action.payload.splitterConf },
       };
-      console.log("changeDiscussionSplitterConf", result);
       return result;
     case "updateTopic":
       return {
@@ -599,7 +598,6 @@ export const vfCoreReducer = (state: VFState, action: VFAction): VFState => {
 
 export type VFDispatchStore = {
   vfDispatch: (action: VFAction) => void;
-  mergeSequentialTopics: (topics: Topic[]) => void;
   updateTopic: (topic: Topic) => void;
 };
 // VFCoreStateストア
@@ -607,34 +605,6 @@ export const useVFStore = create<VFState & VFDispatchStore>()(
   subscribeWithSelector((set, get) => ({
     ...initVFState(),
     vfDispatch: (action) => set((state) => vfCoreReducer(state, action)),
-    mergeSequentialTopics: (topics) => {
-      const sequentialTopics = filterSequentialTopics(topics);
-      if (sequentialTopics.length > 1) {
-        const firstTopic = sequentialTopics[0].topic;
-        const lastTopic = sequentialTopics[sequentialTopics.length - 1].topic;
-
-        // 最初のTopicを更新（IDは再利用）、それ以外のTopicは削除する。
-        // 合成されて削除されるTopicのIDを利用するConnectedIdをさがして、更新する。
-        // 当該IDを利用するEdgeも更新し、表示を点線にする。
-
-        const mergedTopic: Topic = {
-          ...firstTopic,
-          title: sequentialTopics
-            .map((item) => item.topic.title)
-            .join(" / ")
-            .slice(0, 100),
-        };
-        set((state) => ({
-          ...state,
-          topics: state.topics
-            .filter(
-              (topic) =>
-                !sequentialTopics.map((item) => item.topic).includes(topic)
-            )
-            .concat(mergedTopic),
-        }));
-      }
-    },
     updateTopic: (topic) => {
       set({
         topics: get().topics.map((currentTopic) =>

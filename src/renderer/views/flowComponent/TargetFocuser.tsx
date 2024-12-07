@@ -14,26 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { FilterCenterFocus, Folder, ViewAgenda } from "@mui/icons-material";
+import { Button, ListSubheader, MenuItem, Select } from "@mui/material";
 import {
-  Autocomplete,
-  AutocompleteRenderGroupParams,
-  Button,
-  ListSubheader,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
-import { getNodesBounds, useReactFlow } from "@xyflow/react";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+  getNodesBounds,
+  useNodesInitialized,
+  useReactFlow,
+} from "@xyflow/react";
+import { useEffect, useState } from "react";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import {
   getLayoutParam,
   useVFReactflowStore,
+  VFReactflowDispatchStore,
+  VFReactflowState,
 } from "../store/useVFReactflowStore.jsx";
 import { useVFStore } from "../store/useVFStore.jsx";
-import useWindowSize from "../useWindowSize.jsx";
-import { StageTransitionOption } from "./CustomMiniMap.jsx";
+import { useWindowSize } from "../useWindowSize.jsx";
+
+export const StageTransitionOption = { padding: 0.1, duration: 100 };
 
 type TargetFocuserOption = {
   type: "system" | "agenda" | "group";
@@ -44,13 +43,22 @@ type TargetFocuserOption = {
 export const TargetFocuser = () => {
   const startTimestamp = useVFStore.getState().startTimestamp ?? 0;
 
+  const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized({
+    includeHiddenNodes: true,
+  });
+  const flowState = useVFReactflowStore((state) => state);
+  const windowSize = useWindowSize();
+
   const systemList: Array<TargetFocuserOption> = [
     { type: "system", label: "All nodes", id: "all_nodes" },
     { type: "system", label: "First topic", id: "first_topic" },
     { type: "system", label: "Last topic", id: "last_topic" },
   ];
   const agendaList = useAgendaStore.getState().getAllAgendas();
-  const groupList = useMinutesGroupStore(startTimestamp).getState().getAllGroup();
+  const groupList = useMinutesGroupStore(startTimestamp)
+    .getState()
+    .getAllGroup();
 
   const options: Array<TargetFocuserOption> = [
     ...systemList,
@@ -69,62 +77,40 @@ export const TargetFocuser = () => {
   const [targetFocus, setTargetFocus] = useState<TargetFocuserOption>(
     options[0]
   );
+
+  // minutes 変更時
   useEffect(() => {
-    setTargetFocus(options[0]);
-  }, [startTimestamp]);
+    if (nodesInitialized) {
+      const timerId = setTimeout(() => setTargetFocus(options[2]), 500); // 500 msec はマジックナンバー
+      return () => clearTimeout(timerId);
+    }
+  }, [startTimestamp, nodesInitialized]);
 
   // フォーカス対象の変更
-  const reactFlow = useReactFlow();
-  const flowState = useVFReactflowStore((state) => state);
-  const windowSize = useWindowSize();
   const handleFocus = () => {
-    const layoutRoot = getLayoutParam().initialViewPort;
     switch (targetFocus.type) {
       case "system":
         switch (targetFocus.id) {
           case "all_nodes":
-            reactFlow.fitView(StageTransitionOption);
+            focusAllNodes(reactFlow);
             break;
           case "first_topic":
-            reactFlow.setViewport(layoutRoot, StageTransitionOption);
+            focusFirstTopic(reactFlow);
             break;
           case "last_topic":
-            const discussionNode = flowState.topicBothEndsNodes[1];
-            const newY =
-              (discussionNode?.position.y || 0) * -1 +
-              windowSize.height -
-              (discussionNode?.measured?.height ?? 0) -
-              200; // header height と footer height を考慮したマジックナンバー;
-            reactFlow.setViewport(
-              {
-                x: discussionNode.position.x * layoutRoot.zoom,
-                y: newY * layoutRoot.zoom,
-                zoom: layoutRoot.zoom,
-              },
-              StageTransitionOption
-            );
+            focusLastTopic({ reactFlow, flowState, windowSize });
             break;
         }
         break;
       case "agenda":
       case "group":
         if (targetFocus.id) {
-          const targetNodes = flowState
-            .getContentImplementedNodes()
-            .filter((node) =>
-              (targetFocus.type === "agenda"
-                ? node.data.content.agendaIds ?? []
-                : node.data.content.groupIds ?? []
-              ).includes(targetFocus.id)
-            );
-          if (targetNodes.length === 0) {
-            console.log("No nodes found in the agenda.");
-            return;
-          }
-          reactFlow.fitBounds(
-            getNodesBounds(targetNodes),
-            StageTransitionOption
-          );
+          focusGroup({
+            reactFlow,
+            flowState,
+            targetId: targetFocus.id,
+            targetType: targetFocus.type,
+          });
         }
         break;
     }
@@ -196,71 +182,65 @@ export const TargetFocuser = () => {
   );
 };
 
-const TargetFocuserAutocomplete = (props: {
-  options: Array<TargetFocuserOption>;
-  handleFocus: (event: any) => void;
-  targetFocus: TargetFocuserOption;
-  setTargetFocus: Dispatch<SetStateAction<TargetFocuserOption>>;
-}) => {
-  const { options, handleFocus, targetFocus, setTargetFocus } = props;
+// == Focus function ==
 
-  const handleOnChange = (event: any, newValue: TargetFocuserOption | null) => {
-    if (newValue) {
-      setTargetFocus(newValue);
-      handleFocus(event);
-    }
-  };
+export function focusAllNodes(
+  reactFlow: ReturnType<typeof useReactFlow>
+): void {
+  reactFlow.fitView(StageTransitionOption);
+}
 
-  const renderGroup = (params: AutocompleteRenderGroupParams) => {
-    const { key, group, children } = params;
-    let groupHeader = <></>;
-    switch (group) {
-      case "agenda":
-        groupHeader = (
-          <div className="text-white bg-blue-600 p-1 text-sm">
-            <ViewAgenda className="mr-2" />
-            Agenda
-          </div>
-        );
-        break;
-      case "group":
-        groupHeader = (
-          <div className="text-white bg-orange-600 p-1 text-sm">
-            <Folder className="mr-2" />
-            Group
-          </div>
-        );
-        break;
-      case "system": // 何も入れない
-      default:
-        break;
-    }
-
-    return (
-      <div key={key}>
-        {groupHeader}
-        {children}
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <Autocomplete
-        fullWidth
-        size="small"
-        options={options}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
-        value={targetFocus}
-        groupBy={(option) => option.type}
-        renderGroup={renderGroup}
-        renderInput={(params) => <TextField {...params} />}
-        onChange={handleOnChange}
-        className="text-white bg-white"
-      />
-      <Button className="text-white min-w-0" onClick={handleFocus}>
-        <FilterCenterFocus />
-      </Button>
-    </>
+export function focusFirstTopic(
+  reactFlow: ReturnType<typeof useReactFlow>
+): void {
+  console.log("focusFirstTopic");
+  reactFlow.setViewport(
+    getLayoutParam().initialViewPort,
+    StageTransitionOption
   );
-};
+}
+
+export function focusLastTopic(props: {
+  reactFlow: ReturnType<typeof useReactFlow>;
+  flowState: VFReactflowState & VFReactflowDispatchStore;
+  windowSize: ReturnType<typeof useWindowSize>;
+}): void {
+  const { reactFlow, flowState, windowSize } = props;
+  const layoutRoot = getLayoutParam().initialViewPort;
+  const discussionNode = flowState.topicBothEndsNodes[1];
+  const newY =
+    (discussionNode?.position.y || 0) * -1 +
+    windowSize.height -
+    (discussionNode?.measured?.height ?? 0) -
+    200; // header height と footer height を考慮したマジックナンバー;
+  reactFlow.setViewport(
+    {
+      x: discussionNode.position.x * layoutRoot.zoom,
+      y: newY * layoutRoot.zoom,
+      zoom: layoutRoot.zoom,
+    },
+    StageTransitionOption
+  );
+}
+
+export function focusGroup(props: {
+  reactFlow: ReturnType<typeof useReactFlow>;
+  flowState: VFReactflowState & VFReactflowDispatchStore;
+  targetId: string;
+  targetType: "group" | "agenda";
+}): void {
+  const { reactFlow, flowState, targetId, targetType } = props;
+  const targetNodes = flowState
+    .getContentImplementedNodes()
+    .filter((node) =>
+      (targetType === "agenda"
+        ? node.data.content.agendaIds ?? []
+        : node.data.content.groupIds ?? []
+      ).includes(targetId)
+    );
+  if (targetNodes.length === 0) {
+    console.log(`No nodes found in the ${targetType}.`);
+    return;
+  }
+  reactFlow.fitBounds(getNodesBounds(targetNodes), StageTransitionOption);
+}

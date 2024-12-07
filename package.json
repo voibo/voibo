@@ -123,7 +123,7 @@
       "output": "built"
     },
     "mac": {
-      "appId": "org.voibo.app.v0",
+      "appId": "org.voibo.app.v1",
       "target": [
         "dmg"
       ],
@@ -131,7 +131,6 @@
       "entitlementsInherit": "./resources/entitlements.mac.plist",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "identity": "506844D720927340EA2C8E67F45C0F1795FF52A6",
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Please give us access to your microphone",
         "com.apple.security.device.audio-input": true

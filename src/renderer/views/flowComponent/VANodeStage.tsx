@@ -30,7 +30,6 @@ import { AgendaPanel } from "../agenda/AgendaPanel.jsx";
 import { Content, getDefaultContent } from "../store/Content.js";
 import { useMinutesContentStore } from "../store/useContentStore.js";
 import {
-  getLayoutParam,
   useVFReactflowStore,
   VFReactflowDispatchStore,
   VFReactflowState,
@@ -42,9 +41,9 @@ import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
 import ContentNode from "./node/ContentNode.jsx";
 import DiscussionNode from "./node/DisscussionNode.jsx";
 import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
-import TopicNode, { TopicNode as TopicNodeType } from "./node/TopicNode.jsx";
+import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
-import { TargetFocuser } from "./TargetFocuser.jsx";
+import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
 
 const ZOOM_MIN = 0.001;
 
@@ -95,14 +94,10 @@ const VANodeStageCore = (props: {}) => {
   const nodesInitialized = useNodesInitialized({
     includeHiddenNodes: true,
   });
-  const layoutParam = getLayoutParam();
 
   const [guiState, setGUIState] = useState<VANodeStageGUIState>({
     lastVFAction: null,
-    //viewport: layoutParam.initialViewPort,
   });
-  const reactFlow = useReactFlow();
-
   // subscribe lastAction to update GUI
   useVFStore.subscribe(
     (state) => state.lastAction,
@@ -114,96 +109,35 @@ const VANodeStageCore = (props: {}) => {
     }
   );
 
-  /*
-
-  // subscribe _layoutTopicsQueue to update GUI
-  const [layoutTopicsQueue, setLayoutTopicsQueue] = useState<
-    Array<TopicNodeType>
-  >([]);
-  useVFReactflowStore.subscribe(
-    (state) => state._layoutTopicsQueue,
-    (layoutTopicsQueue) => setLayoutTopicsQueue(layoutTopicsQueue)
-  );
-
-  useEffect(() => {
-    if (nodesInitialized) {
-      console.warn("VANodeStageCore: nodesInitialized", layoutTopicsQueue);
-      if (layoutTopicsQueue.length > 0) {
-        layoutTopics();
-      }
-    }
-  }, [nodesInitialized]);
-  */
+  const reactFlow = useReactFlow();
+  const flowState = useVFReactflowStore((state) => state);
 
   // handle lastVFAction
-
   useEffect(() => {
-    if (guiState.lastVFAction) {
-      //console.log("VANodeStageCore: lastVFAction", guiState.lastVFAction);
+    if (guiState.lastVFAction && nodesInitialized && flowState.topicNodes) {
       switch (guiState.lastVFAction.type) {
         // トピックツリーの初期化
         case "deleteAllTopic": // minutes 再構築時
         case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
-          setGUIState({
-            lastVFAction: null,
-          });
-          reactFlow.setViewport(getLayoutParam().initialViewPort); // 即時反映
+          focusFirstTopic(reactFlow);
           break;
         case "createNewMinutes": //　minutes 作成時
         case "openMinutes": // minutes open時
-          //console.warn("VANodeStageCore: lastVFAction: openMinutes");
-          setGUIState({
-            lastVFAction: null,
-          });
-          const wait = new Promise((resolve) => setTimeout(resolve, 500));
-          reactFlow.zoomTo(ZOOM_MIN).then(() => {
-            // FIXME
-            // 500ms は暫定で逃げている。呼び出すデータが大きいともっと時間がかかるかもしれない。
-            // zustand の store を subscribe して、自動的に再描画するロジックと、おそらくぶつかっているので、そちらとの調整が必要
-            wait.then(() => {
-              /*
-              console.warn(
-                "VANodeStageCore: lastVFAction: openMinutes: setGUIState"
-              );
-              */
-              reactFlow.setViewport(getLayoutParam().initialViewPort, {
-                duration: 100,
-              });
-            });
-          });
+          // このときには TargetFocuser の初期値によりFocusされる
           break;
-        /*
         case "setTopic": // トピック変更時
-        // FIXME:　setTopicの内部で、Position更新のために updateTopicを読んでしまっているので、Actionの最後が setTopicとならない
-          console.log(
-            "VANodeStageCore: lastVFAction: setTopic",
-            guiState.lastVFAction.payload.topics
-          );
-          if (
-            guiState.lastVFAction.payload.topics &&
-            guiState.lastVFAction.payload.topics.length > 0
-          ) {
-            // 本来は agenda 単位で表示するべきだが、とりあえず最後のトピックにフォーカスする
-            const messageId =
-              guiState.lastVFAction.payload.topics[
-                guiState.lastVFAction.payload.topics.length - 1
-              ].id;
-            const node = reactFlow.getNode(messageId);
-            if (node) {
-              reactFlow.fitView({
-                nodes: [node],
-                maxZoom: 1,
-                minZoom: ZOOM_MIN,
-              });
-            }
-          }
+          // FIXME
+          // Topic の position 更新を永続化させるために useVFReactflowStore:updateNodePosition にて、
+          // useVFStore.getState().vfDispatch({type: "updateTopic"/// を使わざるを得ず、
+          // このタイミングでは setTopic が呼ばれない事になっている。
+          // VFStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
+          // focusLastTopic({ reactFlow, flowState, windowSize });
           break;
-          */
         default:
           break;
       }
     }
-  }, [guiState.lastVFAction]);
+  }, [guiState.lastVFAction, nodesInitialized, flowState.topicNodes]);
 
   // DnD
   const reactFlowWrapper = useRef(null);
@@ -255,7 +189,6 @@ const VANodeStageCore = (props: {}) => {
           topicHeader: TopicHeaderNode,
           discussion: DiscussionNode,
           assistantMessage: AssistantMessageNode,
-          //agenda: AgendaNode,
           content: ContentNode,
         }}
         panOnScroll={true}
@@ -265,7 +198,7 @@ const VANodeStageCore = (props: {}) => {
         selectionMode={SelectionMode.Partial}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-        <CustomMiniMap guiState={guiState} setGUIState={setGUIState} />
+        <CustomMiniMap />
         <div className="absolute top-2 right-2 z-10">
           <AgendaPanel />
         </div>

@@ -15,7 +15,7 @@ limitations under the License.
 */
 import { useEffect, useState } from "react";
 
-const useWindowSize = () => {
+export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -39,5 +39,3 @@ const useWindowSize = () => {
 
   return windowSize;
 };
-
-export default useWindowSize;
