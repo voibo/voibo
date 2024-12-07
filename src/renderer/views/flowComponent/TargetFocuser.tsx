@@ -15,7 +15,11 @@ limitations under the License.
 */
 import { FilterCenterFocus, Folder, ViewAgenda } from "@mui/icons-material";
 import { Button, ListSubheader, MenuItem, Select } from "@mui/material";
-import { getNodesBounds, useReactFlow } from "@xyflow/react";
+import {
+  getNodesBounds,
+  useNodesInitialized,
+  useReactFlow,
+} from "@xyflow/react";
 import { useEffect, useState } from "react";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
@@ -38,6 +42,13 @@ type TargetFocuserOption = {
 
 export const TargetFocuser = () => {
   const startTimestamp = useVFStore.getState().startTimestamp ?? 0;
+
+  const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized({
+    includeHiddenNodes: true,
+  });
+  const flowState = useVFReactflowStore((state) => state);
+  const windowSize = useWindowSize();
 
   const systemList: Array<TargetFocuserOption> = [
     { type: "system", label: "All nodes", id: "all_nodes" },
@@ -66,14 +77,16 @@ export const TargetFocuser = () => {
   const [targetFocus, setTargetFocus] = useState<TargetFocuserOption>(
     options[0]
   );
+
+  // minutes 変更時
   useEffect(() => {
-    setTargetFocus(options[0]);
-  }, [startTimestamp]);
+    if (nodesInitialized) {
+      const timerId = setTimeout(() => setTargetFocus(options[2]), 500); // 500 msec はマジックナンバー
+      return () => clearTimeout(timerId);
+    }
+  }, [startTimestamp, nodesInitialized]);
 
   // フォーカス対象の変更
-  const reactFlow = useReactFlow();
-  const flowState = useVFReactflowStore((state) => state);
-  const windowSize = useWindowSize();
   const handleFocus = () => {
     switch (targetFocus.type) {
       case "system":

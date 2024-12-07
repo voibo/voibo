@@ -575,7 +575,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         ...state,
         discussionSplitter: { ...action.payload.splitterConf },
       };
-      console.log("changeDiscussionSplitterConf", result);
       return result;
     case "updateTopic":
       return {

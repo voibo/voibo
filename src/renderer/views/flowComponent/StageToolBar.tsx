@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { AlignHorizontalLeft, NoteAdd } from "@mui/icons-material";
-import { Button } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
 import {
   getLayoutParam,
   useVFReactflowStore,
@@ -29,14 +29,7 @@ export const StageToolBar = () => {
         <ContentsMakerButton />
       </div>
       <div className="flex flex-col rounded border border-white bg-indigo-950">
-        <Button
-          className="text-white min-w-0"
-          onClick={() => {
-            layout(getLayoutParam());
-          }}
-        >
-          <AlignHorizontalLeft />
-        </Button>
+        <LayoutButton />
       </div>
     </div>
   );
@@ -49,12 +42,30 @@ const ContentsMakerButton = () => {
     event.dataTransfer.effectAllowed = "move";
   };
   return (
-    <Button
-      className="text-white min-w-0"
-      onDragStart={(event) => onDragStart(event, "input")}
-      draggable
-    >
-      <NoteAdd className="text-white" />
-    </Button>
+    <Tooltip title="Drag to create new content" placement="right">
+      <Button
+        className="text-white min-w-0"
+        onDragStart={(event) => onDragStart(event, "input")}
+        draggable
+      >
+        <NoteAdd className="text-white" />
+      </Button>
+    </Tooltip>
+  );
+};
+
+const LayoutButton = () => {
+  const layout = useVFReactflowStore((state) => state.layout);
+  return (
+    <Tooltip title="Layout automatically" placement="right">
+      <Button
+        className="text-white min-w-0"
+        onClick={() => {
+          layout(getLayoutParam());
+        }}
+      >
+        <AlignHorizontalLeft />
+      </Button>
+    </Tooltip>
   );
 };

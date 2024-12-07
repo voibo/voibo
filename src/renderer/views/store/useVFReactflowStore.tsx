@@ -846,7 +846,6 @@ const updateTopicNode = (props: { targetTopic: Topic }) => {
   if (storedTopicNode) {
     storedTopicNode.data.content = targetTopic;
     useVFReactflowStore.getState().upsertTopicNode(storedTopicNode);
-    console.log("updateTopicNode", storedTopicNode);
   }
 };
 

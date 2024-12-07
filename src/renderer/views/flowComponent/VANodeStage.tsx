@@ -43,12 +43,7 @@ import DiscussionNode from "./node/DisscussionNode.jsx";
 import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
 import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
-import {
-  focusFirstTopic,
-  focusLastTopic,
-  TargetFocuser,
-} from "./TargetFocuser.jsx";
-import { useWindowSize } from "../useWindowSize.jsx";
+import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
 
 const ZOOM_MIN = 0.001;
 
@@ -116,7 +111,6 @@ const VANodeStageCore = (props: {}) => {
 
   const reactFlow = useReactFlow();
   const flowState = useVFReactflowStore((state) => state);
-  const windowSize = useWindowSize();
 
   // handle lastVFAction
   useEffect(() => {
@@ -125,17 +119,19 @@ const VANodeStageCore = (props: {}) => {
         // トピックツリーの初期化
         case "deleteAllTopic": // minutes 再構築時
         case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
-        case "createNewMinutes": //　minutes 作成時
-        case "openMinutes": // minutes open時
-          console.warn(
-            "VANodeStageCore: lastVFAction: openMinutes/createNewMinutes",
-            flowState.topicNodes
-          );
           focusFirstTopic(reactFlow);
           break;
+        case "createNewMinutes": //　minutes 作成時
+        case "openMinutes": // minutes open時
+          // このときには TargetFocuser の初期値によりFocusされる
+          break;
         case "setTopic": // トピック変更時
-          console.warn("VANodeStageCore: lastVFAction: setTopic");
-          focusLastTopic({ reactFlow, flowState, windowSize });
+          // FIXME
+          // Topic の position 更新を永続化させるために useVFReactflowStore:updateNodePosition にて、
+          // useVFStore.getState().vfDispatch({type: "updateTopic"/// を使わざるを得ず、
+          // このタイミングでは setTopic が呼ばれない事になっている。
+          // VFStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
+          // focusLastTopic({ reactFlow, flowState, windowSize });
           break;
         default:
           break;
@@ -193,7 +189,6 @@ const VANodeStageCore = (props: {}) => {
           topicHeader: TopicHeaderNode,
           discussion: DiscussionNode,
           assistantMessage: AssistantMessageNode,
-          //agenda: AgendaNode,
           content: ContentNode,
         }}
         panOnScroll={true}
