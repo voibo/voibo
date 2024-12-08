@@ -81,6 +81,11 @@ export const VFPage = () => {
     switch (vfState.needToSaveOnDB) {
       // == minutes ==
       case "createNewMinutes":
+        // renderer
+        useMinutesTitle.setMinutesTitle({
+          title: vfState.minutesTitle,
+          startTimestamp: vfState.startTimestamp!,
+        });
         // server
         window.electron.send(
           IPCSenderKeys.CREATE_MINUTES,

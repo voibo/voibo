@@ -96,9 +96,10 @@ export const HeaderComponent = () => {
 const MinutesTitle = (props: {}) => {
   const vfState = useVFStore((state) => state);
   const useMinutesTitle = useMinutesTitleStore((state) => state);
-  let minutesTitle = useMinutesTitle.getMinutesTitle(
-    vfState.startTimestamp ?? 0
-  );
+  const defaultTitle = `会議: ${formatTimestamp(vfState.startTimestamp)}`;
+  let minutesTitle =
+    useMinutesTitle.getMinutesTitle(vfState.startTimestamp ?? 0) ??
+    defaultTitle;
 
   // current title
   const [currentMinutesTitle, setMinutesTitle] = useState(minutesTitle);
@@ -114,7 +115,6 @@ const MinutesTitle = (props: {}) => {
 
   const handleBlurMinutesTitle = (event: any) => {
     if (vfState.startTimestamp) {
-      const defaultTitle = `会議: ${formatTimestamp(vfState.startTimestamp)}`;
       const title =
         currentMinutesTitle && currentMinutesTitle != ""
           ? currentMinutesTitle

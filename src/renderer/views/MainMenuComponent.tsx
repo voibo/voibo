@@ -22,7 +22,7 @@ import {
   MenuItem,
   MenuList,
 } from "@mui/material";
-import { Dispatch, useEffect, useState } from "react";
+import { Dispatch } from "react";
 import { useIndexedDB } from "react-indexed-db-hook";
 import { TopicSchema } from "../../main/agent/agentManagerDefinition.js";
 import { drawerWidth } from "./VFPage.jsx";
@@ -47,7 +47,7 @@ export const MainMenuComponent = (props: {
     const loadTargetTitle =
       event.currentTarget.closest("[data-title]").dataset?.title;
     // load
-    if (loadTargetSavedMinutes && loadTargetTitle) {
+    if (loadTargetSavedMinutes) {
       minutesDB
         .getByID<MinutesRecord>(Number(loadTargetSavedMinutes))
         .then((record) => {
@@ -80,7 +80,7 @@ export const MainMenuComponent = (props: {
 
   const storedMinutes = useMinutesTitleStore((state) => state)
     .getAllMinutesTitles()
-    .sort();
+    .sort((a, b) => b.startTimestamp - a.startTimestamp);
 
   return (
     <Drawer

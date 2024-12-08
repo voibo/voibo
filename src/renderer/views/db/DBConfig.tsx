@@ -22,10 +22,6 @@ import { Topic } from "../topic/Topic.js";
 // table name
 export const DB_MINUTES = "minutes";
 
-// record key
-export const DB_KEY_AUDIO_SETTINGS = "audioSettings";
-export const DB_KEY_COMMON_SETTINGS = "commonSettings";
-
 export const DBConfig = {
   name: "VF_DB",
   version: 9,

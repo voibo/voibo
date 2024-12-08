@@ -70,8 +70,8 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
       removeMinutesTitle: (startTimestamp) => {
         set(
           produce((state) => {
-            (state.minutesTitleMap as Map<number, string>).delete(
-              startTimestamp
+            (state.minutesTitleMap as Map<string, string>).delete(
+              startTimestamp.toString()
             );
           })
         );
