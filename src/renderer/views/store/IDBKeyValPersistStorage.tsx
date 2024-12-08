@@ -36,7 +36,7 @@ export const IDBKeyValPersistStorage: StateStorage = {
 export const IDBKeyValKeys = {
   AGENDAS_STORE: "agendas",
   SETTINGS_STORE: "settings",
-  ASSISTANT_STORE: "assistant",
+  MINUTES_TITLE_STORE: "minutesTitle",
 };
 
 // === Hydrate ===

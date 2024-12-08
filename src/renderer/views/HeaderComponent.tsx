@@ -31,7 +31,7 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import React, { Dispatch, useEffect, useState } from "react";
+import React, { ChangeEvent, Dispatch, useEffect, useState } from "react";
 import { formatTimestamp } from "../util.js";
 import { VirtualAssistantManager } from "./assistant/VirtualAssistantManager.jsx";
 import { useConfirmDialog } from "./common/useConfirmDialog.jsx";
@@ -39,6 +39,7 @@ import { useDetailViewDialog } from "./common/useDetailViewDialog.jsx";
 import { useVFStore, VFAction, VFState } from "./store/useVFStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
 import { useDownloadMinutes } from "./VFPage.jsx";
+import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const HeaderComponent = () => {
   const vfState = useVFStore((state) => state);
@@ -70,7 +71,7 @@ export const HeaderComponent = () => {
           />
         </IconButton>
         <div className="flex flex-row items-end">
-          <MinutesTitle title={vfState.minutesTitle} vfdDispatch={vfDispatch} />
+          <MinutesTitle />
           <div className="ml-4 flex flex-row text-xs items-center text-white/50">
             <AccessTime className="h-4 w-4 mr-2" />
             <div className="w-12">
@@ -92,31 +93,47 @@ export const HeaderComponent = () => {
   );
 };
 
-const MinutesTitle = (props: {
-  title: string;
-  vfdDispatch: Dispatch<VFAction>;
-}) => {
-  const { title, vfdDispatch } = props;
-  const [minutesTitle, setMinutesTitle] = useState(title);
+const MinutesTitle = (props: {}) => {
+  const vfState = useVFStore((state) => state);
+  const useMinutesTitle = useMinutesTitleStore((state) => state);
+  let minutesTitle = useMinutesTitle.getMinutesTitle(
+    vfState.startTimestamp ?? 0
+  );
+
+  // current title
+  const [currentMinutesTitle, setMinutesTitle] = useState(minutesTitle);
   useEffect(() => {
-    setMinutesTitle(title);
-  }, [title]);
+    setMinutesTitle(minutesTitle);
+  }, [minutesTitle]);
+
+  const handleChangeMinutesTitle = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setMinutesTitle(event.target.value);
+  };
+
+  const handleBlurMinutesTitle = (event: any) => {
+    if (vfState.startTimestamp) {
+      const defaultTitle = `会議: ${formatTimestamp(vfState.startTimestamp)}`;
+      const title =
+        currentMinutesTitle && currentMinutesTitle != ""
+          ? currentMinutesTitle
+          : defaultTitle;
+      setMinutesTitle(title);
+      useMinutesTitle.setMinutesTitle({
+        title,
+        startTimestamp: vfState.startTimestamp,
+      });
+    }
+  };
+
   return (
     <FormControl className="ml-2 pt-2 w-48 ">
       <TextField
-        value={minutesTitle}
+        value={currentMinutesTitle}
         variant="standard"
-        onChange={(event) => {
-          setMinutesTitle(event.target.value);
-        }}
-        onBlur={(event) => {
-          vfdDispatch({
-            type: "updateMinutesTitle",
-            payload: {
-              minutesTitle: event.target.value,
-            },
-          });
-        }}
+        onChange={handleChangeMinutesTitle}
+        onBlur={handleBlurMinutesTitle}
         sx={{ input: { color: "white" } }}
       />
     </FormControl>
@@ -169,7 +186,8 @@ const OthersMenuButton = (props: {
   };
 
   // menu item events
-  const downloadMinutes = useDownloadMinutes();
+  const useMinutesTitle = useMinutesTitleStore.getState();
+  const downloadMinutes = useDownloadMinutes(useMinutesTitle);
 
   // menu item events
   const handleBack = () => {

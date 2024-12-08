@@ -23,19 +23,17 @@ import { IPCInvokeKeys, IPCSenderKeys } from "../../common/constants.js";
 import { AssistantAIData } from "../../main/agent/agentManagerDefinition.js";
 import { HeaderComponent } from "./HeaderComponent.jsx";
 import { MainMenuComponent } from "./MainMenuComponent.jsx";
-import {
-  DB_MINUTES,
-  DB_MINUTES_TITLES,
-  Minutes,
-  MinutesRecord,
-  MinutesTitleRecord,
-} from "./db/DBConfig.jsx";
+import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
 import { VANodeStage } from "./flowComponent/VANodeStage.jsx";
 import { VFSettings } from "./setting/VFSettings.jsx";
 import { useTopicStore } from "./store/useTopicManagerStore.jsx";
 import { useVAConfEffect } from "./store/useVAConfStore.jsx";
 import { useVFStore } from "./store/useVFStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
+import {
+  MinutesTitleStore,
+  useMinutesTitleStore,
+} from "./store/useMinutesTitle.jsx";
 
 export const drawerWidth = 240;
 
@@ -65,39 +63,37 @@ const MainComponent = styled("div", {
  * @returns
  */
 export const VFPage = () => {
-  const minutesTitlesDB = useIndexedDB(DB_MINUTES_TITLES);
   const minutesDB = useIndexedDB(DB_MINUTES);
 
   // == VF state / dispatch w/ Zustand ==
   const vfState = useVFStore((state) => state);
   const vfDispatch = useVFStore((state) => state.vfDispatch);
   const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
+  const useMinutesTitle = useMinutesTitleStore();
 
   // ==  VA Config ==
   useVAConfEffect();
 
   // == Save to IndexedDB ==
   useEffect(() => {
-    let needToUpdateMinutesTitle = false;
     let needToUpdateMinutes = false;
 
     switch (vfState.needToSaveOnDB) {
       // == minutes ==
-      case "updateMinutesTitle":
-        needToUpdateMinutesTitle = true;
-        break;
       case "createNewMinutes":
         // server
         window.electron.send(
           IPCSenderKeys.CREATE_MINUTES,
           vfState.startTimestamp
         );
-
         // indexedDB
-        needToUpdateMinutesTitle = true;
         needToUpdateMinutes = true;
         break;
       case "setMinutesLines":
+        console.log(
+          "setMinutesLines: updateTopicSeeds(false)",
+          vfState.startTimestamp
+        );
         updateTopicSeeds(false);
         needToUpdateMinutes = true;
         break;
@@ -128,15 +124,9 @@ export const VFPage = () => {
             vfState.startTimestamp
           );
 
+          useMinutesTitle.removeMinutesTitle(vfState.startTimestamp);
+
           // indexedDB
-          minutesTitlesDB
-            .deleteRecord(vfState.startTimestamp)
-            .then(() => {
-              console.log("deleted");
-            })
-            .catch((error: Error) => {
-              console.log(error);
-            });
           minutesDB
             .deleteRecord(vfState.startTimestamp)
             .then(() => {
@@ -158,31 +148,6 @@ export const VFPage = () => {
         break;
     }
     // update
-    if (needToUpdateMinutesTitle) {
-      minutesTitlesDB
-        .update({
-          id: vfState.startTimestamp,
-          json: JSON.stringify({
-            title: vfState.minutesTitle,
-            startTimestamp: vfState.startTimestamp,
-          }),
-        })
-        .then((id) => {
-          //console.log("created", id);
-        })
-        .catch((error: Error) => {
-          console.log(error);
-        })
-        .finally(() => {
-          vfDispatch({
-            type: "savedOnDB",
-            payload: {
-              db: DB_MINUTES_TITLES,
-              key: undefined,
-            },
-          });
-        });
-    }
     if (needToUpdateMinutes) {
       //console.log("update minutes: assistants", vfState.assistants);
       minutesDB
@@ -253,9 +218,10 @@ export const VFPage = () => {
   );
 };
 
-export function useDownloadMinutes(): (targetMinutes: number) => void {
+export function useDownloadMinutes(
+  useMinutesTitle: MinutesTitleStore
+): (targetMinutes: number) => void {
   const minutesDB = useIndexedDB(DB_MINUTES);
-  const minutesTitleDB = useIndexedDB(DB_MINUTES_TITLES);
 
   const handleDownload = (targetMinutes: number) => {
     minutesDB.getByID<MinutesRecord>(targetMinutes).then((minutesRecord) => {
@@ -264,146 +230,99 @@ export function useDownloadMinutes(): (targetMinutes: number) => void {
       const results: JSZip[] = [];
 
       // minutesTitle
-      minutesTitleDB
-        .getByID<MinutesTitleRecord>(targetMinutes)
-        .then((minutesTitleRecord) => {
-          const minutesTitle = JSON.parse(minutesTitleRecord.json);
-          results.push(
-            zip.file("minutesTitle.json", JSON.stringify(minutesTitle))
-          );
-          results.push(zip.file("minutesTitle.md", minutesTitle.title));
+      const minutesTitle = useMinutesTitle.getMinutesTitle(targetMinutes);
+      if (minutesTitle) {
+        results.push(
+          zip.file("minutesTitle.json", JSON.stringify(minutesTitle))
+        );
+        results.push(zip.file("minutesTitle.md", minutesTitle));
 
-          // assistants
-          window.electron
-            .invoke(
-              IPCInvokeKeys.LANGCHAIN_GET_ALL_ASSISTANT_DATA,
-              targetMinutes,
-              minutes.assistants.map((assistant) => {
-                return {
-                  dataThreadId: assistant.assistantId,
-                  assistantName: assistant.assistantName,
-                };
-              })
-            )
-            .then((res: AssistantAIData[]) => {
-              res.map((assistantData) => {
-                results.push(
-                  zip.file(
-                    `assistant_${assistantData.startTimestamp}.json`,
-                    JSON.stringify(assistantData)
-                  )
-                );
-                results.push(
-                  zip.file(
-                    `assistant_${assistantData.startTimestamp}.md`,
-                    assistantData.messages
-                      .map((message) => {
-                        if ((message as any).type === "ai") {
-                          return `#${(message as any).type}\n\n${
-                            (message as any).data.content
-                          }`;
-                        }
-                      })
-                      .join("\n\n")
-                  )
-                );
-              });
-
-              // topics
+        // assistants
+        window.electron
+          .invoke(
+            IPCInvokeKeys.LANGCHAIN_GET_ALL_ASSISTANT_DATA,
+            targetMinutes,
+            minutes.assistants.map((assistant) => {
+              return {
+                dataThreadId: assistant.assistantId,
+                assistantName: assistant.assistantName,
+              };
+            })
+          )
+          .then((res: AssistantAIData[]) => {
+            res.map((assistantData) => {
               results.push(
                 zip.file(
-                  "topics.json",
-                  JSON.stringify(Array.from(minutes.topics))
+                  `assistant_${assistantData.startTimestamp}.json`,
+                  JSON.stringify(assistantData)
                 )
               );
               results.push(
                 zip.file(
-                  "topics.md",
-                  Array.from(minutes.topics)
-                    .map((item) => {
-                      return `# ${item.title}\n\n${
-                        item.topic instanceof Array
-                          ? item.topic.join("\n")
-                          : item.topic
-                      }`;
-                    })
-                    .join("\n\n\n")
-                )
-              );
-
-              // discussion
-              results.push(
-                zip.file("discussion.json", JSON.stringify(minutes.minutes))
-              );
-              results.push(
-                zip.file(
-                  "discussion.md",
-                  Array.from(minutes.minutes)
-                    .map((discussionSegment) => {
-                      return `${discussionSegment.texts
-                        .map((text) => text.text)
-                        .join("\n")}`;
+                  `assistant_${assistantData.startTimestamp}.md`,
+                  assistantData.messages
+                    .map((message) => {
+                      if ((message as any).type === "ai") {
+                        return `#${(message as any).type}\n\n${
+                          (message as any).data.content
+                        }`;
+                      }
                     })
                     .join("\n\n")
                 )
               );
+            });
 
-              console.log("DL: minutes", minutes);
+            // topics
+            results.push(
+              zip.file(
+                "topics.json",
+                JSON.stringify(Array.from(minutes.topics))
+              )
+            );
+            results.push(
+              zip.file(
+                "topics.md",
+                Array.from(minutes.topics)
+                  .map((item) => {
+                    return `# ${item.title}\n\n${
+                      item.topic instanceof Array
+                        ? item.topic.join("\n")
+                        : item.topic
+                    }`;
+                  })
+                  .join("\n\n\n")
+              )
+            );
 
-              // construct contents
-              Promise.all(results).then(() => {
-                zip.generateAsync({ type: "blob" }).then((content) => {
-                  saveAs(content, `va_${targetMinutes}.zip`);
-                });
+            // discussion
+            results.push(
+              zip.file("discussion.json", JSON.stringify(minutes.minutes))
+            );
+            results.push(
+              zip.file(
+                "discussion.md",
+                Array.from(minutes.minutes)
+                  .map((discussionSegment) => {
+                    return `${discussionSegment.texts
+                      .map((text) => text.text)
+                      .join("\n")}`;
+                  })
+                  .join("\n\n")
+              )
+            );
+
+            console.log("DL: minutes", minutes);
+
+            // construct contents
+            Promise.all(results).then(() => {
+              zip.generateAsync({ type: "blob" }).then((content) => {
+                saveAs(content, `va_${targetMinutes}.zip`);
               });
             });
-        });
+          });
+      }
     });
   };
   return handleDownload;
 }
-
-export const DownloadAllIDB = () => {
-  const minutesTitlesDB = useIndexedDB(DB_MINUTES_TITLES);
-  const minutesDB = useIndexedDB(DB_MINUTES);
-  return (
-    <div>
-      <div
-        onClick={() => {
-          minutesTitlesDB.getAll<MinutesTitleRecord>().then((records) => {
-            if (records) {
-              const blob = new Blob([JSON.stringify(records)], {
-                type: "application/json",
-              });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "minutesTitlesDB.json";
-              a.click();
-            }
-          });
-        }}
-      >
-        MinutesTitleRecord DL
-      </div>
-      <div
-        onClick={() => {
-          minutesDB.getAll<MinutesRecord>().then((records) => {
-            if (records) {
-              const blob = new Blob([JSON.stringify(records)], {
-                type: "application/json",
-              });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "minutesDB.json";
-              a.click();
-            }
-          });
-        }}
-      >
-        MinutesRecord DL
-      </div>
-    </div>
-  );
-};

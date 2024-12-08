@@ -20,10 +20,7 @@ import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
 import { Topic } from "../topic/Topic.js";
 
 // table name
-export const DB_MINUTES_TITLES = "minutesTitles";
 export const DB_MINUTES = "minutes";
-export const DB_SETTINGS = "settings";
-export const DB_AGENDAS = "agendas";
 
 // record key
 export const DB_KEY_AUDIO_SETTINGS = "audioSettings";
@@ -31,20 +28,8 @@ export const DB_KEY_COMMON_SETTINGS = "commonSettings";
 
 export const DBConfig = {
   name: "VF_DB",
-  version: 8,
+  version: 9,
   objectStoresMeta: [
-    {
-      store: DB_MINUTES_TITLES,
-      storeConfig: { keyPath: "id", autoIncrement: false },
-      storeSchema: [
-        {
-          name: "id",
-          keypath: "id",
-          options: { unique: true },
-        },
-        { name: "json", keypath: "id", options: { unique: false } },
-      ],
-    },
     {
       store: DB_MINUTES,
       storeConfig: { keyPath: "id", autoIncrement: false },
@@ -64,13 +49,6 @@ export const DBConfig = {
 type CommonDBItem<T = string | number> = {
   id: T;
   json: string;
-};
-
-// ============== Implements ==============
-export type MinutesTitleRecord = CommonDBItem<number>;
-export type MinutesTitle = {
-  startTimestamp: number;
-  title: string;
 };
 
 export type MinutesRecord = CommonDBItem<number>;

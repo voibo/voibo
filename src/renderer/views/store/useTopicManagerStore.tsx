@@ -52,9 +52,10 @@ export const useTopicStore = create<
         (pre, current) => pre + Number(current.length) / 1000,
         currentStartTimestamp
       );
-      const text = segment.texts.reduce((inPrev, inCurrent) => {
-        return inPrev + inCurrent.text;
-      }, "");
+      const text = segment.texts.reduce(
+        (inPrev, inCurrent) => inPrev + inCurrent.text,
+        ""
+      );
       if (segment.topicStartedPoint) {
         topicSeeds.push({
           startTimestamp: currentStartTimestamp,
@@ -71,7 +72,7 @@ export const useTopicStore = create<
               .map((agenda) => agenda.id),
           ],
         });
-        console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
+        //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
       } else if (topicSeeds.length > 0) {
         topicSeeds[topicSeeds.length - 1].endTimestamp = currentEndTimestamp;
         topicSeeds[topicSeeds.length - 1].text += "\n" + text;

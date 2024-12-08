@@ -48,7 +48,6 @@ import { v4 as uuidv4 } from "uuid";
 export type VFStateMode = "home" | "recordingStudio";
 export type VFNeedToSaveMode =
   | undefined
-  | "updateMinutesTitle"
   | "createNewMinutes"
   | "setMinutesLines"
   | "deleteMinutes"
@@ -159,12 +158,6 @@ export type VFAction =
       payload: {
         db: string;
         key: string | undefined;
-      };
-    }
-  | {
-      type: "updateMinutesTitle";
-      payload: {
-        minutesTitle: string;
       };
     }
   | {
@@ -480,12 +473,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
       return {
         ...state,
         needToSaveOnDB: undefined,
-      };
-    case "updateMinutesTitle":
-      return {
-        ...state,
-        minutesTitle: action.payload.minutesTitle,
-        needToSaveOnDB: "updateMinutesTitle" as VFNeedToSaveMode,
       };
     case "createNewMinutes":
       const startTimestamp = Date.now();

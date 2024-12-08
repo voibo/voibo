@@ -26,24 +26,20 @@ import { Dispatch, useEffect, useState } from "react";
 import { useIndexedDB } from "react-indexed-db-hook";
 import { TopicSchema } from "../../main/agent/agentManagerDefinition.js";
 import { drawerWidth } from "./VFPage.jsx";
+import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
 import {
-  DB_MINUTES,
-  DB_MINUTES_TITLES,
-  Minutes,
-  MinutesRecord,
-  MinutesTitle,
-  MinutesTitleRecord,
-} from "./db/DBConfig.jsx";
-import { GeneralAssistantConf, VFAction, VFState } from "./store/useVFStore.jsx";
+  GeneralAssistantConf,
+  VFAction,
+  VFState,
+} from "./store/useVFStore.jsx";
+import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const MainMenuComponent = (props: {
   vfState: VFState;
   vfDispatch: Dispatch<VFAction>;
 }) => {
   const { vfState, vfDispatch } = props;
-  const minutesTitlesDB = useIndexedDB(DB_MINUTES_TITLES);
   const minutesDB = useIndexedDB(DB_MINUTES);
-  const [storedMinutes, setStoredMinutes] = useState<MinutesTitle[]>([]);
 
   const handleLoad = (event: any) => {
     const loadTargetSavedMinutes =
@@ -82,23 +78,9 @@ export const MainMenuComponent = (props: {
     }
   };
 
-  useEffect(() => {
-    // load from indexedDB
-    minutesTitlesDB
-      .getAll<MinutesTitleRecord>()
-      .then((records) => {
-        if (records) {
-          setStoredMinutes(
-            records.map((record) => {
-              return JSON.parse(record.json) as MinutesTitle;
-            })
-          );
-        }
-      })
-      .catch((error: Error) => {
-        console.log(error);
-      });
-  }, [vfState.needToSaveOnDB]);
+  const storedMinutes = useMinutesTitleStore((state) => state)
+    .getAllMinutesTitles()
+    .sort();
 
   return (
     <Drawer
