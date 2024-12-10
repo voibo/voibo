@@ -20,7 +20,7 @@ import JSZip from "jszip";
 import { useEffect } from "react";
 import { useIndexedDB } from "react-indexed-db-hook";
 import { IPCInvokeKeys, IPCSenderKeys } from "../../common/constants.js";
-import { AssistantAIData } from "../../main/agent/agentManagerDefinition.js";
+import { AssistantAIData } from "../../common/agentManagerDefinition.js";
 import { HeaderComponent } from "./HeaderComponent.jsx";
 import { MainMenuComponent } from "./MainMenuComponent.jsx";
 import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
@@ -31,6 +31,7 @@ import { useVAConfEffect } from "./store/useVAConfStore.jsx";
 import { useVFStore } from "./store/useVFStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
 import {
+  makeDefaultTitle,
   MinutesTitleStore,
   useMinutesTitleStore,
 } from "./store/useMinutesTitle.jsx";
@@ -83,7 +84,7 @@ export const VFPage = () => {
       case "createNewMinutes":
         // renderer
         useMinutesTitle.setMinutesTitle({
-          title: vfState.minutesTitle,
+          title: makeDefaultTitle(vfState.startTimestamp!),
           startTimestamp: vfState.startTimestamp!,
         });
         // server
@@ -159,7 +160,7 @@ export const VFPage = () => {
         .update({
           id: vfState.startTimestamp,
           json: JSON.stringify({
-            title: vfState.minutesTitle,
+            //title: vfState.minutesTitle,
             startTimestamp: vfState.startTimestamp,
             minutes: vfState.discussion,
             topics: vfState.topics,

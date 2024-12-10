@@ -56,7 +56,6 @@ export const TopicNodeComponent = (props: NodeProps<TopicNode>) => {
           messageId={data.content.id}
           detailViewDialog={AIMinutesDialog}
           handleClose={handleAIMinutesDialogClose}
-          selected={props.selected ?? false}
         />
       </NodeBase>
       {renderAIMinutesDialog()}

@@ -18,7 +18,7 @@ import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";
 
 import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
-import { Message } from "../../../../main/agent/agentManagerDefinition.js";
+import { Message } from "../../../../common/agentManagerDefinition.js";
 import { VAMessage } from "../../assistant/message/VAMessage.jsx";
 import {
   useMinutesAssistantStore,

@@ -16,14 +16,8 @@ limitations under the License.
 import { MicVAD } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import {
-  EnglishTopicPrompt,
-  GENERAL_ASSISTANT_NAME,
-  TopicSchema,
-} from "../../../main/agent/agentManagerDefinition.js";
 import { Segment } from "../../../common/Segment.js";
 import { CaptureClient } from "../../lib/capture.js";
-import { formatTimestamp } from "../../util.js";
 import { AIConfig } from "../common/aiConfig.jsx";
 import { Minutes } from "../db/DBConfig.jsx";
 import {
@@ -34,14 +28,17 @@ import {
   splitMinutesText,
   updateMinutesText,
 } from "../discussion/DiscussionSegment.jsx";
-import {
-  DefaultSplitter,
-  DiscussionSplitterConf,
-} from "../topic/DiscussionSplitter.jsx";
+import { DiscussionSplitterConf } from "../topic/DiscussionSplitter.jsx";
 import { Topic } from "../topic/Topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
 import { SystemDefaultTemplate } from "../assistant/AssistantTemplates.js";
 import { v4 as uuidv4 } from "uuid";
+import {
+  initMinutesState,
+  MinutesStore,
+  NO_MINUTES_START_TIMESTAMP,
+  useMinutesStore,
+} from "./useMinutesStore.jsx";
 
 // ==== VF Core ====
 
@@ -65,91 +62,53 @@ export type VFNeedToSaveMode =
   | "removeVirtualAssistantConf"
   | "updateTopic";
 
-export type VFState = {
-  // gui
-  mode: VFStateMode;
-  mainMenuOpen: boolean;
-  startTimestamp: number | null;
-  minutesTitle: string;
-  recording: boolean;
-  discussion: DiscussionSegment[];
-  needToScrollMinutes: boolean;
-  playWavMute: boolean;
-  discussionSplitter: DiscussionSplitterConf;
-
+type GUIState = {
   // db
   needToSaveOnDB: VFNeedToSaveMode;
 
+  // gui
+  mode: VFStateMode;
+  mainMenuOpen: boolean;
+  recording: boolean;
+  needToScrollMinutes: boolean;
+  playWavMute: boolean;
+
   // config
   audioFolder: string;
-
   // == audio ==
   audioSettingsDialogOpen: boolean;
-
   // == Topic ==
-  topics: Topic[];
   interimSegment: Segment | null;
-  topicAIConf: AIConfig;
-
-  // == Virtual Assistant ==
-  assistants: VirtualAssistantConf[];
-
   // == zustand subscript ==
   lastAction: VFAction | null;
 };
 
-export const GeneralAssistantConf: VirtualAssistantConf = {
-  assistantType: "va-general",
-  aiConfig: {
-    systemPrompt: "",
-    modelType: "gemini-1.5-flash",
-    temperature: 1,
-  },
-  assistantId: GENERAL_ASSISTANT_NAME,
-  assistantName: GENERAL_ASSISTANT_NAME,
-  icon: "./asset/dog_robo_iconL.svg",
-  label: "General Assistant",
-  updateMode: "manual",
-  messageViewMode: "history",
-};
-
-export const initVFState = (): VFState => {
-  return {
-    // VF Conf
+export const useVFCoreStore = create<GUIState>()(
+  subscribeWithSelector((set, get) => ({
+    // db
     needToSaveOnDB: undefined,
 
     // gui
     mode: "home",
     mainMenuOpen: true,
-    audioSettingsDialogOpen: false,
-    startTimestamp: null,
-    minutesTitle: "",
     recording: false,
-    discussion: [],
     needToScrollMinutes: true,
     playWavMute: true,
-    discussionSplitter: DefaultSplitter,
 
     // config
     audioFolder: "/",
-
-    // llm
-    topics: [],
+    // == audio ==
+    audioSettingsDialogOpen: false,
+    // == Topic ==
     interimSegment: null,
-    topicAIConf: {
-      modelType: "gpt-4",
-      systemPrompt: EnglishTopicPrompt,
-      structuredOutputSchema: TopicSchema,
-      temperature: 0,
-    },
-
-    // == Virtual Assistant ==
-    assistants: [GeneralAssistantConf],
-
     // == zustand subscript ==
     lastAction: null,
-  };
-};
+  }))
+);
+
+// VFState
+
+export type VFState = MinutesStore & GUIState;
 
 export type VFAction =
   //| VAConfAction
@@ -260,19 +219,6 @@ export type VFAction =
       type: "deleteAllTopic";
     }
   | {
-      type: "selectTopic";
-      payload: {
-        topicID: string;
-        selected: boolean;
-      };
-    }
-  | {
-      type: "deselectAllTopic";
-    }
-  | {
-      type: "selectAllTopic";
-    }
-  | {
       type: "addVirtualAssistantConf";
       payload: {
         assistant: VirtualAssistantConf;
@@ -339,40 +285,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         ),
         needToSaveOnDB: "setVirtualAssistantConf" as VFNeedToSaveMode,
       };
-    case "selectAllTopic":
-      return {
-        ...state,
-        topics: state.topics.map((item) => {
-          return {
-            ...item,
-            selected: true,
-          };
-        }),
-      };
-    case "deselectAllTopic":
-      return {
-        ...state,
-        topics: state.topics.map((item) => {
-          return {
-            ...item,
-            selected: false,
-          };
-        }),
-      };
-    case "selectTopic":
-      const topics: Topic[] = JSON.parse(JSON.stringify(state.topics));
-      const targetIndex = topics.findIndex(
-        (topic) => topic.id === action.payload.topicID
-      );
-      if (targetIndex !== -1) {
-        topics[targetIndex].selected = action.payload.selected;
-        return {
-          ...state,
-          topics: topics,
-        };
-      } else {
-        return state;
-      }
     case "removeTopic":
       return {
         ...state,
@@ -461,7 +373,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         needToSaveOnDB: "deleteMinutes" as VFNeedToSaveMode,
         mode: "home" as VFStateMode,
         mainMenuOpen: true,
-        minutesTitle: ``,
         startTimestamp: action.payload.startTimestamp,
         recording: false,
         discussion: [],
@@ -480,7 +391,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         ...state,
         mode: "recordingStudio" as VFStateMode,
         startTimestamp: startTimestamp,
-        minutesTitle: `会議: ${formatTimestamp(startTimestamp)}`,
         recording: false,
         discussion: [],
         mainMenuOpen: false,
@@ -497,8 +407,7 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
       return {
         ...state,
         mode: "home" as VFStateMode,
-        minutesTitle: ``,
-        startTimestamp: null,
+        startTimestamp: NO_MINUTES_START_TIMESTAMP,
         recording: false,
         discussion: [],
         mainMenuOpen: true,
@@ -538,7 +447,6 @@ const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
         mode: "recordingStudio" as VFStateMode,
         recording: false,
         startTimestamp: action.payload.startTimestamp,
-        minutesTitle: action.payload.title,
         discussion: action.payload.minutes,
         topics: action.payload.topics,
         mainMenuOpen: false,
@@ -585,21 +493,48 @@ export const vfCoreReducer = (state: VFState, action: VFAction): VFState => {
 
 export type VFDispatchStore = {
   vfDispatch: (action: VFAction) => void;
-  updateTopic: (topic: Topic) => void;
 };
-// VFCoreStateストア
+
 export const useVFStore = create<VFState & VFDispatchStore>()(
   subscribeWithSelector((set, get) => ({
-    ...initVFState(),
+    ...initMinutesState(NO_MINUTES_START_TIMESTAMP),
+
+    // VF Conf
+    needToSaveOnDB: undefined,
+    // gui
+    mode: "home",
+    mainMenuOpen: true,
+    audioSettingsDialogOpen: false,
+    minutesTitle: "",
+    recording: false,
+    needToScrollMinutes: true,
+    playWavMute: true,
+    // config
+    audioFolder: "/",
+    // llm
+    interimSegment: null,
+    // == zustand subscript ==
+    lastAction: null,
+
+    // Dispatch
     vfDispatch: (action) => set((state) => vfCoreReducer(state, action)),
-    updateTopic: (topic) => {
-      set({
-        topics: get().topics.map((currentTopic) =>
-          topic.id === currentTopic.id ? topic : currentTopic
-        ),
-      });
-    },
   }))
+);
+
+useVFStore.subscribe(
+  (state) => ({
+    startTimestamp: state.startTimestamp,
+    discussionSplitter: state.discussionSplitter,
+    discussion: state.discussion,
+    topicAIConf: state.topicAIConf,
+    topics: state.topics,
+    assistants: state.assistants,
+  }),
+  (state) => {
+    useMinutesStore(state.startTimestamp).setState({
+      ...state,
+    });
+  }
 );
 
 export function filterSequentialTopics(

@@ -32,7 +32,7 @@ import {
 import { create } from "zustand";
 
 import { subscribeWithSelector } from "zustand/middleware";
-import { Message } from "../../../main/agent/agentManagerDefinition.js";
+import { Message } from "../../../common/agentManagerDefinition.js";
 import { AgendaNode } from "../flowComponent/node/AgendaNode.jsx";
 import {
   AssistantMessageNode,
@@ -1224,26 +1224,6 @@ useVFStore.subscribe(
           // topic
           useVFReactflowStore.setState({ ...DefaultVFReactflowState });
           initTopicTree({ topics: useVFStore.getState().topics });
-          break;
-        // トピックの選択
-        case "selectTopic":
-          const selectedTopic = useVFStore
-            .getState()
-            .topics.find((topic) => topic.id === lastAction.payload.topicID);
-          if (selectedTopic) {
-            updateTopicNode({
-              targetTopic: selectedTopic,
-            });
-          }
-          break;
-        // トピックの選択解除
-        case "selectAllTopic":
-        case "deselectAllTopic":
-          useVFStore.getState().topics.forEach((topic, index) => {
-            updateTopicNode({
-              targetTopic: topic,
-            });
-          });
           break;
         default:
           break;

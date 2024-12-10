@@ -48,7 +48,7 @@ import Editor_ from "@monaco-editor/react";
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import {
   InvokeAssistantAttachOption,
   useMinutesAssistantStore,

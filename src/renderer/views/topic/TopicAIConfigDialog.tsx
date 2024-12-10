@@ -15,7 +15,7 @@ limitations under the License.
 */
 import { Button, Dialog, FormControl, TextField, Tooltip } from "@mui/material";
 import { Dispatch, useEffect, useState } from "react";
-import { EnglishTopicPrompt } from "../../../main/agent/agentManagerDefinition.js";
+import { EnglishTopicPrompt } from "../../../common/agentManagerDefinition.js";
 import { AIConfig, AIConfigurator } from "../common/aiConfig.jsx";
 
 import { VFAction, VFState } from "../store/useVFStore.jsx";

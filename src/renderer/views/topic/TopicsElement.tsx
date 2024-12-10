@@ -39,32 +39,11 @@ export const TopicsElement = (props: {
   messageId: string;
   detailViewDialog: (props: DetailViewDialogState) => void;
   handleClose: () => void;
-  selected: boolean;
 }) => {
-  const { messageId, detailViewDialog, handleClose, selected } = props;
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const { messageId, detailViewDialog, handleClose } = props;
   const topic = useVFStore((state) => state.topics).find(
     (topic) => topic.id === messageId
   );
-  const agendaStore = useAgendaStore((state) => state);
-  const agendaList =
-    topic?.seedData?.agendaIdList
-      ?.map((agendaId) => {
-        const agenda = agendaStore.getAgenda(agendaId);
-        if (agenda) {
-          return agenda;
-        }
-      })
-      .filter((agenda) => agenda != undefined) ?? [];
-
-  useEffect(() => {
-    if (topic && topic.selected !== selected) {
-      vfDispatch({
-        type: "selectTopic",
-        payload: { topicID: topic.id, selected: selected },
-      });
-    }
-  }, [topic?.selected, selected]);
 
   if (!topic) return <></>;
 

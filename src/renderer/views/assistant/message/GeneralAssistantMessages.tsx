@@ -16,7 +16,7 @@ limitations under the License.
 import { Close, Replay } from "@mui/icons-material";
 import { Button, ToggleButton } from "@mui/material";
 import { Fragment, HTMLAttributes, useEffect, useState } from "react";
-import { GENERAL_ASSISTANT_NAME } from "../../../../main/agent/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
 import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";
 import {
   AssistantState,

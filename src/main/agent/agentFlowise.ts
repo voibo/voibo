@@ -26,9 +26,7 @@ import {
 } from "@langchain/core/messages";
 import { ChatResult } from "@langchain/core/outputs";
 import { net } from "electron";
-import { isLangChainHumanMessage } from "./agentManagerDefinition.js";
-
-
+import { isLangChainHumanMessage } from "../../common/agentManagerDefinition.js";
 
 export interface AgentFlowiseInput extends BaseChatModelParams {
   apiKey: string;
@@ -111,12 +109,17 @@ export class AgentFlowise extends BaseChatModel<
                   ],
                   llmOutput: {},
                 });
-               }
-              else {
-                console.log(`AgentDify: There is no text or json in the response.`, res);
-              } 
+              } else {
+                console.log(
+                  `AgentDify: There is no text or json in the response.`,
+                  res
+                );
+              }
             } catch (error) {
-              console.error(`AgentFlowise: Unexpected error on requesting`, error);
+              console.error(
+                `AgentFlowise: Unexpected error on requesting`,
+                error
+              );
               reject(error);
             }
           });
@@ -126,9 +129,11 @@ export class AgentFlowise extends BaseChatModel<
           console.error(`AgentFlowise: Error on requesting`, error);
           reject(error);
         });
-        req.write(JSON.stringify({
+        req.write(
+          JSON.stringify({
             question: messages.at(-1)?.content,
-          }));
+          })
+        );
         req.end();
       } catch (error) {
         console.error(`AgentFlowise: Error`, error);
@@ -136,5 +141,4 @@ export class AgentFlowise extends BaseChatModel<
       }
     });
   }
-
 }

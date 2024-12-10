@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Message } from "../../../../main/agent/agentManagerDefinition.js";
+import { Message } from "../../../../common/agentManagerDefinition.js";
 import { TypicalRequestType } from "../input/VirtualAssistantRequester.jsx";
 
 export function detectVAMessageType(message: Message): VAMessageResponse {
@@ -65,34 +65,34 @@ export function detectVAMessageType(message: Message): VAMessageResponse {
 }
 export type VAMessageResponse =
   | {
-    type: "InvokedMessage";
-    value: Message;
-  }
+      type: "InvokedMessage";
+      value: Message;
+    }
   | {
-    type: "InvokedMessageWithAttachment";
-    value: Message;
-  }
+      type: "InvokedMessageWithAttachment";
+      value: Message;
+    }
   | {
-    type: "LangChainAIMessage";
-    value: Message;
-  }
+      type: "LangChainAIMessage";
+      value: Message;
+    }
   | {
-    type: "LangChainHumanMessage";
-    value: Message;
-  }
+      type: "LangChainHumanMessage";
+      value: Message;
+    }
   | {
-    type: "LangChainAIMessageWithAttachment";
-    value: Message;
-  }
+      type: "LangChainAIMessageWithAttachment";
+      value: Message;
+    }
   | {
-    type: "LangChainHumanMessageWithAttachment";
-    value: Message;
-  }
+      type: "LangChainHumanMessageWithAttachment";
+      value: Message;
+    }
   | {
-    type: "LangChainAIMessageMindMap";
-    value: Message;
-  }
+      type: "LangChainAIMessageMindMap";
+      value: Message;
+    }
   | {
-    type: "Unknown";
-    value: Message;
-  };
+      type: "Unknown";
+      value: Message;
+    };

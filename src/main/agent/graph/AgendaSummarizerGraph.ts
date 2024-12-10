@@ -19,7 +19,7 @@ import { LangGraphInvokeParams } from "../agentLangGraph.js";
 import {
   getTargetCategoryDetail,
   getTargetClassificationDetail,
-} from "../agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { VABaseGraph, VAGraphOutput } from "../VABaseGraph.js";
 import { DuckDuckGoSearch } from "./tool/duckduckgoSearch.js";
 
@@ -52,21 +52,21 @@ ${input.agendaContext}
 
 ### Classifications
 ${input.agendas
-            ?.map(
-              (agenda: Agenda) =>
-                `* ${agenda.classification}:${getTargetClassificationDetail(
-                  agenda.classification
-                )}`
-            )
-            .join("\n")}
+  ?.map(
+    (agenda: Agenda) =>
+      `* ${agenda.classification}:${getTargetClassificationDetail(
+        agenda.classification
+      )}`
+  )
+  .join("\n")}
 
 ### Content Categories
 ${input.agendas
-            ?.map(
-              (agenda: Agenda) =>
-                `* ${agenda.category}:${getTargetCategoryDetail(agenda.category)}`
-            )
-            .join("\n")}
+  ?.map(
+    (agenda: Agenda) =>
+      `* ${agenda.category}:${getTargetCategoryDetail(agenda.category)}`
+  )
+  .join("\n")}
 `,
       });
 

@@ -348,7 +348,7 @@ import {
   isBaseMessage,
 } from "@langchain/core/messages";
 import { z } from "zod";
-import { Content, getDefaultContent } from "../../renderer/views/store/Content.js";
+import { Content, getDefaultContent } from "../renderer/views/store/Content.js";
 
 export type LangChainMessage = AIMessage | HumanMessage;
 export function isLangChainHumanMessage(obj: any): obj is HumanMessage {

@@ -19,7 +19,7 @@ import { IPCInvokeKeys } from "../../../common/constants.js";
 import {
   EnglishTopicPrompt,
   TopicInvokeParam,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVFStore } from "../store/useVFStore.jsx";
@@ -64,33 +64,33 @@ export const initTopicManagerState: TopicManagerState = {
 
 export type TopicManagerAction =
   | {
-    type: "startProcess";
-  }
+      type: "startProcess";
+    }
   | {
-    type: "resError";
-    payload: {
-      error: Error;
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
-    };
-  }
-  | {
-    type: "resSuccess";
-    payload: {
-      res: {
-        data: LLMAnalyzedTopics;
+      type: "resError";
+      payload: {
+        error: Error;
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
       };
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
-    };
-  }
+    }
   | {
-    type: "replaceTopicSeed";
-    payload: {
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
+      type: "resSuccess";
+      payload: {
+        res: {
+          data: LLMAnalyzedTopics;
+        };
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
+      };
+    }
+  | {
+      type: "replaceTopicSeed";
+      payload: {
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
+      };
     };
-  };
 
 export const topicManagerReducer = (
   state: TopicManagerState,
@@ -158,10 +158,11 @@ export function useTopicManager(): {
         if (topicState.res && topicState.res.data.topics.length > 0) {
           const lastTopic =
             topicState.res.data.topics[topicState.res.data.topics.length - 1];
-          lastResult = `${lastTopic.title}\n\n ${Array.isArray(lastTopic.topic)
+          lastResult = `${lastTopic.title}\n\n ${
+            Array.isArray(lastTopic.topic)
               ? lastTopic.topic.join("\n")
               : lastTopic.topic
-            }`;
+          }`;
 
           if (lastTopic.seedData && lastTopic.seedData.agendaIdList) {
             lastTopic.seedData.agendaIdList.forEach((agendaId) => {

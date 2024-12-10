@@ -30,7 +30,7 @@ import {
   FlowiseConf,
   LangGraphConf,
   ModelType,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 
 export type AIConfig = AIConfigCore & {
   systemPrompt: string;
@@ -122,32 +122,32 @@ export const DEFAULT_LANG_GRAPH_CONF: LangGraphConf = {
 
 type AIConfigAction =
   | {
-    type: "SET_MODEL_TYPE";
-    payload: ModelType;
-  }
+      type: "SET_MODEL_TYPE";
+      payload: ModelType;
+    }
   | {
-    type: "SET_DIFY_CONFIG";
-    payload: DifyConf | undefined;
-  }
+      type: "SET_DIFY_CONFIG";
+      payload: DifyConf | undefined;
+    }
   | {
-    type: "SET_FLOWISE_CONFIG";
-    payload: FlowiseConf | undefined;
-  }
+      type: "SET_FLOWISE_CONFIG";
+      payload: FlowiseConf | undefined;
+    }
   | {
-    type: "SET_LANG_GRAPH_CONFIG";
-    payload: LangGraphConf | undefined;
-  }
+      type: "SET_LANG_GRAPH_CONFIG";
+      payload: LangGraphConf | undefined;
+    }
   | {
-    type: "SET_TEMPERATURE";
-    payload: number;
-  }
+      type: "SET_TEMPERATURE";
+      payload: number;
+    }
   | {
-    type: "AI_CONFIG_IS_CHANGED";
-  }
+      type: "AI_CONFIG_IS_CHANGED";
+    }
   | {
-    type: "SET_ATTACH_HISTORY_LIMIT";
-    payload: number;
-  };
+      type: "SET_ATTACH_HISTORY_LIMIT";
+      payload: number;
+    };
 
 export const AIConfigurator = (props: {
   initConf: AIConfig;

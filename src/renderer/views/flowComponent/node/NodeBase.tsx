@@ -18,7 +18,7 @@ import { Button, ButtonGroup } from "@mui/material";
 import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
 import { useEffect, useState } from "react";
-import { GENERAL_ASSISTANT_NAME } from "../../../../main/agent/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
 import { AgendaSelectorDialogBody } from "../../agenda/AgendaSelector.jsx";
 import { AIAssistantAvatar } from "../../assistant/message/AIAssistantAvatar.jsx";
 import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";

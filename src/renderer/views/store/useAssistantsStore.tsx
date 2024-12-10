@@ -30,7 +30,7 @@ import {
   Message,
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { detectVAMessageType } from "../assistant/message/detectVAMessageType.jsx";
 import { AIConfig } from "../common/aiConfig.jsx";
 import { isTopic, Topic, TopicSeed } from "../topic/Topic.js";

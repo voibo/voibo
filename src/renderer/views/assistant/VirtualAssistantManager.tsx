@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { MouseEventHandler, ReactNode, useReducer, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { GENERAL_ASSISTANT_NAME } from "../../../main/agent/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../common/agentManagerDefinition.js";
 import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
 import { useVFStore } from "../store/useVFStore.jsx";
 import {

@@ -16,7 +16,7 @@ limitations under the License.
 import { SmartToyOutlined } from "@mui/icons-material";
 import { ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import { Dispatch } from "react";
-import { ModelType } from "../../../../main/agent/agentManagerDefinition.js";
+import { ModelType } from "../../../../common/agentManagerDefinition.js";
 import {
   AssistantAction,
   AssistantState,

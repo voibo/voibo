@@ -26,6 +26,7 @@ import {
   IDBKeyValKeys,
   IDBKeyValPersistStorage,
 } from "./IDBKeyValPersistStorage.jsx";
+import { formatTimestamp } from "../../util.js";
 
 export type MinutesTitle = {
   startTimestamp: number;
@@ -119,3 +120,7 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
     }
   )
 );
+
+export function makeDefaultTitle(startTimestamp: number): string {
+  return `会議: ${formatTimestamp(startTimestamp)}`;
+}

@@ -24,14 +24,10 @@ import {
 } from "@mui/material";
 import { Dispatch } from "react";
 import { useIndexedDB } from "react-indexed-db-hook";
-import { TopicSchema } from "../../main/agent/agentManagerDefinition.js";
+import { TopicSchema } from "../../common/agentManagerDefinition.js";
 import { drawerWidth } from "./VFPage.jsx";
 import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
-import {
-  GeneralAssistantConf,
-  VFAction,
-  VFState,
-} from "./store/useVFStore.jsx";
+import { VFAction, VFState } from "./store/useVFStore.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const MainMenuComponent = (props: {
@@ -59,10 +55,9 @@ export const MainMenuComponent = (props: {
               payload: {
                 title: loadTargetTitle,
                 startTimestamp: Number(data.startTimestamp),
-                segments: data.segments ?? new Map(),
                 minutes: data.minutes ?? [],
                 topics: data.topics ?? [],
-                assistants: data.assistants ?? [GeneralAssistantConf],
+                assistants: data.assistants ?? [],
                 topicAIConf: {
                   ...data.topicAIConf, // 過去にstructuredOutputSchemaがないものを考慮
                   structuredOutputSchema:

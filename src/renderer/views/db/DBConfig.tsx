@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Segment } from "../../../common/Segment.js";
 import { AIConfig } from "../common/aiConfig.jsx";
 import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
 import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
@@ -51,7 +50,6 @@ export type MinutesRecord = CommonDBItem<number>;
 export type Minutes = {
   title: string;
   startTimestamp: number;
-  segments: Map<string, Segment[]>;
   minutes: DiscussionSegment[];
   topics: Topic[];
   assistants: VirtualAssistantConf[];

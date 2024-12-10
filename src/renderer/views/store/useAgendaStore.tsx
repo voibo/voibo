@@ -23,7 +23,7 @@ import {
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { Content } from "./Content.js";
 import {
   ExpandJSONOptions,
@@ -64,27 +64,27 @@ export const AgendaStatusDetail: Array<{
   value: AgendaStatus;
   detail: string;
 }> = [
-    {
-      value: "waiting",
-      label: "Waiting",
-      detail: "waiting for discussion",
-    },
-    {
-      value: "inProgress",
-      label: "In Progress",
-      detail: "in progress",
-    },
-    {
-      value: "mayBeDone",
-      label: "May Be Done",
-      detail: "may be done that detected by the system",
-    },
-    {
-      value: "done",
-      label: "Done",
-      detail: "done that detected by the human",
-    },
-  ];
+  {
+    value: "waiting",
+    label: "Waiting",
+    detail: "waiting for discussion",
+  },
+  {
+    value: "inProgress",
+    label: "In Progress",
+    detail: "in progress",
+  },
+  {
+    value: "mayBeDone",
+    label: "May Be Done",
+    detail: "may be done that detected by the system",
+  },
+  {
+    value: "done",
+    label: "Done",
+    detail: "done that detected by the human",
+  },
+];
 
 export interface Agenda extends Content {
   type: "agenda";
@@ -235,9 +235,9 @@ export const useAgendaStore = create<AgendaStore>()(
             .filter(
               (elem) =>
                 elem.timeRange.endFromMStartMsec >=
-                timeRange.startFromMStartMsec &&
+                  timeRange.startFromMStartMsec &&
                 elem.timeRange.startFromMStartMsec <=
-                timeRange.endFromMStartMsec
+                  timeRange.endFromMStartMsec
             )
             .map((elem) => get().getAgenda(elem.agendaId)!),
           // Is current discussing agenda included?
