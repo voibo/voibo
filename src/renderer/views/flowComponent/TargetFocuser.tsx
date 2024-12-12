@@ -25,10 +25,10 @@ import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import {
   getLayoutParam,
-  useVFReactflowStore,
-  VFReactflowDispatchStore,
-  VFReactflowState,
-} from "../store/useVFReactflowStore.jsx";
+  useVBReactflowStore,
+  VBReactflowDispatchStore,
+  VBReactflowState,
+} from "../store/useVBReactflowStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useWindowSize } from "../useWindowSize.jsx";
 
@@ -47,7 +47,7 @@ export const TargetFocuser = () => {
   const nodesInitialized = useNodesInitialized({
     includeHiddenNodes: true,
   });
-  const flowState = useVFReactflowStore((state) => state);
+  const flowState = useVBReactflowStore((state) => state);
   const windowSize = useWindowSize();
 
   const systemList: Array<TargetFocuserOption> = [
@@ -202,7 +202,7 @@ export function focusFirstTopic(
 
 export function focusLastTopic(props: {
   reactFlow: ReturnType<typeof useReactFlow>;
-  flowState: VFReactflowState & VFReactflowDispatchStore;
+  flowState: VBReactflowState & VBReactflowDispatchStore;
   windowSize: ReturnType<typeof useWindowSize>;
 }): void {
   const { reactFlow, flowState, windowSize } = props;
@@ -225,7 +225,7 @@ export function focusLastTopic(props: {
 
 export function focusGroup(props: {
   reactFlow: ReturnType<typeof useReactFlow>;
-  flowState: VFReactflowState & VFReactflowDispatchStore;
+  flowState: VBReactflowState & VBReactflowDispatchStore;
   targetId: string;
   targetType: "group" | "agenda";
 }): void {

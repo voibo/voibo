@@ -81,7 +81,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   const minutesStore = useMinutesStore(startTimestamp);
 
   // VA conf dialog
-  const [vfConfDialogState, vaConfDialogDispatch] = useReducer(
+  const [vaConfDialogState, vaConfDialogDispatch] = useReducer(
     (state: AssistantConfigState, action: AssistantConfigAction) => {
       switch (action.type) {
         case "open":
@@ -221,7 +221,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
       </div>
 
       <VirtualAssistantConfDialog
-        dialogState={vfConfDialogState}
+        dialogState={vaConfDialogState}
         dialogDispatch={vaConfDialogDispatch}
       />
 

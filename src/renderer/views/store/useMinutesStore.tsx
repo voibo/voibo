@@ -443,7 +443,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         openHomeMenu: () => {
           // 即時反映
           clearQueue();
-          // 実際に Home 用の state を呼び出すのは、VFStore で行う
+          // 実際に Home 用の state を呼び出すのは、VBStore で行う
         },
         deleteMinutes: () => {
           // 即時反映

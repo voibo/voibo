@@ -23,7 +23,7 @@ import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";
 import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
 import { useVAConfStore } from "./useVAConfStore.jsx";
-import { useVFSettingsStore } from "./useVFSettingStore.jsx";
+import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 
@@ -58,7 +58,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
       try {
         const startTimestamp =
           useVBStore.getState().startTimestamp ?? Date.now();
-        const settingsData = useVFSettingsStore.getState();
+        const settingsData = useVBSettingsStore.getState();
         console.log("startRecording", settingsData);
 
         if (settingsData && settingsData._hasHydrated) {

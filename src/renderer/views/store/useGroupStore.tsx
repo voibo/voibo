@@ -27,7 +27,7 @@ import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
 import { useMinutesAssistantStore } from "./useAssistantsStore.jsx";
-import { useMinutesContentStore } from "./useContentStore.js";
+import { useMinutesContentStore } from "./useContentStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // == Group ==

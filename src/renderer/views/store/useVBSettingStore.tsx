@@ -22,7 +22,7 @@ import {
 import { AudioDeviceSettingsDefault } from "../setting/AudioDeviceSettings.jsx";
 import { DecibelDividerSettingDefault } from "../setting/DecibelDividerSetting.jsx";
 import { VADSettingsDefault } from "../setting/VADSettings.jsx";
-import { VFSettingsAction, VBSettingsState } from "../setting/VFSettings.jsx";
+import { VBSettingsAction, VBSettingsState } from "../setting/VBSettings.jsx";
 import {
   ExpandJSONOptions,
   HydrateState,
@@ -30,14 +30,14 @@ import {
   IDBKeyValPersistStorage,
 } from "./IDBKeyValPersistStorage.jsx";
 
-export type VFSettingsStoreAction = {
-  settingDispatch: (action: VFSettingsAction) => void;
+export type VBSettingsStoreAction = {
+  settingDispatch: (action: VBSettingsAction) => void;
 };
 
-export type VFSettingsStore = VBSettingsState &
-  VFSettingsStoreAction &
+export type VBSettingsStore = VBSettingsState &
+  VBSettingsStoreAction &
   HydrateState;
-export const useVFSettingsStore = create<VFSettingsStore>()(
+export const useVBSettingsStore = create<VBSettingsStore>()(
   persist(
     subscribeWithSelector((set, get) => ({
       // state
@@ -47,7 +47,7 @@ export const useVFSettingsStore = create<VFSettingsStore>()(
 
       // action
       settingDispatch: (action) => {
-        set((state: VFSettingsStore) => {
+        set((state: VBSettingsStore) => {
           switch (action.type) {
             case "setVADSettings":
             case "setMicSettings":

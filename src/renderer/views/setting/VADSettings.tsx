@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { TextField } from "@mui/material";
-import { useVFSettingsStore } from "../store/useVFSettingStore.jsx";
+import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 
 export type VADSettingsState = {
   positiveSpeechThreshold: number;
@@ -39,8 +39,8 @@ export type VADSettingsAction = {
 };
 
 export const VADSettings = () => {
-  const state = useVFSettingsStore((state) => state);
-  const dispatch = useVFSettingsStore((state) => state.settingDispatch);
+  const state = useVBSettingsStore((state) => state);
+  const dispatch = useVBSettingsStore((state) => state.settingDispatch);
   return (
     <div className="flex flex-col p-4 rounded border">
       <div>Voice Active Detection</div>

@@ -28,12 +28,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../agenda/AgendaPanel.jsx";
 import { Content, getDefaultContent } from "../store/Content.js";
-import { useMinutesContentStore } from "../store/useContentStore.js";
+import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
-  useVFReactflowStore,
-  VFReactflowDispatchStore,
-  VFReactflowState,
-} from "../store/useVFReactflowStore.jsx";
+  useVBReactflowStore,
+  VBReactflowDispatchStore,
+  VBReactflowState,
+} from "../store/useVBReactflowStore.jsx";
 import { useVBStore, VBAction } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
@@ -62,7 +62,7 @@ export const VBNodeStage = (props: {}) => {
   );
 };
 
-const selector = (state: VFReactflowState & VFReactflowDispatchStore) => ({
+const selector = (state: VBReactflowState & VBReactflowDispatchStore) => ({
   nodes: state.nodes,
   edges: state.edges,
   onNodesChange: state.onNodesChange,
@@ -75,7 +75,7 @@ const selector = (state: VFReactflowState & VFReactflowDispatchStore) => ({
 });
 
 export type VANodeStageGUIState = {
-  lastVFAction: VBAction | null;
+  lastAction: VBAction | null;
 };
 
 const VANodeStageCore = (props: {}) => {
@@ -88,7 +88,7 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStart,
     onNodeDragStop,
     onNodesDelete,
-  } = useVFReactflowStore(useShallow(selector));
+  } = useVBReactflowStore(useShallow(selector));
   // handle nodes initialized and measure nodes.
   // after add new nodes, it will be called.
   const nodesInitialized = useNodesInitialized({
@@ -96,7 +96,7 @@ const VANodeStageCore = (props: {}) => {
   });
 
   const [guiState, setGUIState] = useState<VANodeStageGUIState>({
-    lastVFAction: null,
+    lastAction: null,
   });
   // subscribe lastAction to update GUI
   useVBStore.subscribe(
@@ -104,18 +104,18 @@ const VANodeStageCore = (props: {}) => {
     (lastAction) => {
       setGUIState((state) => ({
         ...state,
-        lastVFAction: lastAction,
+        lastAction: lastAction,
       }));
     }
   );
 
   const reactFlow = useReactFlow();
-  const flowState = useVFReactflowStore((state) => state);
+  const flowState = useVBReactflowStore((state) => state);
 
-  // handle lastVFAction
+  // handle lastAction
   useEffect(() => {
-    if (guiState.lastVFAction && nodesInitialized && flowState.topicNodes) {
-      switch (guiState.lastVFAction.type) {
+    if (guiState.lastAction && nodesInitialized && flowState.topicNodes) {
+      switch (guiState.lastAction.type) {
         // トピックツリーの初期化
         case "deleteAllTopic": // minutes 再構築時
         case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
@@ -127,17 +127,17 @@ const VANodeStageCore = (props: {}) => {
           break;
         case "setTopic": // トピック変更時
           // FIXME
-          // Topic の position 更新を永続化させるために useVFReactflowStore:updateNodePosition にて、
-          // useVFStore.getState().vbDispatch({type: "updateTopic"/// を使わざるを得ず、
+          // Topic の position 更新を永続化させるために useVBReactflowStore:updateNodePosition にて、
+          // useVBStore.getState().vbDispatch({type: "updateTopic"/// を使わざるを得ず、
           // このタイミングでは setTopic が呼ばれない事になっている。
-          // VFStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
+          // VBStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
           // focusLastTopic({ reactFlow, flowState, windowSize });
           break;
         default:
           break;
       }
     }
-  }, [guiState.lastVFAction, nodesInitialized, flowState.topicNodes]);
+  }, [guiState.lastAction, nodesInitialized, flowState.topicNodes]);
 
   // DnD
   const reactFlowWrapper = useRef(null);

@@ -39,7 +39,7 @@ export type VBSettingsState = AudioDeviceSettingsState &
   VADSettingsState &
   DecibelDividerSettingState;
 
-export type VFSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
+export type VBSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
 
 export const VBSettings = () => {
   const vbState = useVBStore((state) => state);

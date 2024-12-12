@@ -31,7 +31,7 @@ import {
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
 import { useMinutesGroupStore } from "../../store/useGroupStore.jsx";
-import { useVFReactflowStore } from "../../store/useVFReactflowStore.jsx";
+import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
 import { ContentNode } from "./ContentNode.jsx";
@@ -50,7 +50,7 @@ export const NodeBase = (props: {
   const cssStyle = nodeProps.selected
     ? "relative border-4 border-green-500"
     : "relative";
-  const selectedSequenceIndex = useVFReactflowStore(
+  const selectedSequenceIndex = useVBReactflowStore(
     (state) => state.selectedSequences
   ).findIndex((seq) => seq === nodeProps.id);
 
@@ -70,7 +70,7 @@ export const NodeBase = (props: {
       </div>
     ) : null;
 
-  const isLastSelected = useVFReactflowStore(
+  const isLastSelected = useVBReactflowStore(
     (state) =>
       state.selectedSequences[state.selectedSequences.length - 1] ===
       nodeProps.id
@@ -221,7 +221,7 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
 
           if (!onProcess) {
             // deselect all
-            useVFReactflowStore.getState().deselectAll();
+            useVBReactflowStore.getState().deselectAll();
           }
         }
       }
@@ -240,7 +240,7 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
         queue: [
           makeInvokeParam({
             basePrompt: assistantConfig.aiConfig.systemPrompt,
-            messages: useVFReactflowStore.getState().getSequencedSelection(),
+            messages: useVBReactflowStore.getState().getSequencedSelection(),
             attachOption: assistantConfig.attachOption ?? {
               attachment: "topic",
               target: "manualSelected",

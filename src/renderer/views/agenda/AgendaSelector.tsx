@@ -16,7 +16,7 @@ limitations under the License.
 import { Autocomplete, Button, Chip, TextField } from "@mui/material";
 import { useState } from "react";
 import { Agenda, useAgendaStore } from "../store/useAgendaStore.jsx";
-import { useVFReactflowStore } from "../store/useVFReactflowStore.jsx";
+import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
 
 /**
  * Agenda 選択コンポーネント
@@ -81,10 +81,10 @@ export const AgendaSelectorDialogBody = (props: {
     setCurrentAgendas(selectedAgendas);
   };
   const handleUpdateAgenda = (event: any) => {
-    useVFReactflowStore
+    useVBReactflowStore
       .getState()
       .updateSequencedSelectionsAgenda(currentAgendas);
-    useVFReactflowStore.getState().deselectAll();
+    useVBReactflowStore.getState().deselectAll();
     handleClose();
   };
   return (
