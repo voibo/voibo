@@ -305,7 +305,7 @@ export const VBActionProcessor = async (action: VBAction) => {
 
     case "createNewMinutes":
       const startTimestamp = Date.now();
-      console.warn("useVFStore: createNewMinutes: 0", startTimestamp);
+      console.warn("useVBStore: createNewMinutes: 0", startTimestamp);
       useMinutesStore(startTimestamp).getState().createNewMinutes();
       // server
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
@@ -320,17 +320,17 @@ export const VBActionProcessor = async (action: VBAction) => {
         recording: false,
         mainMenuOpen: false,
       });
-      console.warn("useVFStore: createNewMinutes: 1", startTimestamp);
+      console.warn("useVBStore: createNewMinutes: 1", startTimestamp);
       break;
     case "openMinutes":
-      console.warn("useVFStore: openMinutes: 0", action.payload.startTimestamp);
+      console.warn("useVBStore: openMinutes: 0", action.payload.startTimestamp);
       await useMinutesStore(action.payload.startTimestamp)
         .getState()
         .waitForHydration()
         .then((newState) => {
-          console.warn("useVFStore: openMinutes: 1", newState);
+          console.warn("useVBStore: openMinutes: 1", newState);
         });
-      console.warn("useVFStore: openMinutes: 2", action.payload.startTimestamp);
+      console.warn("useVBStore: openMinutes: 2", action.payload.startTimestamp);
       useVBStore.setState({
         startTimestamp: action.payload.startTimestamp,
         mode: "recordingStudio",
@@ -338,17 +338,17 @@ export const VBActionProcessor = async (action: VBAction) => {
         recording: false,
         interimSegment: null,
       });
-      console.warn("useVFStore: openMinutes: 3", action.payload.startTimestamp);
+      console.warn("useVBStore: openMinutes: 3", action.payload.startTimestamp);
       break;
     case "openHomeMenu":
-      console.log("useVFStore: openHomeMenu: 0");
+      console.log("useVBStore: openHomeMenu: 0");
       await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
         .getState()
         .waitForHydration()
         .then((newState) => {
-          console.log("useVFStore: openHomeMenu: 1", newState);
+          console.log("useVBStore: openHomeMenu: 1", newState);
         });
-      console.log("useVFStore: openHomeMenu: 2");
+      console.log("useVBStore: openHomeMenu: 2");
       useVBStore.setState({
         startTimestamp: NO_MINUTES_START_TIMESTAMP,
         mode: "home",
@@ -356,28 +356,28 @@ export const VBActionProcessor = async (action: VBAction) => {
         mainMenuOpen: true,
         interimSegment: null,
       });
-      console.log("useVFStore: openHomeMenu: 3");
+      console.log("useVBStore: openHomeMenu: 3");
       break;
     case "deleteMinutes":
-      console.log("useVFStore: deleteMinutes: 0");
+      console.log("useVBStore: deleteMinutes: 0");
       minutesState.deleteMinutes();
       await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
         .getState()
         .waitForHydration()
         .then((newState) => {
-          console.log("useVFStore: deleteMinutes: 1", newState);
+          console.log("useVBStore: deleteMinutes: 1", newState);
         });
-      console.log("useVFStore: deleteMinutes: 2");
+      console.log("useVBStore: deleteMinutes: 2");
       useVBStore.setState({
         startTimestamp: NO_MINUTES_START_TIMESTAMP,
         mode: "home",
         mainMenuOpen: true,
         recording: false,
       });
-      console.log("useVFStore: deleteMinutes: 3");
+      console.log("useVBStore: deleteMinutes: 3");
       break;
     default:
-      console.log("vfActionProcessor: unexpected default", action);
+      console.log("vbActionProcessor: unexpected default", action);
   }
   useVBStore.setState({
     lastAction: action,

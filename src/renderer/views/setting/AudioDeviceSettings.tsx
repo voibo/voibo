@@ -22,7 +22,7 @@ import {
   Select,
 } from "@mui/material";
 import { useEffect, useReducer } from "react";
-import { useVFSettingsStore } from "../store/useVFSettingStore.jsx";
+import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 
 export type AudioDeviceSettingsState = {
   selectedOwnDeviceId: string;
@@ -42,8 +42,8 @@ export type AudioDeviceSettingsAction = {
 };
 
 export const MicSettings = () => {
-  const state = useVFSettingsStore((state) => state);
-  const dispatch = useVFSettingsStore((state) => state.settingDispatch);
+  const state = useVBSettingsStore((state) => state);
+  const dispatch = useVBSettingsStore((state) => state.settingDispatch);
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex flex-row items-center">

@@ -20,7 +20,7 @@ import {
   makeDefaultGroup,
   useMinutesGroupStore,
 } from "../store/useGroupStore.jsx";
-import { useVFReactflowStore } from "../store/useVFReactflowStore.jsx";
+import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
 
 /**
  * Group 選択コンポーネント
@@ -98,8 +98,8 @@ export const GroupSelectorDialogBody = (props: {
     setCurrentGroup(selectedGroups);
   };
   const handleAddGroup = (event: any) => {
-    useVFReactflowStore.getState().updateSequencedSelectionsGroup(currentGroup);
-    useVFReactflowStore.getState().deselectAll();
+    useVBReactflowStore.getState().updateSequencedSelectionsGroup(currentGroup);
+    useVBReactflowStore.getState().deselectAll();
     handleClose();
   };
   return (

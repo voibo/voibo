@@ -40,7 +40,7 @@ export const useVAConfStore = create<VAConfStore>((set) => ({
 /**
  * VAConfStore と electron の設定ファイルを連携する。
  *  LLMのKeyなど
- * メインとなるVFPage でのみ使用することを想定している。
+ * メインとなるPage でのみ使用することを想定している。
  */
 export const useVAConfEffect = () => {
   const vaConfStore = useVAConfStore();

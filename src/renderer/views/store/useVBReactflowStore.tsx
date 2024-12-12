@@ -31,7 +31,7 @@ import {
 import { create } from "zustand";
 
 import { subscribeWithSelector } from "zustand/middleware";
-import { Message } from "../../../common/agentManagerDefinition.js";
+import { Message } from "../../../common/agentManagerDefinition.jsx";
 import { AgendaNode } from "../flowComponent/node/AgendaNode.jsx";
 import {
   AssistantMessageNode,
@@ -58,7 +58,7 @@ import {
   AssistantState,
   useMinutesAssistantStore,
 } from "./useAssistantsStore.jsx";
-import { useMinutesContentStore } from "./useContentStore.js";
+import { useMinutesContentStore } from "./useContentStore.jsx";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
@@ -260,7 +260,7 @@ export const makeContentNode = (props: { content: Content }): ContentNode => {
 
 // Types
 
-export type VFReactflowState = {
+export type VBReactflowState = {
   // # connecter for ReactFlow
   // subscribe からしか変更してはいけない
   nodes: Node[];
@@ -305,7 +305,7 @@ type Bounds = {
     y: number;
   };
 };
-export type VFReactflowDispatchStore = {
+export type VBReactflowDispatchStore = {
   // # connecter for ReactFlow
   // 内容を変更してはならない
   onNodesChange: OnNodesChange;
@@ -333,7 +333,7 @@ export type VFReactflowDispatchStore = {
   updateSequencedSelectionsAgenda: (agendas: Agenda[]) => void;
 };
 
-export const DefaultVFReactflowState: VFReactflowState = {
+export const DefaultVBReactflowState: VBReactflowState = {
   // connecter for ReactFlow
   // subscribe からしか変更してはいけない
   nodes: [],
@@ -359,12 +359,12 @@ export const DefaultVFReactflowState: VFReactflowState = {
   contentTreeEdges: [],
 };
 
-// VFReactflowDispatchStoreストア
-export const useVFReactflowStore = create<
-  VFReactflowState & VFReactflowDispatchStore
+// VBReactflowDispatchStoreストア
+export const useVBReactflowStore = create<
+  VBReactflowState & VBReactflowDispatchStore
 >()(
   subscribeWithSelector((set, get) => ({
-    ...DefaultVFReactflowState,
+    ...DefaultVBReactflowState,
 
     getSequencedSelection: () => {
       const result: Array<Content | Topic | Message> = [];
@@ -783,13 +783,13 @@ export const useVFReactflowStore = create<
   }))
 );
 
-// ==== VFStore Subscriber ====
+// ==== VBStore Subscriber ====
 
 // # util
 
 // assistant 毎に配置すべきNodeを取得
 const updateAssistantLocatedNodeMap = () => {
-  const assistantTreeNodes = useVFReactflowStore.getState()
+  const assistantTreeNodes = useVBReactflowStore.getState()
     .assistantTreeNodes as AssistantMessageNode[];
   const _assistantLastNodeMap: Map<string, Node> = new Map();
   assistantTreeNodes.forEach((assistantNode) => {
@@ -798,7 +798,7 @@ const updateAssistantLocatedNodeMap = () => {
     if (assistantNode.data.content.connectedMessageIds.length > 0) {
       _assistantLastNodeMap.set(
         assistantNode.id,
-        useVFReactflowStore
+        useVBReactflowStore
           .getState()
           .nodes.filter(
             (node) =>
@@ -831,21 +831,21 @@ const updateAssistantLocatedNodeMap = () => {
     }
   });
 
-  useVFReactflowStore.setState({
+  useVBReactflowStore.setState({
     _assistantLocatedNodeMap: assistantLocatedNodeMap,
   });
 };
 
 const updateTopicNode = (props: { targetTopic: Topic }) => {
   const { targetTopic } = props;
-  const storedTopicNode = useVFReactflowStore
+  const storedTopicNode = useVBReactflowStore
     .getState()
     .nodes.find(
       (node) => isTopicNode(node) && node.data.content.id === targetTopic.id
     ) as TopicNode | undefined;
   if (storedTopicNode) {
     storedTopicNode.data.content = targetTopic;
-    useVFReactflowStore.getState().upsertTopicNode(storedTopicNode);
+    useVBReactflowStore.getState().upsertTopicNode(storedTopicNode);
   }
 };
 
@@ -856,9 +856,9 @@ export const initTopicTree = (props: { topics: Topic[] }) => {
   const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
   const topicBothEndsNodes = relocateTopicBothEndsNodes(
     topicNodes,
-    useVFReactflowStore.getState().topicBothEndsNodes
+    useVBReactflowStore.getState().topicBothEndsNodes
   );
-  useVFReactflowStore.setState({
+  useVBReactflowStore.setState({
     topicNodes,
     topicBothEndsNodes: relocateTopicBothEndsNodes(
       topicNodes,
@@ -879,8 +879,8 @@ const updateNodePosition = (node: Node) => {
   switch (node.type) {
     case "topic":
       /*
-      // ここで vbDispatch を経由してはいけない。 => この方法だと VFStore の永続化は Zustand の middleware が担当していないので、変更できない。
-      useVFStore.getState().updateTopic({
+      // ここで vbDispatch を経由してはいけない。 => この方法だと VBStore の永続化は Zustand の middleware が担当していないので、変更できない。
+      useVBStore.getState().updateTopic({
         ...(node as TopicNode).data.content,
         position: {
           x: node.position.x,
@@ -991,7 +991,7 @@ const locateAssistantAt = (
   // 直系のAssistantは Node の右の1列目に、横方向に並べる。重ねないように！
   let groupBounds = getNodesBounds([targetNode]);
   let updatedAssistantNodes: AssistantMessageNode[] = [];
-  const assistantGroup = useVFReactflowStore
+  const assistantGroup = useVBReactflowStore
     .getState()
     ._assistantLocatedNodeMap.get(targetNode.id);
   if (assistantGroup) {
@@ -1054,32 +1054,32 @@ const locateAssistantAt = (
 };
 
 // === Subscribe ===
-useVFReactflowStore.subscribe((current, pre) => {
+useVBReactflowStore.subscribe((current, pre) => {
   if (
     current.topicNodes !== pre.topicNodes ||
     current.assistantTreeNodes !== pre.assistantTreeNodes ||
     current.contentNodes !== pre.contentNodes
   ) {
     // ノードの変更を検知して、トピックツリーを再構築
-    useVFReactflowStore.setState({
+    useVBReactflowStore.setState({
       nodes: [
         ...constructTopicTreeNodes({
-          topicBothEndsNodes: useVFReactflowStore.getState().topicBothEndsNodes,
-          topicNodes: useVFReactflowStore.getState().topicNodes,
+          topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
+          topicNodes: useVBReactflowStore.getState().topicNodes,
         }),
-        ...useVFReactflowStore.getState().assistantTreeNodes,
-        ...useVFReactflowStore.getState().contentNodes,
+        ...useVBReactflowStore.getState().assistantTreeNodes,
+        ...useVBReactflowStore.getState().contentNodes,
       ],
       edges: [
-        ...useVFReactflowStore.getState().topicTreeEdges,
-        ...useVFReactflowStore.getState().assistantTreeEdges,
+        ...useVBReactflowStore.getState().topicTreeEdges,
+        ...useVBReactflowStore.getState().assistantTreeEdges,
       ],
     });
   }
 });
 
 // measured
-useVFReactflowStore.subscribe(
+useVBReactflowStore.subscribe(
   (state) => state.nodes,
   (nodes, prevNodes) => {
     const newlyMeasuredNodes = nodes.filter(
@@ -1093,24 +1093,22 @@ useVFReactflowStore.subscribe(
     if (newlyMeasuredNodes.length > 0) {
       // measured が付与されたノードが見つかったら処理を行う
       console.warn(
-        "useVFReactflowStore.subscribe: Measured node:",
+        "useVBReactflowStore.subscribe: Measured node:",
         newlyMeasuredNodes
       );
       // topic nodes
-      useVFReactflowStore
+      useVBReactflowStore
         .getState()
         .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
     }
   }
 );
 
-// VFStore
+// VBStore
 const relocateTopicBothEndsNodes = (
   topicNodes: TopicNode[],
   topicBothEndsNodes: TopicBothEndsNode[]
 ): TopicBothEndsNode[] => {
-  //const topicNodes = useVFReactflowStore.getState().topicNodes;
-  //const topicBothEndsNodes = useVFReactflowStore.getState().topicBothEndsNodes;
   let updatedHeaderNode;
   let updatedDiscussionNode;
   if (topicNodes.length > 0) {
@@ -1161,20 +1159,20 @@ useVBStore.subscribe(
     (async () => {
       let topicNodes: TopicNode[] = [];
       let topicBothEndsNodes =
-        useVFReactflowStore.getState().topicBothEndsNodes;
+        useVBReactflowStore.getState().topicBothEndsNodes;
       const minutesStore = useMinutesStore(
         useVBStore.getState().startTimestamp
       ).getState();
       switch (lastAction?.type) {
         case "updateTopic": // トピックの追加・削除・変更
-          topicNodes = useVFReactflowStore
+          topicNodes = useVBReactflowStore
             .getState()
             .topicNodes.map((node) =>
               node.id === lastAction.payload.topic.id
                 ? makeTopicNode({ topic: lastAction.payload.topic })
                 : node
             );
-          useVFReactflowStore.setState({
+          useVBReactflowStore.setState({
             topicNodes,
             topicBothEndsNodes: relocateTopicBothEndsNodes(
               topicNodes,
@@ -1186,9 +1184,9 @@ useVBStore.subscribe(
           const newTopicNodes = lastAction.payload.topics.map((topic) =>
             makeTopicNode({ topic })
           );
-          topicNodes = [...useVFReactflowStore.getState().topicNodes];
+          topicNodes = [...useVBReactflowStore.getState().topicNodes];
           topicBothEndsNodes =
-            useVFReactflowStore.getState().topicBothEndsNodes;
+            useVBReactflowStore.getState().topicBothEndsNodes;
 
           let lastNode =
             topicNodes.length > 0
@@ -1209,7 +1207,7 @@ useVBStore.subscribe(
             topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
             lastBounds = located.bounds;
           }
-          useVFReactflowStore.setState({
+          useVBReactflowStore.setState({
             _layoutTopicsQueue: _layoutTopicsQueue,
             topicNodes,
             topicBothEndsNodes: relocateTopicBothEndsNodes(
@@ -1227,13 +1225,13 @@ useVBStore.subscribe(
           // topic
           const topics = minutesStore.topics;
           console.log(
-            "useVFReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 0",
+            "useVBReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 0",
             topics
           );
-          useVFReactflowStore.setState({ ...DefaultVFReactflowState });
+          useVBReactflowStore.setState({ ...DefaultVBReactflowState });
           initTopicTree({ topics });
           console.log(
-            "useVFReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 1"
+            "useVBReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 1"
           );
           break;
         default:
@@ -1274,7 +1272,7 @@ const updateAssistantNodes = ({
     );
 
     // 更新
-    useVFReactflowStore.setState({
+    useVBReactflowStore.setState({
       assistantTreeNodes,
       assistantTreeEdges,
     });
@@ -1288,7 +1286,7 @@ useVBStore.subscribe(
     // content node
     if (startTimestamp) {
       // 1. 初期状態を手動で取得してノードをセット
-      console.log("useVFReactflowStore: updatedAssistant: init");
+      console.log("useVBReactflowStore: updatedAssistant: init");
       updateAssistantNodes({
         startTimestamp,
         assistantsMap:
@@ -1356,7 +1354,7 @@ useVBStore.subscribe(
 );
 
 // assistant message Node 自動配置
-useVFReactflowStore.subscribe(
+useVBReactflowStore.subscribe(
   (state) => state.assistantTreeNodes,
   (assistantTreeNodes, preAssistantTreeNodes) => {
     // topic
@@ -1375,7 +1373,7 @@ useVFReactflowStore.subscribe(
       .forEach((node) => {
         const message = (node as AssistantMessageNode).data.content;
         if (message.connectedMessageIds.length > 0) {
-          const targetNode = useVFReactflowStore
+          const targetNode = useVBReactflowStore
             .getState()
             .nodes.find(
               (node) =>
@@ -1386,7 +1384,7 @@ useVFReactflowStore.subscribe(
             );
           if (targetNode) {
             // 対象Node　の右に配置して
-            useVFReactflowStore.getState().updateAssistantAt(targetNode);
+            useVBReactflowStore.getState().updateAssistantAt(targetNode);
           }
         }
       });
@@ -1414,7 +1412,7 @@ useVBStore.subscribe(
     // content node
     if (startTimestamp && startTimestamp > 0) {
       // 1. 初期状態を手動で取得してノードをセット
-      useVFReactflowStore.setState({
+      useVBReactflowStore.setState({
         contentNodes: Array.from(
           useMinutesContentStore(startTimestamp).getState().contentMap.values()
         ).map((content) => makeContentNode({ content })),
@@ -1430,7 +1428,7 @@ useVBStore.subscribe(
       ).subscribe(
         (state) => state.contentMap,
         (state) => {
-          useVFReactflowStore.setState({
+          useVBReactflowStore.setState({
             contentNodes: Array.from(state.values()).map((content) =>
               makeContentNode({ content })
             ),

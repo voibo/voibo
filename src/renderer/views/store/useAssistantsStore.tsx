@@ -1432,7 +1432,7 @@ useVBStore.subscribe(
               assistantsStore.enqueueTopicRelatedInvoke(vaConfig);
               /*
         console.warn(
-          "useAssistantsStore: useVFStore.subscribe: topic",
+          "useAssistantsStore: useVBStore.subscribe: topic",
           vaConfig.label,
           assistantsStore.getState().assistantsMap.get(vaConfig.assistantId)
             ?.invokeQueue

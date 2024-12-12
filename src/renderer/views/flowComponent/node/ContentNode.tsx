@@ -20,7 +20,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import useClickHandler from "../../common/useClickHandler.jsx";
 import { Content } from "../../store/Content.js";
-import { useMinutesContentStore } from "../../store/useContentStore.js";
+import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
 

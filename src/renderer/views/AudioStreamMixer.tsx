@@ -26,7 +26,7 @@ limitations under the License.
 //////////////////////////////////////////////////////////////////
 
 import JSZip from "jszip";
-import { VFSettingsState } from "./setting/VFSettings";
+import { VBSettingsState } from "./setting/VBSettings";
 
 interface AudioStreamMixerOptions {
   channels: number;
@@ -137,7 +137,7 @@ export class AudioStreamMixerManager {
     this._closeMixer();
   }
 
-  async startAudioMixer(settingsData: VFSettingsState): Promise<MediaStream> {
+  async startAudioMixer(settingsData: VBSettingsState): Promise<MediaStream> {
     this._closeMixer();
 
     this.ownMicStream = await navigator.mediaDevices.getUserMedia({

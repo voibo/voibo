@@ -17,12 +17,12 @@ import { AlignHorizontalLeft, NoteAdd } from "@mui/icons-material";
 import { Button, Tooltip } from "@mui/material";
 import {
   getLayoutParam,
-  useVFReactflowStore,
-} from "../store/useVFReactflowStore.jsx";
+  useVBReactflowStore,
+} from "../store/useVBReactflowStore.jsx";
 import { useDnD } from "./DnDContext.jsx";
 
 export const StageToolBar = () => {
-  const layout = useVFReactflowStore((state) => state.layout);
+  const layout = useVBReactflowStore((state) => state.layout);
   return (
     <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
       <div className="flex flex-col rounded border border-white bg-indigo-950 mb-4">
@@ -55,7 +55,7 @@ const ContentsMakerButton = () => {
 };
 
 const LayoutButton = () => {
-  const layout = useVFReactflowStore((state) => state.layout);
+  const layout = useVBReactflowStore((state) => state.layout);
   return (
     <Tooltip title="Layout automatically" placement="right">
       <Button

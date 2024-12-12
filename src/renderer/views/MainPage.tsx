@@ -20,7 +20,7 @@ import { IPCInvokeKeys } from "../../common/constants.js";
 import { HeaderComponent } from "./HeaderComponent.jsx";
 import { MainMenuComponent } from "./MainMenuComponent.jsx";
 import { VBNodeStage } from "./flowComponent/VBNodeStage.jsx";
-import { VBSettings } from "./setting/VFSettings.jsx";
+import { VBSettings } from "./setting/VBSettings.jsx";
 import { useTopicStore } from "./store/useTopicManagerStore.jsx";
 import { useVAConfEffect } from "./store/useVAConfStore.jsx";
 import { useVBStore } from "./store/useVBStore.jsx";
@@ -42,7 +42,6 @@ const MainComponent = styled("div", {
 }));
 
 export const MainPage = () => {
-  // == VF state / dispatch w/ Zustand ==
   const lastAction = useVBStore((state) => state.lastAction);
   const mainMenuOpen = useVBStore((state) => state.mainMenuOpen);
   const vbDispatch = useVBStore((state) => state.vbDispatch);
