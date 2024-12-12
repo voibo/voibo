@@ -38,15 +38,21 @@ import { useConfirmDialog } from "./common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "./common/useDetailViewDialog.jsx";
 import { useVBStore, VBAction, VBState } from "./store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
-import { useDownloadMinutes } from "./VFPage.jsx";
-import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
+import {
+  MinutesTitleStore,
+  useMinutesTitleStore,
+} from "./store/useMinutesTitle.jsx";
+import { useMinutesStore } from "./store/useMinutesStore.jsx";
+import { useMinutesAssistantStore } from "./store/useAssistantsStore.jsx";
+import { saveAs } from "file-saver";
+import JSZip from "jszip";
 
 export const HeaderComponent = () => {
-  const vfState = useVBStore((state) => state);
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
+  const vbState = useVBStore((state) => state);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleOpenHome = () => {
-    vfDispatch({
+    vbDispatch({
       type: "openHomeMenu",
     });
   };
@@ -60,10 +66,10 @@ export const HeaderComponent = () => {
           onClick={handleOpenHome}
           edge="start"
           sx={{
-            ...(vfState.mainMenuOpen && { display: "none" }),
+            ...(vbState.mainMenuOpen && { display: "none" }),
           }}
           className="mr-2"
-          disabled={vfState.recording}
+          disabled={vbState.recording}
         >
           <img
             src="./asset/va_logo_black.svg"
@@ -75,7 +81,7 @@ export const HeaderComponent = () => {
           <div className="ml-4 flex flex-row text-xs items-center text-white/50">
             <AccessTime className="h-4 w-4 mr-2" />
             <div className="w-12">
-              {formatTimestamp(vfState.startTimestamp)}
+              {formatTimestamp(vbState.startTimestamp)}
             </div>
           </div>
         </div>
@@ -87,18 +93,18 @@ export const HeaderComponent = () => {
       </div>
       <div className="flex flex-row items-center space-x-2 justify-end">
         <AssistantButton />
-        <OthersMenuButton state={vfState} dispatch={vfDispatch} />
+        <OthersMenuButton state={vbState} dispatch={vbDispatch} />
       </div>
     </div>
   );
 };
 
 const MinutesTitle = (props: {}) => {
-  const vfState = useVBStore((state) => state);
+  const vbState = useVBStore((state) => state);
   const useMinutesTitle = useMinutesTitleStore((state) => state);
-  const defaultTitle = `会議: ${formatTimestamp(vfState.startTimestamp)}`;
+  const defaultTitle = `会議: ${formatTimestamp(vbState.startTimestamp)}`;
   let minutesTitle =
-    useMinutesTitle.getMinutesTitle(vfState.startTimestamp ?? 0) ??
+    useMinutesTitle.getMinutesTitle(vbState.startTimestamp ?? 0) ??
     defaultTitle;
 
   // current title
@@ -114,7 +120,7 @@ const MinutesTitle = (props: {}) => {
   };
 
   const handleBlurMinutesTitle = (event: any) => {
-    if (vfState.startTimestamp) {
+    if (vbState.startTimestamp) {
       const title =
         currentMinutesTitle && currentMinutesTitle != ""
           ? currentMinutesTitle
@@ -122,7 +128,7 @@ const MinutesTitle = (props: {}) => {
       setMinutesTitle(title);
       useMinutesTitle.setMinutesTitle({
         title,
-        startTimestamp: vfState.startTimestamp,
+        startTimestamp: vbState.startTimestamp,
       });
     }
   };
@@ -186,8 +192,83 @@ const OthersMenuButton = (props: {
   };
 
   // menu item events
-  const useMinutesTitle = useMinutesTitleStore.getState();
-  const downloadMinutes = useDownloadMinutes(useMinutesTitle);
+  // download minutes
+  const downloadMinutes = (targetMinutes: number) => {
+    // Following stores should be snapshoted to download, so call getState().
+    const minutesTitle = useMinutesTitleStore
+      .getState()
+      .getMinutesTitle(targetMinutes);
+    const minutesStore = useMinutesStore(targetMinutes).getState();
+    const assistantStore = useMinutesAssistantStore(targetMinutes).getState();
+
+    if (minutesTitle && minutesStore && assistantStore) {
+      const zip = new JSZip();
+      const results: JSZip[] = [];
+
+      results.push(zip.file("minutesTitle.json", JSON.stringify(minutesTitle)));
+      results.push(zip.file("minutesTitle.md", minutesTitle));
+
+      // topics
+      results.push(
+        zip.file("topics.json", JSON.stringify(Array.from(minutesStore.topics)))
+      );
+      results.push(
+        zip.file(
+          "topics.md",
+          Array.from(minutesStore.topics)
+            .map((item) => {
+              return `# ${item.title}\n\n${
+                item.topic instanceof Array ? item.topic.join("\n") : item.topic
+              }`;
+            })
+            .join("\n\n\n")
+        )
+      );
+
+      // discussion
+      results.push(
+        zip.file("discussion.json", JSON.stringify(minutesStore.discussion))
+      );
+      results.push(
+        zip.file(
+          "discussion.md",
+          Array.from(minutesStore.discussion)
+            .map((discussionSegment) => {
+              return `${discussionSegment.texts
+                .map((text) => text.text)
+                .join("\n")}`;
+            })
+            .join("\n\n")
+        )
+      );
+
+      // assistants
+      assistantStore.assistantsMap.forEach((assistant) => {
+        (assistant.messages ?? []).forEach((message) => {
+          results.push(
+            zip.file(
+              `assistant/${assistant.vaConfig.assistantId}/${message.id}.json`,
+              JSON.stringify(message)
+            )
+          );
+          results.push(
+            zip.file(
+              `assistant/${assistant.vaConfig.assistantId}/${message.id}.md`,
+              message.content
+            )
+          );
+        });
+      });
+
+      console.log("DL: minutes", minutesStore);
+      // construct contents
+      Promise.all(results).then(() => {
+        zip.generateAsync({ type: "blob" }).then((content) => {
+          saveAs(content, `va_${targetMinutes}.zip`);
+        });
+      });
+    }
+  };
 
   // menu item events
   const handleBack = () => {

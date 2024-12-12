@@ -47,7 +47,7 @@ import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
 
 const ZOOM_MIN = 0.001;
 
-export const VANodeStage = (props: {}) => {
+export const VBNodeStage = (props: {}) => {
   // Warning: Seems like you have not used zustand provider as an ancestor を解消する方法
   // https://reactflow.dev/learn/troubleshooting
   // h-[calc(100vh-5rem)]
@@ -128,7 +128,7 @@ const VANodeStageCore = (props: {}) => {
         case "setTopic": // トピック変更時
           // FIXME
           // Topic の position 更新を永続化させるために useVFReactflowStore:updateNodePosition にて、
-          // useVFStore.getState().vfDispatch({type: "updateTopic"/// を使わざるを得ず、
+          // useVFStore.getState().vbDispatch({type: "updateTopic"/// を使わざるを得ず、
           // このタイミングでは setTopic が呼ばれない事になっている。
           // VFStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
           // focusLastTopic({ reactFlow, flowState, windowSize });

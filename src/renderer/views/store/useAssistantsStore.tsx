@@ -765,10 +765,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           }
           const state = get().getOrInitAssistant(vaConfig);
           const dispatch = get().assistantDispatch(vaConfig);
-
-          const vfState = useVBStore.getState();
           const minutesState = useMinutesStore(
-            vfState.startTimestamp
+            useVBStore.getState().startTimestamp
           ).getState();
           const { updateMode, attachOption, updatePrompt } = assistantConfig;
           if (

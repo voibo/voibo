@@ -91,5 +91,5 @@ export default memo(TopicNodeComponent, (prevProps, nextProps) => {
 export function removeTopic(topicID: string) {
   useVBStore
     .getState()
-    .vfDispatch({ type: "removeTopic", payload: { topicID } });
+    .vbDispatch({ type: "removeTopic", payload: { topicID } });
 }

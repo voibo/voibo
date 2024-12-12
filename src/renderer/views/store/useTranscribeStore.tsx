@@ -194,7 +194,7 @@ function setMinutesLines(segments: Segment[]) {
     minutesStore.discussionSplitter.duration
   );
   //console.log("setMinutesLines", newMinutes, segments);
-  vfDispatch({
+  useVBStore.getState().vbDispatch({
     type: "setMinutesLines",
     payload: {
       minutes: newMinutes.minutes,
@@ -203,8 +203,7 @@ function setMinutesLines(segments: Segment[]) {
 }
 
 // == ON Transcribe ==
-const vfDispatch = useVBStore.getState().vfDispatch;
-const vfState = useVBStore.getState();
+
 window.electron.on(
   IPCReceiverKeys.ON_TRANSCRIBED,
   (
@@ -231,8 +230,8 @@ window.electron.on(
       segments: Segment[];
     }
   ) => {
-    //console.log("ON_TRANSCRIBED_INTERIM", response.id, response.segments);
-    vfDispatch({
+    //console.log("ON_TRANSCRIBED_INTERIM", response.id, response.segments)
+    useVBStore.getState().vbDispatch({
       type: "updateInterimSegment",
       payload: {
         segment: response.segments[0],

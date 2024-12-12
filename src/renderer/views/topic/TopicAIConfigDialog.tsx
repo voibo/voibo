@@ -18,20 +18,19 @@ import { Dispatch, useEffect, useState } from "react";
 import { EnglishTopicPrompt } from "../../../common/agentManagerDefinition.js";
 import { AIConfig, AIConfigurator } from "../common/aiConfig.jsx";
 
-import { VBAction, VBState } from "../store/useVBStore.js";
+import { useVBStore, VBAction, VBState } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const TopicAIConfigDialog = (props: {
   dialogState: boolean;
   dialogDispatch: Dispatch<React.SetStateAction<boolean>>;
-  vfState: VBState;
-  vfDispatch: Dispatch<VBAction>;
 }) => {
-  const { dialogState, dialogDispatch, vfState, vfDispatch } = props;
-  const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
-  const [stateAIConfig, setAIConfig] = useState<AIConfig>(
-    minutesStore.topicAIConf
-  );
+  const { dialogState, dialogDispatch } = props;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+  const minutesStore = useMinutesStore(startTimestamp);
+  const topicAIConf = minutesStore((state) => state.topicAIConf);
+  const [stateAIConfig, setAIConfig] = useState<AIConfig>(topicAIConf);
 
   const handleClose = () => {
     dialogDispatch(false);
@@ -39,7 +38,7 @@ export const TopicAIConfigDialog = (props: {
 
   const handleUpdate = () => {
     console.log("Update AI Config", stateAIConfig);
-    vfDispatch({
+    vbDispatch({
       type: "changeTopicAIConfig",
       payload: {
         aiConfig: {
@@ -52,8 +51,8 @@ export const TopicAIConfigDialog = (props: {
   };
 
   useEffect(() => {
-    setAIConfig(minutesStore.topicAIConf);
-  }, [minutesStore.topicAIConf]);
+    setAIConfig(topicAIConf);
+  }, [topicAIConf]);
 
   return (
     <Dialog open={dialogState} onClose={handleClose}>
@@ -69,7 +68,7 @@ export const TopicAIConfigDialog = (props: {
             <div className="col-span-3">
               <TextField
                 label="Initial Prompt"
-                value={minutesStore.topicAIConf.systemPrompt}
+                value={topicAIConf.systemPrompt}
                 variant="outlined"
                 multiline
                 minRows={4}

@@ -43,9 +43,11 @@ export const TopicsElement = (props: {
 }) => {
   const { messageId, detailViewDialog, handleClose } = props;
   const minutesStore = useMinutesStore(
-    useVBStore.getState().startTimestamp
-  ).getState();
-  const topic = minutesStore.topics.find((topic) => topic.id === messageId);
+    useVBStore((state) => state.startTimestamp)
+  );
+  const topic = minutesStore((state) => state.topics).find(
+    (topic) => topic.id === messageId
+  );
 
   if (!topic) return <></>;
 
@@ -147,13 +149,12 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const vfState = useVBStore((state) => state);
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
-
   const [openDialog, setOpenDialog] = useState(false);
+
   const handleClick = () => {
-    vfDispatch({ type: "deleteAllTopic" });
+    vbDispatch({ type: "deleteAllTopic" });
     updateTopicSeeds(true);
   };
 
@@ -181,8 +182,6 @@ export const TopicsHeader = () => {
       <TopicAIConfigDialog
         dialogState={openDialog}
         dialogDispatch={setOpenDialog}
-        vfState={vfState}
-        vfDispatch={vfDispatch}
       />
     </div>
   );
@@ -193,9 +192,8 @@ const TopicConfigDialog = (props: {
   handleClose: () => void;
 }) => {
   const { topic, handleClose } = props;
-
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
-  const agendaStore = useAgendaStore((state) => state);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+  const getAgenda = useAgendaStore((state) => state.getAgenda);
 
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory({
     behavior: "instant",
@@ -214,7 +212,7 @@ const TopicConfigDialog = (props: {
           color="error"
           onClick={() => {
             handleClose();
-            vfDispatch({
+            vbDispatch({
               type: "removeTopic",
               payload: { topicID: topic.id },
             });
@@ -235,7 +233,7 @@ const TopicConfigDialog = (props: {
         <div>Agenda</div>
         <div className="m-2 flex">
           {topic.seedData?.agendaIdList?.map((agendaId, index) => {
-            const agenda = agendaStore.getAgenda(agendaId);
+            const agenda = getAgenda(agendaId);
             if (agenda) {
               return (
                 <div key={index}>

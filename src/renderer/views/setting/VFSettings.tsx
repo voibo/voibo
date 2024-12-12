@@ -35,18 +35,18 @@ const TabContext = TabContext_ as unknown as typeof TabContext_.default;
 const TabList = TabList_ as unknown as typeof TabList_.default;
 const TabPanel = TabPanel_ as unknown as typeof TabPanel_.default;
 
-export type VFSettingsState = AudioDeviceSettingsState &
+export type VBSettingsState = AudioDeviceSettingsState &
   VADSettingsState &
   DecibelDividerSettingState;
 
 export type VFSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
 
-export const VFSettings = () => {
-  const vfState = useVBStore((state) => state);
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
+export const VBSettings = () => {
+  const vbState = useVBStore((state) => state);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleClose = () => {
-    vfDispatch({ type: "changeVADDialogOpen" });
+    vbDispatch({ type: "changeVADDialogOpen" });
   };
 
   const [selectedTab, selectTab] = useState("1");
@@ -55,7 +55,7 @@ export const VFSettings = () => {
   };
 
   return (
-    <Dialog open={vfState.audioSettingsDialogOpen} onClose={handleClose}>
+    <Dialog open={vbState.audioSettingsDialogOpen} onClose={handleClose}>
       <div className="p-4 text-zinc-600">
         <div className="flex items-center justify-start text-lg">
           <Settings className="mr-2" />

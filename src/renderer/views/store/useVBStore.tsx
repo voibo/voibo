@@ -30,7 +30,7 @@ import { IPCSenderKeys } from "../../../common/constants.js";
 
 // ==== VB Core ====
 
-export type VFStateMode = "home" | "recordingStudio";
+export type VBStateMode = "home" | "recordingStudio";
 
 export type VBState = {
   // current minutes start timestamp.
@@ -38,7 +38,7 @@ export type VBState = {
   startTimestamp: number;
 
   // gui
-  mode: VFStateMode;
+  mode: VBStateMode;
   mainMenuOpen: boolean;
   recording: boolean;
   playWavMute: boolean;
@@ -54,7 +54,7 @@ export type VBState = {
 };
 
 type VBDispatch = {
-  vfDispatch: (action: VBAction) => void;
+  vbDispatch: (action: VBAction) => void;
   isNoMinutes: () => boolean;
 };
 
@@ -78,7 +78,7 @@ export const useVBStore = create<VBState & VBDispatch>()(
     // == zustand subscript ==
     lastAction: null,
 
-    vfDispatch: (action) => VBActionProcessor(action),
+    vbDispatch: (action) => VBActionProcessor(action),
     isNoMinutes: () => get().startTimestamp === NO_MINUTES_START_TIMESTAMP,
   }))
 );

@@ -19,17 +19,16 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
-import { VFPage } from "./views/VFPage.jsx";
+import { MainPage } from "./views/MainPage.jsx";
 
 export const App = () => {
   // router
   const router = createHashRouter(
     createRoutesFromElements(
       <Route errorElement={<div>Error</div>}>
-        <Route path="/" element={<VFPage />}></Route>
+        <Route path="/" element={<MainPage />}></Route>
       </Route>
     )
   );
-
   return <RouterProvider router={router} />;
 };

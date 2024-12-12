@@ -420,7 +420,7 @@ export const useVFReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVBStore.getState().vfDispatch({
+          useVBStore.getState().vbDispatch({
             type: "updateTopic",
             payload: {
               topic: {
@@ -482,7 +482,7 @@ export const useVFReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVBStore.getState().vfDispatch({
+          useVBStore.getState().vbDispatch({
             type: "updateTopic",
             payload: {
               topic: {
@@ -879,7 +879,7 @@ const updateNodePosition = (node: Node) => {
   switch (node.type) {
     case "topic":
       /*
-      // ここで vfDispatch を経由してはいけない。 => この方法だと VFStore の永続化は Zustand の middleware が担当していないので、変更できない。
+      // ここで vbDispatch を経由してはいけない。 => この方法だと VFStore の永続化は Zustand の middleware が担当していないので、変更できない。
       useVFStore.getState().updateTopic({
         ...(node as TopicNode).data.content,
         position: {
@@ -888,7 +888,7 @@ const updateNodePosition = (node: Node) => {
         },
       });
       */
-      useVBStore.getState().vfDispatch({
+      useVBStore.getState().vbDispatch({
         type: "updateTopic",
         payload: {
           topic: {

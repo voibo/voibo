@@ -22,7 +22,7 @@ import {
 import { AudioDeviceSettingsDefault } from "../setting/AudioDeviceSettings.jsx";
 import { DecibelDividerSettingDefault } from "../setting/DecibelDividerSetting.jsx";
 import { VADSettingsDefault } from "../setting/VADSettings.jsx";
-import { VFSettingsAction, VFSettingsState } from "../setting/VFSettings.jsx";
+import { VFSettingsAction, VBSettingsState } from "../setting/VFSettings.jsx";
 import {
   ExpandJSONOptions,
   HydrateState,
@@ -34,7 +34,7 @@ export type VFSettingsStoreAction = {
   settingDispatch: (action: VFSettingsAction) => void;
 };
 
-export type VFSettingsStore = VFSettingsState &
+export type VFSettingsStore = VBSettingsState &
   VFSettingsStoreAction &
   HydrateState;
 export const useVFSettingsStore = create<VFSettingsStore>()(

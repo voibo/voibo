@@ -30,8 +30,8 @@ import {
   AssistantState,
   makeTopicOrientedInvokeParam,
 } from "../../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../../store/useVBStore.js";
-import { useMinutesStore } from "../../store/useMinutesStore.js";
+import { useVBStore } from "../../store/useVBStore.js";
+import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 
 // requestor
 export type TypicalRequestType =
@@ -48,12 +48,11 @@ export type TypicalRequest = {
 export const VirtualAssistantRequester = (props: {
   state: AssistantState;
   dispatch: Dispatch<AssistantAction>;
-  vfState: VBState;
 }) => {
-  const { state, dispatch, vfState } = props;
-
-  const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
-  const isSomeSelected = minutesStore.topics.some(
+  const { state, dispatch } = props;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const minutesStore = useMinutesStore(startTimestamp);
+  const isSomeSelected = minutesStore((state) => state.topics).some(
     (topic) => topic.selected ?? false
   );
 
@@ -89,7 +88,9 @@ export const VirtualAssistantRequester = (props: {
         queue: [
           makeTopicOrientedInvokeParam({
             basePrompt: typicalRequests[index].value,
-            topics: minutesStore.topics.filter((topic) => topic.selected),
+            topics: minutesStore((state) => state.topics).filter(
+              (topic) => topic.selected
+            ),
             attachOption: {
               attachment: "topic",
               target: "manualSelected",

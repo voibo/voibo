@@ -35,9 +35,7 @@ export const AssistantTemplateDialog = (props: {
   closeDialog: Dispatch<SetStateAction<boolean>>;
 }) => {
   const { open, closeDialog } = props;
-  const vfStore = useVBStore.getState();
-  const minutesStartTimestamp = vfStore.startTimestamp;
-  if (!minutesStartTimestamp) return <></>;
+  if (useVBStore((state) => state.isNoMinutes)()) return <></>;
 
   // handle close dialog
   const handleClose = () => {
@@ -58,7 +56,7 @@ export const AssistantTemplateDialog = (props: {
     };
 
     console.log("handleAddTemplate", newAssistantConf);
-    vfStore.vfDispatch({
+    useVBStore((state) => state.vbDispatch)({
       type: "addVirtualAssistantConf",
       payload: {
         assistant: newAssistantConf,

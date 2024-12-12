@@ -22,20 +22,20 @@ import {
   MenuItem,
   MenuList,
 } from "@mui/material";
-import { drawerWidth } from "./VFPage.jsx";
+import { drawerWidth } from "./MainPage.jsx";
 import { useVBStore } from "./store/useVBStore.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const MainMenuComponent = () => {
-  const vfState = useVBStore((state) => state);
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
+  const mainMenuOpen = useVBStore((state) => state.mainMenuOpen);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleLoad = (event: any) => {
     const startTimestamp =
       event.currentTarget.closest("[data-minutes]").dataset?.minutes;
     // load
     if (startTimestamp) {
-      vfDispatch({
+      vbDispatch({
         type: "openMinutes",
         payload: {
           startTimestamp: Number(startTimestamp),
@@ -60,7 +60,7 @@ export const MainMenuComponent = () => {
       }}
       variant="persistent"
       anchor="left"
-      open={vfState.mainMenuOpen}
+      open={mainMenuOpen}
     >
       <div className="overflow-hidden">
         <div className="p-2 w-full flex items-center">
@@ -72,7 +72,7 @@ export const MainMenuComponent = () => {
         <Divider />
         <MenuItem
           onClick={() => {
-            vfDispatch({
+            vbDispatch({
               type: "createNewMinutes",
             });
           }}
@@ -119,7 +119,7 @@ export const MainMenuComponent = () => {
           <Divider />
           <MenuItem
             onClick={() => {
-              vfDispatch({
+              vbDispatch({
                 type: "changeVADDialogOpen",
               });
             }}

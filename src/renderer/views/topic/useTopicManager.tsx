@@ -138,11 +138,11 @@ export function useTopicManager(): {
   dispatcher: Dispatch<TopicManagerAction>;
 } {
   // openAIChat
-  const minutesStore = useMinutesStore(
-    useVBStore.getState().startTimestamp
-  ).getState();
-  const topicAIConf = minutesStore.topicAIConf;
-  const vfDispatch = useVBStore((state) => state.vfDispatch);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const topicAIConf = useMinutesStore(startTimestamp)(
+    (state) => state.topicAIConf
+  );
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const topicState = useTopicStore((state) => state);
   const topicDispatcher = useTopicStore((state) => state.topicDispatch);
   const agendaStore = useAgendaStore((state) => state);
@@ -195,7 +195,7 @@ export function useTopicManager(): {
         updatePrompts[targetIndex].isRequested = true;
         await window.electron
           .invoke(IPCInvokeKeys.GET_TOPIC, {
-            systemPrompt: EnglishTopicPrompt, //,vfState.topicAIConf.systemPrompt,
+            systemPrompt: EnglishTopicPrompt, //,vbState.topicAIConf.systemPrompt,
             structuredOutputSchema: topicAIConf.structuredOutputSchema,
             inputPrompt: prompt,
             modelType: topicAIConf.modelType,
@@ -273,11 +273,10 @@ export function useTopicManager(): {
     }
   }, [topicState.processing, topicState.prompts, topicState.res]);
 
-  // update vfState
   useEffect(() => {
     if (topicState.res) {
-      console.log("useOpenAIChat: update vfState", topicState.res.data.topics);
-      vfDispatch({
+      console.log("useTopicManager: setTopic", topicState.res.data.topics);
+      vbDispatch({
         type: "setTopic",
         payload: {
           topics: topicState.res.data.topics,
