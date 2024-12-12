@@ -23,9 +23,10 @@ import {
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
-import { VFAction, VFState } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 const SplitterConfigList: Array<DiscussionSplitterConf> = [
   {
@@ -69,21 +70,11 @@ export type DiscussionSplitterConf = {
   duration: number;
 };
 
-export const DiscussionSplitter = ({
-  vfState,
-  vfDispatch,
-}: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
-}) => {
+export const DiscussionSplitter = () => {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    console.log(
-      "vfState.discussionSplitter changed:",
-      vfState.discussionSplitter
-    );
-  }, [vfState.discussionSplitter]);
+  const discussionSplitterName = useMinutesStore(
+    useVBStore.getState().startTimestamp
+  )((state) => state.discussionSplitter.name);
 
   return (
     <div className="flex flex-row items-center">
@@ -94,14 +85,9 @@ export const DiscussionSplitter = ({
         }}
       >
         <TimerOutlined sx={{ fontSize: "1rem" }} className="mr-2" />
-        {vfState.discussionSplitter.name}
+        {discussionSplitterName}
       </Button>
-      <DiscussionSplitterDialog
-        open={open}
-        setOpen={setOpen}
-        vfState={vfState}
-        vfDispatch={vfDispatch}
-      />
+      <DiscussionSplitterDialog open={open} setOpen={setOpen} />
     </div>
   );
 };
@@ -109,16 +95,20 @@ export const DiscussionSplitter = ({
 const DiscussionSplitterDialog = (props: {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
 }) => {
-  const { open, setOpen, vfState, vfDispatch } = props;
+  const { open, setOpen } = props;
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+  const minutesStore = useMinutesStore(
+    useVBStore((state) => state.startTimestamp)
+  );
+  const discussionSplitter = minutesStore((state) => state.discussionSplitter);
+  const discussion = minutesStore((state) => state.discussion);
 
   const handleChange = (e: SelectChangeEvent) => {
     const selected = SplitterConfigList.filter(
       (config) => String(config.duration) === e.target.value
     )[0];
-    vfDispatch({
+    vbDispatch({
       type: "changeDiscussionSplitterConf",
       payload: {
         splitterConf: { ...selected }, // 新オブジェクトにするため
@@ -128,14 +118,14 @@ const DiscussionSplitterDialog = (props: {
   };
 
   const handleSplit = () => {
-    const duration = vfState.discussionSplitter.duration;
+    const duration = discussionSplitter.duration;
     if (duration === 0) return;
 
     let lastStartTimestamp = 0;
-    vfDispatch({
+    vbDispatch({
       type: "setMinutesLines",
       payload: {
-        minutes: vfState.discussion.map((v, index) => {
+        minutes: discussion.map((v, index) => {
           if (index === 0) {
             lastStartTimestamp = Number(v.timestamp);
             return { ...v, topicStartedPoint: true };
@@ -160,7 +150,7 @@ const DiscussionSplitterDialog = (props: {
             <div className="flex-1">
               <FormControl fullWidth>
                 <Select
-                  value={String(vfState.discussionSplitter.duration)}
+                  value={String(discussionSplitter.duration)}
                   label=""
                   onChange={handleChange}
                 >
@@ -194,12 +184,6 @@ const DiscussionSplitterDialog = (props: {
   );
 };
 
-/**
- *
- * @param minutes
- * @param duration 0 for manual split
- * @returns
- */
 export function splitMinutes(
   minutes: DiscussionSegment[],
   duration: number

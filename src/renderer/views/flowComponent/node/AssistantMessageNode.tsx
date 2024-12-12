@@ -18,13 +18,13 @@ import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";
 
 import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
-import { Message } from "../../../../main/agent/agentManagerDefinition.js";
+import { Message } from "../../../../common/agentManagerDefinition.js";
 import { VAMessage } from "../../assistant/message/VAMessage.jsx";
 import {
   useMinutesAssistantStore,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { useVFStore } from "../../store/useVFStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
 
 export type AssistantMessageNodeParam = {
@@ -95,7 +95,7 @@ export function removeAssistantMessage(data: AssistantMessageNodeParam) {
 
   if (messageId) {
     console.log("removeAssistantMessage", messageId, data.assistantConfig);
-    const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+    const minutesStartTimestamp = useVBStore.getState().startTimestamp;
     if (minutesStartTimestamp) {
       const assistantStore = useMinutesAssistantStore(
         minutesStartTimestamp

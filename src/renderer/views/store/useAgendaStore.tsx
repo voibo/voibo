@@ -23,7 +23,7 @@ import {
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { Content } from "./Content.js";
 import {
   ExpandJSONOptions,
@@ -32,7 +32,7 @@ import {
   IDBKeyValPersistStorage,
 } from "./IDBKeyValPersistStorage.jsx";
 import { useTranscribeStore } from "./useTranscribeStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
 
 // == Agenda Manager ==
 type DiscussingAgenda = {
@@ -64,27 +64,27 @@ export const AgendaStatusDetail: Array<{
   value: AgendaStatus;
   detail: string;
 }> = [
-    {
-      value: "waiting",
-      label: "Waiting",
-      detail: "waiting for discussion",
-    },
-    {
-      value: "inProgress",
-      label: "In Progress",
-      detail: "in progress",
-    },
-    {
-      value: "mayBeDone",
-      label: "May Be Done",
-      detail: "may be done that detected by the system",
-    },
-    {
-      value: "done",
-      label: "Done",
-      detail: "done that detected by the human",
-    },
-  ];
+  {
+    value: "waiting",
+    label: "Waiting",
+    detail: "waiting for discussion",
+  },
+  {
+    value: "inProgress",
+    label: "In Progress",
+    detail: "in progress",
+  },
+  {
+    value: "mayBeDone",
+    label: "May Be Done",
+    detail: "may be done that detected by the system",
+  },
+  {
+    value: "done",
+    label: "Done",
+    detail: "done that detected by the human",
+  },
+];
 
 export interface Agenda extends Content {
   type: "agenda";
@@ -131,14 +131,14 @@ export const useAgendaStore = create<AgendaStore>()(
       // action
       getDiscussingAgenda: () => {
         const agendaStore = get().agendas.get(
-          (useVFStore.getState().startTimestamp ?? 0).toString()
+          (useVBStore.getState().startTimestamp ?? 0).toString()
         );
         if (agendaStore) {
           return agendaStore.discussing;
         }
       },
       setDiscussingAgenda: (discussing) => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
         if (!minutesStartTimestamp) return;
         set(
           produce((state: AgendaStore) => {
@@ -152,7 +152,7 @@ export const useAgendaStore = create<AgendaStore>()(
       },
 
       startDiscussion: (agendaId) => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp ?? 0;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp ?? 0;
         const latestDiscussing = get().getDiscussingAgenda();
         if (latestDiscussing && latestDiscussing.agendaId !== agendaId) {
           // 前の会話を終了させて、新規に話し合いを開始
@@ -193,7 +193,7 @@ export const useAgendaStore = create<AgendaStore>()(
         console.log("endDiscussion", agendaId, latestDiscussing);
         if (latestDiscussing && latestDiscussing.agendaId == agendaId) {
           const minutesStartTimestamp =
-            useVFStore.getState().startTimestamp ?? 0;
+            useVBStore.getState().startTimestamp ?? 0;
           const lastAgenda = get().getAgenda(agendaId);
           if (lastAgenda) {
             const timeRange: TimeRange = {
@@ -235,9 +235,9 @@ export const useAgendaStore = create<AgendaStore>()(
             .filter(
               (elem) =>
                 elem.timeRange.endFromMStartMsec >=
-                timeRange.startFromMStartMsec &&
+                  timeRange.startFromMStartMsec &&
                 elem.timeRange.startFromMStartMsec <=
-                timeRange.endFromMStartMsec
+                  timeRange.endFromMStartMsec
             )
             .map((elem) => get().getAgenda(elem.agendaId)!),
           // Is current discussing agenda included?
@@ -253,7 +253,7 @@ export const useAgendaStore = create<AgendaStore>()(
 
       // action
       setAgenda: (agenda) => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
         if (!minutesStartTimestamp) return;
         set(
           produce((state) => {
@@ -278,7 +278,7 @@ export const useAgendaStore = create<AgendaStore>()(
         );
       },
       getAgenda: (agendaId) => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
         if (!minutesStartTimestamp) return undefined;
         const currentAgendas = get().agendas.get(
           minutesStartTimestamp.toString()
@@ -294,7 +294,7 @@ export const useAgendaStore = create<AgendaStore>()(
         return target;
       },
       getAllAgendas: () => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
         if (!minutesStartTimestamp) return [];
         const currentAgendas = get().agendas.get(
           minutesStartTimestamp.toString()
@@ -303,7 +303,7 @@ export const useAgendaStore = create<AgendaStore>()(
         return Array.from(currentAgendas.agendaMap.values());
       },
       removeAgenda: (agendaId) => {
-        const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
         if (!minutesStartTimestamp) return;
         set(
           produce((state) => {

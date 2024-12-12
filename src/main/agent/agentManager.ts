@@ -42,7 +42,7 @@ import {
   TopicInvokeParam,
   TopicZodSchema,
   VAMessageConf,
-} from "./agentManagerDefinition.js";
+} from "../../common/agentManagerDefinition.js";
 
 import { isBaseMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
@@ -178,9 +178,9 @@ export class AgentManager {
         // prompt
         const prompt = systemPrompt
           ? ChatPromptTemplate.fromMessages([
-            ["system", systemPrompt], // このプロンプトに {format_instructions} が含まれる
-            ["human", "{input}"],
-          ])
+              ["system", systemPrompt], // このプロンプトに {format_instructions} が含まれる
+              ["human", "{input}"],
+            ])
           : ChatPromptTemplate.fromMessages([["human", "{input}"]]);
 
         // model
@@ -253,7 +253,8 @@ export class AgentManager {
       if (systemPrompt || zodSchema) {
         promptTemplate.push([
           "system",
-          `${systemPrompt ?? ""}${zodSchema ? "\n{format_instructions}\n" : ""
+          `${systemPrompt ?? ""}${
+            zodSchema ? "\n{format_instructions}\n" : ""
           }`,
         ]);
       }
@@ -278,9 +279,9 @@ export class AgentManager {
 
       const inputParam = jsonOutput
         ? {
-          input: inputPrompt,
-          format_instructions: jsonOutput.getFormatInstructions(),
-        }
+            input: inputPrompt,
+            format_instructions: jsonOutput.getFormatInstructions(),
+          }
         : { input: inputPrompt };
 
       runnable

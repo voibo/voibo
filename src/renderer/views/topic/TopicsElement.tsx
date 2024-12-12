@@ -31,40 +31,23 @@ import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
 import { useDiscussionHistory } from "../discussion/DiscussionHistory.jsx";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { Topic } from "./Topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const TopicsElement = (props: {
   messageId: string;
   detailViewDialog: (props: DetailViewDialogState) => void;
   handleClose: () => void;
-  selected: boolean;
 }) => {
-  const { messageId, detailViewDialog, handleClose, selected } = props;
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
-  const topic = useVFStore((state) => state.topics).find(
+  const { messageId, detailViewDialog, handleClose } = props;
+  const minutesStore = useMinutesStore(
+    useVBStore((state) => state.startTimestamp)
+  );
+  const topic = minutesStore((state) => state.topics).find(
     (topic) => topic.id === messageId
   );
-  const agendaStore = useAgendaStore((state) => state);
-  const agendaList =
-    topic?.seedData?.agendaIdList
-      ?.map((agendaId) => {
-        const agenda = agendaStore.getAgenda(agendaId);
-        if (agenda) {
-          return agenda;
-        }
-      })
-      .filter((agenda) => agenda != undefined) ?? [];
-
-  useEffect(() => {
-    if (topic && topic.selected !== selected) {
-      vfDispatch({
-        type: "selectTopic",
-        payload: { topicID: topic.id, selected: selected },
-      });
-    }
-  }, [topic?.selected, selected]);
 
   if (!topic) return <></>;
 
@@ -166,13 +149,12 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
-
   const [openDialog, setOpenDialog] = useState(false);
+
   const handleClick = () => {
-    vfDispatch({ type: "deleteAllTopic" });
+    vbDispatch({ type: "deleteAllTopic" });
     updateTopicSeeds(true);
   };
 
@@ -200,8 +182,6 @@ export const TopicsHeader = () => {
       <TopicAIConfigDialog
         dialogState={openDialog}
         dialogDispatch={setOpenDialog}
-        vfState={vfState}
-        vfDispatch={vfDispatch}
       />
     </div>
   );
@@ -212,9 +192,8 @@ const TopicConfigDialog = (props: {
   handleClose: () => void;
 }) => {
   const { topic, handleClose } = props;
-
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
-  const agendaStore = useAgendaStore((state) => state);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+  const getAgenda = useAgendaStore((state) => state.getAgenda);
 
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory({
     behavior: "instant",
@@ -233,7 +212,7 @@ const TopicConfigDialog = (props: {
           color="error"
           onClick={() => {
             handleClose();
-            vfDispatch({
+            vbDispatch({
               type: "removeTopic",
               payload: { topicID: topic.id },
             });
@@ -254,7 +233,7 @@ const TopicConfigDialog = (props: {
         <div>Agenda</div>
         <div className="m-2 flex">
           {topic.seedData?.agendaIdList?.map((agendaId, index) => {
-            const agenda = agendaStore.getAgenda(agendaId);
+            const agenda = getAgenda(agendaId);
             if (agenda) {
               return (
                 <div key={index}>

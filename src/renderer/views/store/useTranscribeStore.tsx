@@ -24,7 +24,8 @@ import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";
 import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
 import { useVAConfStore } from "./useVAConfStore.jsx";
 import { useVFSettingsStore } from "./useVFSettingStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 export type TranscribeState = {
   // vad
@@ -56,7 +57,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
     startTranscribe: async (): Promise<void> => {
       try {
         const startTimestamp =
-          useVFStore.getState().startTimestamp ?? Date.now();
+          useVBStore.getState().startTimestamp ?? Date.now();
         const settingsData = useVFSettingsStore.getState();
         console.log("startRecording", settingsData);
 
@@ -133,7 +134,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
           }
 
           console.log("start Recording", startTimestamp);
-          useVFStore.setState({
+          useVBStore.setState({
             startTimestamp: startTimestamp,
             recording: true,
           });
@@ -163,9 +164,9 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
       // reset
       // interim が設定されている場合には、最後の interim を message に変換する
-      const interimSegment = useVFStore.getState().interimSegment;
+      const interimSegment = useVBStore.getState().interimSegment;
 
-      useVFStore.setState({ recording: false, interimSegment: null });
+      useVBStore.setState({ recording: false, interimSegment: null });
       set({
         client: null,
         stream: null,
@@ -185,12 +186,15 @@ export const useTranscribeStore = create<TranscribeStore>()(
 );
 
 function setMinutesLines(segments: Segment[]) {
+  const minutesStore = useMinutesStore(
+    useVBStore.getState().startTimestamp
+  ).getState();
   const newMinutes = splitMinutes(
-    appendMinutesList(segments, vfState.discussion, 5),
-    vfState.discussionSplitter.duration
+    appendMinutesList(segments, minutesStore.discussion, 5),
+    minutesStore.discussionSplitter.duration
   );
   //console.log("setMinutesLines", newMinutes, segments);
-  vfDispatch({
+  useVBStore.getState().vbDispatch({
     type: "setMinutesLines",
     payload: {
       minutes: newMinutes.minutes,
@@ -199,8 +203,7 @@ function setMinutesLines(segments: Segment[]) {
 }
 
 // == ON Transcribe ==
-const vfDispatch = useVFStore.getState().vfDispatch;
-const vfState = useVFStore.getState();
+
 window.electron.on(
   IPCReceiverKeys.ON_TRANSCRIBED,
   (
@@ -227,8 +230,8 @@ window.electron.on(
       segments: Segment[];
     }
   ) => {
-    //console.log("ON_TRANSCRIBED_INTERIM", response.id, response.segments);
-    vfDispatch({
+    //console.log("ON_TRANSCRIBED_INTERIM", response.id, response.segments)
+    useVBStore.getState().vbDispatch({
       type: "updateInterimSegment",
       payload: {
         segment: response.segments[0],

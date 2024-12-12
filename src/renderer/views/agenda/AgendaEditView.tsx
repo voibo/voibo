@@ -29,7 +29,7 @@ import {
   TargetCategoryDetail,
   TargetClassification,
   TargetClassificationDetail,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import {
   Agenda,

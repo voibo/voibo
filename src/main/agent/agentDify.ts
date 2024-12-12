@@ -26,7 +26,7 @@ import {
 } from "@langchain/core/messages";
 import { ChatResult } from "@langchain/core/outputs";
 import { net } from "electron";
-import { isLangChainHumanMessage } from "./agentManagerDefinition.js";
+import { isLangChainHumanMessage } from "../../common/agentManagerDefinition.js";
 
 export interface AgentDifyInput extends BaseChatModelParams {
   url: string;

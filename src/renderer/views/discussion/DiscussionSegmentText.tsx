@@ -22,7 +22,7 @@ import {
 import { Button, Tooltip } from "@mui/material";
 import { Fragment, useEffect, useState } from "react";
 import { secondsToHMS } from "../../util.js";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 
 export const DiscussionSegmentText = (props: {
   segmentIndex: number;
@@ -33,7 +33,6 @@ export const DiscussionSegmentText = (props: {
   audioFilePath: string;
   offsetSeconds?: number;
 }) => {
-  //console.log("EditableSpan", text, timestamp, audioID, offsetSeconds);
   const {
     segmentIndex,
     segmentTextIndex,
@@ -45,8 +44,8 @@ export const DiscussionSegmentText = (props: {
     ...others
   } = props;
 
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const playWavMute = useVBStore((state) => state.playWavMute);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const [editing, setEditing] = useState(false);
   const [currentText, setCurrentText] = useState(text ?? "");
   const currentStartTimestamp = Math.round(Number(timestamp));
@@ -61,8 +60,7 @@ export const DiscussionSegmentText = (props: {
     const srcEndAt = srcStartAt + Number(length) / 1000;
     if (audio) {
       audio.src = `${audioID}#t=${srcStartAt},${srcEndAt}`;
-      //console.log("audioControl:audio.src", audio.src);
-      audio.muted = vfState.playWavMute;
+      audio.muted = playWavMute;
       audio.play();
     }
   };
@@ -80,7 +78,7 @@ export const DiscussionSegmentText = (props: {
             className="col-span-12"
             onClick={(e) => {
               setEditing(false);
-              vfDispatch({
+              vbDispatch({
                 type: "mergeUpMinutesText",
                 payload: {
                   segmentIndex,
@@ -101,7 +99,7 @@ export const DiscussionSegmentText = (props: {
             console.log("input:onBlur", currentText);
             // todo save
             setEditing(false);
-            vfDispatch({
+            vbDispatch({
               type: "removeMinutesText",
               payload: {
                 segmentIndex,
@@ -124,7 +122,7 @@ export const DiscussionSegmentText = (props: {
           className="col-span-1 min-w-0"
           onClick={(e) => {
             setEditing(false);
-            vfDispatch({
+            vbDispatch({
               type: "updateMinutesText",
               payload: {
                 segmentIndex,
@@ -143,7 +141,7 @@ export const DiscussionSegmentText = (props: {
             className="col-span-12"
             onClick={(e) => {
               setEditing(false);
-              vfDispatch({
+              vbDispatch({
                 type: "splitMinutesText",
                 payload: {
                   segmentIndex,
@@ -200,10 +198,9 @@ function splitWithTerminalSymbol(text: string): Array<{
   isTerminal: boolean;
 }> {
   return text
-    .split(/(?<=[。！？\!?])/) // 終了記号（句点・感嘆符・疑問符）で文字列を分割
-    .filter((sentence) => sentence.length > 0) // 空文字列をフィルタリング
+    .split(/(?<=[。！？\!?])/) // split by terminal symbol
+    .filter((sentence) => sentence.length > 0) // filter empty string
     .map((sentence, index, array) => {
-      const isTerminal = index < array.length - 1;
       if (/(?<=[。！？\!?])/.test(sentence)) {
         return { text: sentence, isTerminal: true };
       } else {

@@ -34,7 +34,7 @@ import {
   VFReactflowDispatchStore,
   VFReactflowState,
 } from "../store/useVFReactflowStore.jsx";
-import { useVFStore, VFAction } from "../store/useVFStore.jsx";
+import { useVBStore, VBAction } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
@@ -47,7 +47,7 @@ import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
 
 const ZOOM_MIN = 0.001;
 
-export const VANodeStage = (props: {}) => {
+export const VBNodeStage = (props: {}) => {
   // Warning: Seems like you have not used zustand provider as an ancestor を解消する方法
   // https://reactflow.dev/learn/troubleshooting
   // h-[calc(100vh-5rem)]
@@ -75,7 +75,7 @@ const selector = (state: VFReactflowState & VFReactflowDispatchStore) => ({
 });
 
 export type VANodeStageGUIState = {
-  lastVFAction: VFAction | null;
+  lastVFAction: VBAction | null;
 };
 
 const VANodeStageCore = (props: {}) => {
@@ -99,7 +99,7 @@ const VANodeStageCore = (props: {}) => {
     lastVFAction: null,
   });
   // subscribe lastAction to update GUI
-  useVFStore.subscribe(
+  useVBStore.subscribe(
     (state) => state.lastAction,
     (lastAction) => {
       setGUIState((state) => ({
@@ -128,7 +128,7 @@ const VANodeStageCore = (props: {}) => {
         case "setTopic": // トピック変更時
           // FIXME
           // Topic の position 更新を永続化させるために useVFReactflowStore:updateNodePosition にて、
-          // useVFStore.getState().vfDispatch({type: "updateTopic"/// を使わざるを得ず、
+          // useVFStore.getState().vbDispatch({type: "updateTopic"/// を使わざるを得ず、
           // このタイミングでは setTopic が呼ばれない事になっている。
           // VFStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
           // focusLastTopic({ reactFlow, flowState, windowSize });
@@ -142,7 +142,7 @@ const VANodeStageCore = (props: {}) => {
   // DnD
   const reactFlowWrapper = useRef(null);
   const [type] = useDnD();
-  const startTimestamp = useVFStore((stat) => stat.startTimestamp) ?? 0;
+  const startTimestamp = useVBStore((stat) => stat.startTimestamp) ?? 0;
 
   const onDragOver = useCallback((event: any) => {
     event.preventDefault();

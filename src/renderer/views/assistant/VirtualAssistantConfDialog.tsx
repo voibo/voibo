@@ -48,14 +48,14 @@ import Editor_ from "@monaco-editor/react";
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import {
   InvokeAssistantAttachOption,
   useMinutesAssistantStore,
   VirtualAssistantType,
   VirtualAssistantUpdateMode,
 } from "../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import {
   AssistantConfigAction,
   AssistantConfigState,
@@ -104,20 +104,18 @@ export type VirtualAssistantConfAction =
 
 export type VirtualAssistantConfDialogMode = "create" | "edit";
 export const VirtualAssistantConfDialog = (props: {
-  vfDispatch: Dispatch<VFAction>;
-  vfState: VFState;
   dialogState: AssistantConfigState;
   dialogDispatch: Dispatch<AssistantConfigAction>;
 }) => {
-  const { dialogState, dialogDispatch, vfState, vfDispatch } = props;
-
+  const { dialogState, dialogDispatch } = props;
   const mode = dialogState.dialogMode;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+
+  if (useVBStore((state) => state.isNoMinutes)) return <></>;
   if (!dialogState.assistantConfig) return <></>;
 
-  const minutesStartTimestamp = vfState.startTimestamp;
-  if (!minutesStartTimestamp) return <></>;
-
-  const targetDispatch = useMinutesAssistantStore(minutesStartTimestamp)(
+  const targetDispatch = useMinutesAssistantStore(startTimestamp)(
     (state) => state.assistantDispatch
   )(dialogState.assistantConfig);
 
@@ -180,10 +178,7 @@ export const VirtualAssistantConfDialog = (props: {
     }
   );
 
-  //console.log("VirtualAssistantConfDialog", state, dialogState, vfState);
-
   const isGeneralAssistant = state.assistantType == "va-general";
-  //const isManualUpdateMode = state.updateMode == "manual";
 
   // handle close dialog
   const handleClose = () => {
@@ -209,7 +204,7 @@ export const VirtualAssistantConfDialog = (props: {
 
     dialogDispatch({ type: "close" });
     if (!isGeneralAssistant) {
-      vfDispatch({
+      vbDispatch({
         type: "removeVirtualAssistantConf",
         payload: {
           assistantId: state.assistantId,
@@ -221,7 +216,7 @@ export const VirtualAssistantConfDialog = (props: {
   // handle update
   const handleUpdateAssistant = () => {
     console.log("handleUpdateAssistant", state);
-    vfDispatch({
+    vbDispatch({
       type: "setVirtualAssistantConf",
       payload: {
         assistant: state,
@@ -233,7 +228,7 @@ export const VirtualAssistantConfDialog = (props: {
   // handle create
   const handleCreateAssistant = () => {
     console.log("handleCreateAssistant", state);
-    vfDispatch({
+    vbDispatch({
       type: "addVirtualAssistantConf",
       payload: {
         assistant: state,
@@ -310,11 +305,11 @@ export const VirtualAssistantConfDialog = (props: {
               <Button
                 className="min-w-0 min-h-0 ml-2"
                 onClick={() => {
-                  if (vfState.startTimestamp && dialogState.assistantConfig) {
+                  if (startTimestamp && dialogState.assistantConfig) {
                     targetDispatch({
                       type: "initialize",
                       payload: {
-                        startTimestamp: vfState.startTimestamp,
+                        startTimestamp: startTimestamp,
                         assistantName:
                           dialogState.assistantConfig.assistantName,
                       },

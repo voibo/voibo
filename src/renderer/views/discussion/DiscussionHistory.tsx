@@ -13,43 +13,41 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Bookmark, VolumeOff, VolumeUp } from "@mui/icons-material";
-import { Avatar, Badge, Button } from "@mui/material";
-import {
-  Dispatch,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
-import { useVFStore, VFAction, VFState } from "../store/useVFStore.jsx";
+import { Bookmark } from "@mui/icons-material";
+import { Avatar, Badge } from "@mui/material";
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { DiscussionSegment } from "./DiscussionSegment.jsx";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
 ): [ReactNode, (startTime: number) => void] => {
-  const vfState = useVFStore((state) => state);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const audioFolder = useVBStore((state) => state.audioFolder);
+  const interimSegment = useVBStore((state) => state.interimSegment);
+
+  const minutesStore = useMinutesStore(startTimestamp);
+  const currentDiscussion = minutesStore((state) => state.discussion);
 
   // scroll to bottom
   const endOfMinutesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // scroll
-    if (endOfMinutesRef.current && vfState.needToScrollMinutes) {
+    if (endOfMinutesRef.current) {
       endOfMinutesRef.current.scrollIntoView(option);
     }
-  }, [vfState.discussion, vfState.needToScrollMinutes]);
+  }, [currentDiscussion]);
 
   // scroll to all badges
-  // hint: https://stackoverflow.com/questions/37620694/how-to-scroll-to-an-element
   const badgesRef = useRef<{
     [key in string]: HTMLDivElement;
   }>({});
 
   const discussion = useMemo(
     () =>
-      vfState.discussion.map((v) => ({
+      currentDiscussion.map((v) => ({
         id: v.timestamp.toString(),
         refCallbackFunction: (node: HTMLDivElement | null) => {
           if (
@@ -65,7 +63,7 @@ export const useDiscussionHistory = (
         },
         segment: v,
       })),
-    [vfState.discussion]
+    [currentDiscussion]
   );
 
   const scrollToBadge = useCallback((startTimestamp: number) => {
@@ -110,7 +108,7 @@ export const useDiscussionHistory = (
                         text={text.text}
                         timestamp={text.timestamp}
                         length={text.length}
-                        audioFilePath={`${vfState.audioFolder}${vfState.startTimestamp}/${text.audioSrc}`}
+                        audioFilePath={`${audioFolder}${startTimestamp}/${text.audioSrc}`}
                         offsetSeconds={text.audioOffset}
                       />
                     );
@@ -120,7 +118,7 @@ export const useDiscussionHistory = (
             );
           })}
           {/* interimSegment */}
-          {vfState.interimSegment && (
+          {interimSegment && (
             <div
               className={`flex flex-row `}
               key={`${(discussion ?? []).length}`}
@@ -152,13 +150,11 @@ export const useDiscussionHistory = (
                   segmentIndex={(discussion ?? []).length}
                   segmentTextIndex={-1}
                   text={
-                    vfState.interimSegment.texts
-                      ? vfState.interimSegment.texts[0].text
-                      : ""
+                    interimSegment.texts ? interimSegment.texts[0].text : ""
                   }
-                  timestamp={vfState.interimSegment.timestamp}
-                  length={vfState.interimSegment.length}
-                  audioFilePath={`${vfState.audioFolder}${vfState.startTimestamp}/dummy}`} // dummy
+                  timestamp={interimSegment.timestamp}
+                  length={interimSegment.length}
+                  audioFilePath={`${audioFolder}${startTimestamp}/dummy}`} // dummy
                   offsetSeconds={0} // dummy
                 />
               </div>
@@ -174,7 +170,7 @@ export const useDiscussionHistory = (
 
 const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
   const { index, segment } = props;
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const avatar = (
     <Avatar
@@ -187,7 +183,7 @@ const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
   const handleClick = (e: any) => {
     switch (e.detail) {
       case 2:
-        vfDispatch({
+        vbDispatch({
           type: "changeTopicStartedPoint",
           payload: { segmentIndex: index },
         });
@@ -213,28 +209,5 @@ const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
     <div onClick={handleClick} className={badgeClassName}>
       {avatar}
     </div>
-  );
-};
-
-const PlayWavMuteOnOffButton = (props: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
-}) => {
-  const { vfState, vfDispatch } = props;
-  return (
-    <Button
-      className="min-w-0 min-h-0 text-white"
-      onClick={() => {
-        vfDispatch({
-          type: "togglePlayWavMute",
-        });
-      }}
-    >
-      {vfState.playWavMute ? (
-        <VolumeOff sx={{ fontSize: "1rem" }} />
-      ) : (
-        <VolumeUp sx={{ fontSize: "1rem" }} />
-      )}
-    </Button>
   );
 };

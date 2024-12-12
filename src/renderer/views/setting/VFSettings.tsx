@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { Dialog, Tab } from "@mui/material";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import {
   AudioDeviceSettingsAction,
   AudioDeviceSettingsState,
@@ -35,18 +35,18 @@ const TabContext = TabContext_ as unknown as typeof TabContext_.default;
 const TabList = TabList_ as unknown as typeof TabList_.default;
 const TabPanel = TabPanel_ as unknown as typeof TabPanel_.default;
 
-export type VFSettingsState = AudioDeviceSettingsState &
+export type VBSettingsState = AudioDeviceSettingsState &
   VADSettingsState &
   DecibelDividerSettingState;
 
 export type VFSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
 
-export const VFSettings = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+export const VBSettings = () => {
+  const vbState = useVBStore((state) => state);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleClose = () => {
-    vfDispatch({ type: "changeVADDialogOpen" });
+    vbDispatch({ type: "changeVADDialogOpen" });
   };
 
   const [selectedTab, selectTab] = useState("1");
@@ -55,7 +55,7 @@ export const VFSettings = () => {
   };
 
   return (
-    <Dialog open={vfState.audioSettingsDialogOpen} onClose={handleClose}>
+    <Dialog open={vbState.audioSettingsDialogOpen} onClose={handleClose}>
       <div className="p-4 text-zinc-600">
         <div className="flex items-center justify-start text-lg">
           <Settings className="mr-2" />

@@ -19,23 +19,16 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
-
-import { initDB } from "react-indexed-db-hook";
-
-import { DBConfig } from "./views/db/DBConfig.jsx";
-import { VFPage } from "./views/VFPage.jsx";
-
-initDB(DBConfig);
+import { MainPage } from "./views/MainPage.jsx";
 
 export const App = () => {
   // router
   const router = createHashRouter(
     createRoutesFromElements(
       <Route errorElement={<div>Error</div>}>
-        <Route path="/" element={<VFPage />}></Route>
+        <Route path="/" element={<MainPage />}></Route>
       </Route>
     )
   );
-
   return <RouterProvider router={router} />;
 };

@@ -28,7 +28,7 @@ import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
 import { useMinutesAssistantStore } from "./useAssistantsStore.jsx";
 import { useMinutesContentStore } from "./useContentStore.js";
-import { useVFStore } from "./useVFStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // == Group ==
 export type Group = {
@@ -180,11 +180,13 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
                     });
                   });
 
-                useVFStore.getState().topics.forEach((topic) => {
-                  (topic.groupIds ?? []).forEach((id) => {
-                    usedIDMap.set(id, id);
+                useMinutesStore(minutesStartTimestamp)
+                  .getState()
+                  .topics.forEach((topic) => {
+                    (topic.groupIds ?? []).forEach((id) => {
+                      usedIDMap.set(id, id);
+                    });
                   });
-                });
 
                 return {
                   groupMap: new Map(

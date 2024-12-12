@@ -23,7 +23,8 @@ import {
   TopicRequest,
 } from "../topic/useTopicManager.jsx";
 import { useAgendaStore } from "./useAgendaStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // ==== Zustand ====
 
@@ -46,15 +47,19 @@ export const useTopicStore = create<
   updateTopicSeeds: (enforceUpdateAll: boolean) => {
     // 現在の全discussionから、全topicSeedを再構築する
     const topicSeeds: TopicSeed[] = [];
-    useVFStore.getState().discussion.forEach((segment) => {
+    const minutesStore = useMinutesStore(
+      useVBStore.getState().startTimestamp
+    ).getState();
+    minutesStore.discussion.forEach((segment) => {
       const currentStartTimestamp = Number(segment.timestamp);
       const currentEndTimestamp = segment.texts.reduce(
         (pre, current) => pre + Number(current.length) / 1000,
         currentStartTimestamp
       );
-      const text = segment.texts.reduce((inPrev, inCurrent) => {
-        return inPrev + inCurrent.text;
-      }, "");
+      const text = segment.texts.reduce(
+        (inPrev, inCurrent) => inPrev + inCurrent.text,
+        ""
+      );
       if (segment.topicStartedPoint) {
         topicSeeds.push({
           startTimestamp: currentStartTimestamp,
@@ -71,7 +76,7 @@ export const useTopicStore = create<
               .map((agenda) => agenda.id),
           ],
         });
-        console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
+        //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
       } else if (topicSeeds.length > 0) {
         topicSeeds[topicSeeds.length - 1].endTimestamp = currentEndTimestamp;
         topicSeeds[topicSeeds.length - 1].text += "\n" + text;

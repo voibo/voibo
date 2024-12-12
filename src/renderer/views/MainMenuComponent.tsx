@@ -22,83 +22,31 @@ import {
   MenuItem,
   MenuList,
 } from "@mui/material";
-import { Dispatch, useEffect, useState } from "react";
-import { useIndexedDB } from "react-indexed-db-hook";
-import { TopicSchema } from "../../main/agent/agentManagerDefinition.js";
-import { drawerWidth } from "./VFPage.jsx";
-import {
-  DB_MINUTES,
-  DB_MINUTES_TITLES,
-  Minutes,
-  MinutesRecord,
-  MinutesTitle,
-  MinutesTitleRecord,
-} from "./db/DBConfig.jsx";
-import { GeneralAssistantConf, VFAction, VFState } from "./store/useVFStore.jsx";
+import { drawerWidth } from "./MainPage.jsx";
+import { useVBStore } from "./store/useVBStore.jsx";
+import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
-export const MainMenuComponent = (props: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
-}) => {
-  const { vfState, vfDispatch } = props;
-  const minutesTitlesDB = useIndexedDB(DB_MINUTES_TITLES);
-  const minutesDB = useIndexedDB(DB_MINUTES);
-  const [storedMinutes, setStoredMinutes] = useState<MinutesTitle[]>([]);
+export const MainMenuComponent = () => {
+  const mainMenuOpen = useVBStore((state) => state.mainMenuOpen);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleLoad = (event: any) => {
-    const loadTargetSavedMinutes =
+    const startTimestamp =
       event.currentTarget.closest("[data-minutes]").dataset?.minutes;
-    const loadTargetTitle =
-      event.currentTarget.closest("[data-title]").dataset?.title;
     // load
-    if (loadTargetSavedMinutes && loadTargetTitle) {
-      minutesDB
-        .getByID<MinutesRecord>(Number(loadTargetSavedMinutes))
-        .then((record) => {
-          if (record) {
-            const data = JSON.parse(record.json) as Minutes;
-            console.log("load minutes from IDB:", data, loadTargetTitle);
-            vfDispatch({
-              type: "openMinutes",
-              payload: {
-                title: loadTargetTitle,
-                startTimestamp: Number(data.startTimestamp),
-                segments: data.segments ?? new Map(),
-                minutes: data.minutes ?? [],
-                topics: data.topics ?? [],
-                assistants: data.assistants ?? [GeneralAssistantConf],
-                topicAIConf: {
-                  ...data.topicAIConf, // 過去にstructuredOutputSchemaがないものを考慮
-                  structuredOutputSchema:
-                    data.topicAIConf.structuredOutputSchema ?? TopicSchema,
-                },
-              },
-            });
-          }
-        })
-        .catch((error: Error) => {
-          console.log(error);
-        });
+    if (startTimestamp) {
+      vbDispatch({
+        type: "openMinutes",
+        payload: {
+          startTimestamp: Number(startTimestamp),
+        },
+      });
     }
   };
 
-  useEffect(() => {
-    // load from indexedDB
-    minutesTitlesDB
-      .getAll<MinutesTitleRecord>()
-      .then((records) => {
-        if (records) {
-          setStoredMinutes(
-            records.map((record) => {
-              return JSON.parse(record.json) as MinutesTitle;
-            })
-          );
-        }
-      })
-      .catch((error: Error) => {
-        console.log(error);
-      });
-  }, [vfState.needToSaveOnDB]);
+  const storedMinutes = useMinutesTitleStore((state) => state)
+    .getAllMinutesTitles()
+    .sort((a, b) => b.startTimestamp - a.startTimestamp);
 
   return (
     <Drawer
@@ -112,7 +60,7 @@ export const MainMenuComponent = (props: {
       }}
       variant="persistent"
       anchor="left"
-      open={vfState.mainMenuOpen}
+      open={mainMenuOpen}
     >
       <div className="overflow-hidden">
         <div className="p-2 w-full flex items-center">
@@ -124,7 +72,7 @@ export const MainMenuComponent = (props: {
         <Divider />
         <MenuItem
           onClick={() => {
-            vfDispatch({
+            vbDispatch({
               type: "createNewMinutes",
             });
           }}
@@ -150,7 +98,6 @@ export const MainMenuComponent = (props: {
               <MenuItem
                 key={storedMinute.startTimestamp}
                 data-minutes={storedMinute.startTimestamp}
-                data-title={storedMinute.title}
                 onClick={handleLoad}
               >
                 <div className="flex flex-col pl-4 py-1">
@@ -172,7 +119,7 @@ export const MainMenuComponent = (props: {
           <Divider />
           <MenuItem
             onClick={() => {
-              vfDispatch({
+              vbDispatch({
                 type: "changeVADDialogOpen",
               });
             }}

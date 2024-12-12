@@ -30,14 +30,15 @@ import {
   Message,
   TargetCategory,
   TargetClassification,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { detectVAMessageType } from "../assistant/message/detectVAMessageType.jsx";
 import { AIConfig } from "../common/aiConfig.jsx";
 import { isTopic, Topic, TopicSeed } from "../topic/Topic.js";
 import { Content, isContent } from "./Content.js";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { useAgendaStore } from "./useAgendaStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 enableMapSet();
 
 //  Custom storage object
@@ -764,8 +765,9 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           }
           const state = get().getOrInitAssistant(vaConfig);
           const dispatch = get().assistantDispatch(vaConfig);
-
-          const vfState = useVFStore.getState();
+          const minutesState = useMinutesStore(
+            useVBStore.getState().startTimestamp
+          ).getState();
           const { updateMode, attachOption, updatePrompt } = assistantConfig;
           if (
             state.loaded && // hydrate が終わっている
@@ -809,7 +811,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             if (updateMode === "at_topic_updated") {
               // = 1. 対象トピックの抽出 =
               let ccFilteredTopics: Topic[] = []; // classification, category でフィルタリングされたトピック
-              ccFilteredTopics = vfState.topics
+              ccFilteredTopics = minutesState.topics
                 // 当該Assistantの topicClassification 対象トピックか
                 .filter(
                   (topic) =>
@@ -879,7 +881,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               }
             } else if (updateMode === "at_agenda_updated") {
               // = 1. 対象の抽出 =
-              const agendaFilteredTopics = vfState.topics
+              const agendaFilteredTopics = minutesState.topics
                 .filter((topic) => !resolvedTopicIDs.includes(topic.id))
                 .filter(
                   (topic) =>
@@ -891,7 +893,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               if (agendaFilteredTopics.length > 0) {
                 const reqQueue: Array<Message> = [];
                 const targetTopic = agendaFilteredTopics[0];
-                const targetTopicIndex = vfState.topics.indexOf(targetTopic);
+                const targetTopicIndex =
+                  minutesState.topics.indexOf(targetTopic);
                 targetTopic
                   .seedData!.agendaIdList!.map((agendaId) =>
                     getAgenda(agendaId)
@@ -920,11 +923,11 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                   )
                   // agenda 毎に 関連 topic をすべて抽出
                   .forEach((agenda) => {
-                    topics = vfState.topics.filter(
+                    topics = minutesState.topics.filter(
                       (topic) =>
                         topic.seedData &&
                         topic.seedData?.agendaIdList?.includes(agenda.id) &&
-                        targetTopicIndex >= vfState.topics.indexOf(topic) // targetTopic 以前の topic のみ
+                        targetTopicIndex >= minutesState.topics.indexOf(topic) // targetTopic 以前の topic のみ
                     );
 
                     // = 3. Assistantを呼び出す =
@@ -1016,7 +1019,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               // 以下のロジックはTopicが生成されていく途中で、Agendaの終了が判定される前なら動作する
               // しかし、Topicの再構築を行うと、Agendaがすでに終了済みになっているため、結果的にAgenda毎にTopicの更新時に呼び出されることになる
               // この場合に対応するには、Agendaに時間データが保存されているかどうかを確認する必要がある。
-              vfState.topics.forEach((topic, index, topics) => {
+              minutesState.topics.forEach((topic, index, topics) => {
                 // 原則：　終了した agenda はないと考える
                 endedAgendaMap.set(index, []);
 
@@ -1085,7 +1088,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
               // 未解決対象の抽出
               const reqQueue: Array<Message> = [];
-              vfState.topics.forEach((topic, index) => {
+              minutesState.topics.forEach((topic, index) => {
                 const endedAgenda = endedAgendaMap.get(index);
                 if (
                   endedAgenda != undefined &&
@@ -1118,7 +1121,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                     )
                     // agenda 毎に 関連 topic をすべて抽出
                     .forEach((agenda) => {
-                      topics = vfState.topics.filter(
+                      topics = minutesState.topics.filter(
                         (topic) =>
                           topic.seedData &&
                           topic.seedData?.agendaIdList?.includes(agenda.id)
@@ -1345,18 +1348,17 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
 // minutes 変更時
 let unsubscribeProcessInvoke: (() => void) | null = null;
-useVFStore.subscribe(
+let unsubscribeTopic: (() => void) | null = null;
+useVBStore.subscribe(
+  (state) => ({
+    startTimestamp: state.startTimestamp,
+  }),
   (state) => {
-    return {
-      startTimestamp: state.startTimestamp,
-      assistants: state.assistants,
-    };
-  },
-  (state) => {
-    const minutesStartTimestamp = state.startTimestamp;
-    if (minutesStartTimestamp != null) {
-      const assistantsStore = useMinutesAssistantStore(minutesStartTimestamp);
-      state.assistants.forEach((vaConfig) => {
+    const startTimestamp = state.startTimestamp;
+    if (true) {
+      const minutesStore = useMinutesStore(startTimestamp).getState();
+      const assistantsStore = useMinutesAssistantStore(startTimestamp);
+      minutesStore.assistants.forEach((vaConfig) => {
         // minute変更
         if (assistantsStore.getState()._hasHydrated) {
           const assistantState = assistantsStore
@@ -1365,7 +1367,7 @@ useVFStore.subscribe(
           assistantsStore.getState().assistantDispatch(vaConfig)({
             type: "changeMinutes",
             payload: {
-              startTimestamp: minutesStartTimestamp,
+              startTimestamp: startTimestamp,
               assistantName: vaConfig.assistantName,
               messages: assistantState.messages,
               messagesWithInvoked: assistantState.messagesWithInvoked,
@@ -1381,7 +1383,7 @@ useVFStore.subscribe(
       unsubscribeProcessInvoke = assistantsStore.subscribe(
         (assistantState) => {
           return {
-            startTimestamp: minutesStartTimestamp,
+            startTimestamp: startTimestamp,
             assistantMap: assistantState.assistantsMap,
             hydrated: assistantState._hasHydrated,
           };
@@ -1411,6 +1413,46 @@ useVFStore.subscribe(
           },
         }
       );
+
+      // Topicの変化： Topic をトリガーにした Assistant の Invoke をキューに積む
+      if (unsubscribeTopic) {
+        unsubscribeTopic();
+      }
+      unsubscribeTopic = useMinutesStore(startTimestamp).subscribe(
+        (state) => state,
+        (state) => {
+          if (state.startTimestamp) {
+            const minutesStore = useMinutesStore(
+              state.startTimestamp
+            ).getState();
+            const assistantsStore = useMinutesAssistantStore(
+              state.startTimestamp
+            ).getState();
+            minutesStore.assistants.forEach((vaConfig) => {
+              assistantsStore.enqueueTopicRelatedInvoke(vaConfig);
+              /*
+        console.warn(
+          "useAssistantsStore: useVFStore.subscribe: topic",
+          vaConfig.label,
+          assistantsStore.getState().assistantsMap.get(vaConfig.assistantId)
+            ?.invokeQueue
+        );
+        */
+            });
+          }
+        },
+        {
+          equalityFn: (prev, next) => {
+            if (
+              prev.topics !== next.topics ||
+              prev.topics.length !== next.topics.length
+            ) {
+              return false;
+            }
+            return true;
+          },
+        }
+      );
     }
   },
   {
@@ -1421,23 +1463,22 @@ useVFStore.subscribe(
 );
 
 // mode 変更時
-useVFStore.subscribe(
-  (state) => {
-    return {
-      startTimestamp: state.startTimestamp,
-      assistants: state.assistants,
-      mode: state.mode,
-    };
-  },
+useVBStore.subscribe(
+  (state) => ({
+    startTimestamp: state.startTimestamp,
+    mode: state.mode,
+  }),
   (state) => {
     if (state.startTimestamp != null && state.mode === "home") {
       const assistantsStore = useMinutesAssistantStore(state.startTimestamp);
-      state.assistants.forEach((vaConfig) => {
-        if (!assistantsStore.getState()._hasHydrated) return;
-        assistantsStore.getState().assistantDispatch(vaConfig)({
-          type: "clearAll",
+      useMinutesStore(state.startTimestamp)
+        .getState()
+        .assistants.forEach((vaConfig) => {
+          if (!assistantsStore.getState()._hasHydrated) return;
+          assistantsStore.getState().assistantDispatch(vaConfig)({
+            type: "clearAll",
+          });
         });
-      });
     }
   },
   {
@@ -1446,14 +1487,11 @@ useVFStore.subscribe(
 );
 
 // assistants 変更時: enqueue
-useVFStore.subscribe(
-  (state) => {
-    return {
-      startTimestamp: state.startTimestamp,
-      assistants: state.assistants,
-      lastAction: state.lastAction,
-    };
-  },
+useVBStore.subscribe(
+  (state) => ({
+    startTimestamp: state.startTimestamp,
+    lastAction: state.lastAction,
+  }),
   (state) => {
     if (
       state.startTimestamp &&
@@ -1462,13 +1500,6 @@ useVFStore.subscribe(
         state.lastAction.type === "setVirtualAssistantConf" ||
         state.lastAction.type === "removeVirtualAssistantConf")
     ) {
-      /*
-      console.warn(
-        "useAssistantsStore: useVFStore.subscribe: assistants",
-        state.startTimestamp,
-        state.lastAction.type
-      );
-      */
       const assistantsStore = useMinutesAssistantStore(state.startTimestamp);
       switch (state.lastAction.type) {
         case "addVirtualAssistantConf":
@@ -1496,44 +1527,6 @@ useVFStore.subscribe(
         (next.lastAction.type === "addVirtualAssistantConf" ||
           next.lastAction.type === "setVirtualAssistantConf" ||
           next.lastAction.type === "removeVirtualAssistantConf")
-      ) {
-        return false;
-      }
-      return true;
-    },
-  }
-);
-
-// Topicの変化： Topic をトリガーにした Assistant の Invoke をキューに積む
-useVFStore.subscribe(
-  (state) => {
-    return {
-      startTimestamp: state.startTimestamp,
-      topics: state.topics,
-      assistants: state.assistants,
-    };
-  },
-  (state) => {
-    if (state.startTimestamp) {
-      const assistantsStore = useMinutesAssistantStore(state.startTimestamp);
-      state.assistants.forEach((vaConfig) => {
-        assistantsStore.getState().enqueueTopicRelatedInvoke(vaConfig);
-        /*
-        console.warn(
-          "useAssistantsStore: useVFStore.subscribe: topic",
-          vaConfig.label,
-          assistantsStore.getState().assistantsMap.get(vaConfig.assistantId)
-            ?.invokeQueue
-        );
-        */
-      });
-    }
-  },
-  {
-    equalityFn: (prev, next) => {
-      if (
-        prev.topics !== next.topics ||
-        prev.topics.length !== next.topics.length
       ) {
         return false;
       }

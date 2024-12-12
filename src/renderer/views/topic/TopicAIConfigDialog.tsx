@@ -15,19 +15,22 @@ limitations under the License.
 */
 import { Button, Dialog, FormControl, TextField, Tooltip } from "@mui/material";
 import { Dispatch, useEffect, useState } from "react";
-import { EnglishTopicPrompt } from "../../../main/agent/agentManagerDefinition.js";
+import { EnglishTopicPrompt } from "../../../common/agentManagerDefinition.js";
 import { AIConfig, AIConfigurator } from "../common/aiConfig.jsx";
 
-import { VFAction, VFState } from "../store/useVFStore.jsx";
+import { useVBStore, VBAction, VBState } from "../store/useVBStore.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const TopicAIConfigDialog = (props: {
   dialogState: boolean;
   dialogDispatch: Dispatch<React.SetStateAction<boolean>>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
 }) => {
-  const { dialogState, dialogDispatch, vfState, vfDispatch } = props;
-  const [stateAIConfig, setAIConfig] = useState<AIConfig>(vfState.topicAIConf);
+  const { dialogState, dialogDispatch } = props;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
+  const minutesStore = useMinutesStore(startTimestamp);
+  const topicAIConf = minutesStore((state) => state.topicAIConf);
+  const [stateAIConfig, setAIConfig] = useState<AIConfig>(topicAIConf);
 
   const handleClose = () => {
     dialogDispatch(false);
@@ -35,7 +38,7 @@ export const TopicAIConfigDialog = (props: {
 
   const handleUpdate = () => {
     console.log("Update AI Config", stateAIConfig);
-    vfDispatch({
+    vbDispatch({
       type: "changeTopicAIConfig",
       payload: {
         aiConfig: {
@@ -48,8 +51,8 @@ export const TopicAIConfigDialog = (props: {
   };
 
   useEffect(() => {
-    setAIConfig(vfState.topicAIConf);
-  }, [vfState.topicAIConf]);
+    setAIConfig(topicAIConf);
+  }, [topicAIConf]);
 
   return (
     <Dialog open={dialogState} onClose={handleClose}>
@@ -65,7 +68,7 @@ export const TopicAIConfigDialog = (props: {
             <div className="col-span-3">
               <TextField
                 label="Initial Prompt"
-                value={vfState.topicAIConf.systemPrompt}
+                value={topicAIConf.systemPrompt}
                 variant="outlined"
                 multiline
                 minRows={4}

@@ -19,11 +19,12 @@ import { IPCInvokeKeys } from "../../../common/constants.js";
 import {
   EnglishTopicPrompt,
   TopicInvokeParam,
-} from "../../../main/agent/agentManagerDefinition.js";
+} from "../../../common/agentManagerDefinition.js";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { isTopic, Topic, TopicSeed } from "./Topic.js";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export type LLMAnalyzedTopics = {
   topics: Topic[];
@@ -64,33 +65,33 @@ export const initTopicManagerState: TopicManagerState = {
 
 export type TopicManagerAction =
   | {
-    type: "startProcess";
-  }
+      type: "startProcess";
+    }
   | {
-    type: "resError";
-    payload: {
-      error: Error;
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
-    };
-  }
-  | {
-    type: "resSuccess";
-    payload: {
-      res: {
-        data: LLMAnalyzedTopics;
+      type: "resError";
+      payload: {
+        error: Error;
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
       };
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
-    };
-  }
+    }
   | {
-    type: "replaceTopicSeed";
-    payload: {
-      prompts: TopicRequest[];
-      topicSeed: TopicSeed[];
+      type: "resSuccess";
+      payload: {
+        res: {
+          data: LLMAnalyzedTopics;
+        };
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
+      };
+    }
+  | {
+      type: "replaceTopicSeed";
+      payload: {
+        prompts: TopicRequest[];
+        topicSeed: TopicSeed[];
+      };
     };
-  };
 
 export const topicManagerReducer = (
   state: TopicManagerState,
@@ -137,8 +138,11 @@ export function useTopicManager(): {
   dispatcher: Dispatch<TopicManagerAction>;
 } {
   // openAIChat
-  const topicAIConf = useVFStore((state) => state.topicAIConf);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const topicAIConf = useMinutesStore(startTimestamp)(
+    (state) => state.topicAIConf
+  );
+  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const topicState = useTopicStore((state) => state);
   const topicDispatcher = useTopicStore((state) => state.topicDispatch);
   const agendaStore = useAgendaStore((state) => state);
@@ -158,10 +162,11 @@ export function useTopicManager(): {
         if (topicState.res && topicState.res.data.topics.length > 0) {
           const lastTopic =
             topicState.res.data.topics[topicState.res.data.topics.length - 1];
-          lastResult = `${lastTopic.title}\n\n ${Array.isArray(lastTopic.topic)
+          lastResult = `${lastTopic.title}\n\n ${
+            Array.isArray(lastTopic.topic)
               ? lastTopic.topic.join("\n")
               : lastTopic.topic
-            }`;
+          }`;
 
           if (lastTopic.seedData && lastTopic.seedData.agendaIdList) {
             lastTopic.seedData.agendaIdList.forEach((agendaId) => {
@@ -190,7 +195,7 @@ export function useTopicManager(): {
         updatePrompts[targetIndex].isRequested = true;
         await window.electron
           .invoke(IPCInvokeKeys.GET_TOPIC, {
-            systemPrompt: EnglishTopicPrompt, //,vfState.topicAIConf.systemPrompt,
+            systemPrompt: EnglishTopicPrompt, //,vbState.topicAIConf.systemPrompt,
             structuredOutputSchema: topicAIConf.structuredOutputSchema,
             inputPrompt: prompt,
             modelType: topicAIConf.modelType,
@@ -268,11 +273,10 @@ export function useTopicManager(): {
     }
   }, [topicState.processing, topicState.prompts, topicState.res]);
 
-  // update vfState
   useEffect(() => {
     if (topicState.res) {
-      console.log("useOpenAIChat: update vfState", topicState.res.data.topics);
-      vfDispatch({
+      console.log("useTopicManager: setTopic", topicState.res.data.topics);
+      vbDispatch({
         type: "setTopic",
         payload: {
           topics: topicState.res.data.topics,

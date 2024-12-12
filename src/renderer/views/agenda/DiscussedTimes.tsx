@@ -21,13 +21,13 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import { HTMLProps, useEffect, useState } from "react";
 import { Agenda, TimeRange, useAgendaStore } from "../store/useAgendaStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const DiscussedTimes = (props: { agenda: Agenda }) => {
   const { agenda } = props;
-  const startTimestamp = useVFStore((state) => state.startTimestamp) ?? 0;
+  const startTimestamp = useVBStore((state) => state.startTimestamp) ?? 0;
   const discussedTimes = useAgendaStore(
     (state) => state.getAgenda(agenda.id)?.discussedTimes
   );

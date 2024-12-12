@@ -29,7 +29,7 @@ import {
   VFReactflowDispatchStore,
   VFReactflowState,
 } from "../store/useVFReactflowStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { useWindowSize } from "../useWindowSize.jsx";
 
 export const StageTransitionOption = { padding: 0.1, duration: 100 };
@@ -41,7 +41,7 @@ type TargetFocuserOption = {
 };
 
 export const TargetFocuser = () => {
-  const startTimestamp = useVFStore.getState().startTimestamp ?? 0;
+  const startTimestamp = useVBStore.getState().startTimestamp ?? 0;
 
   const reactFlow = useReactFlow();
   const nodesInitialized = useNodesInitialized({
