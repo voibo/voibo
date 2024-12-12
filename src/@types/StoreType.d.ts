@@ -21,11 +21,11 @@ declare type StoreType = {
   height?: number;
 
   // va config settings
-  conf: VAConf;
+  conf: VBMainConf;
 };
 
 declare type TranscriberType = "localWav" | "stt";
-declare type VAConf = {
+declare type VBMainConf = {
   // == Transcriber ==
   transcriber: TranscriberType;
   GOOGLE_TTS_PROJECT_ID: string;

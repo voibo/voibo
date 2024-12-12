@@ -30,7 +30,11 @@ import Store from "electron-store";
 import path from "node:path";
 import { IPCInvokeKeys, IPCSenderKeys } from "../common/constants.js";
 import { AgentManager } from "./agent/agentManager.js";
-import { deleteFolder, loadDialogSelectedFile, makeDir } from "./server-util.js";
+import {
+  deleteFolder,
+  loadDialogSelectedFile,
+  makeDir,
+} from "./server-util.js";
 import { ITranscribeManager } from "./transcriber/ITranscribeManager.js";
 import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeFromWav.js";
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
@@ -222,15 +226,15 @@ app.whenReady().then(() => {
   let transcriber = initTranscriber();
 
   // ========= VA Config =========
-  ipcMain.removeAllListeners(IPCInvokeKeys.GET_VA_CONFIG);
-  ipcMain.handle(IPCInvokeKeys.GET_VA_CONFIG, (e) => {
+  ipcMain.removeAllListeners(IPCInvokeKeys.GET_VB_MAIN_STORE);
+  ipcMain.handle(IPCInvokeKeys.GET_VB_MAIN_STORE, (e) => {
     const conf = store.get("conf");
     //console.log("get VA config", conf);
     return conf;
   });
 
   ipcMain.removeAllListeners(IPCInvokeKeys.UPDATE_VA_CONFIG);
-  ipcMain.handle(IPCInvokeKeys.UPDATE_VA_CONFIG, (e, conf: VAConf) => {
+  ipcMain.handle(IPCInvokeKeys.UPDATE_VA_CONFIG, (e, conf: VBMainConf) => {
     console.log("update VA config", conf);
     store.set("conf", conf);
     if (transcriber) {

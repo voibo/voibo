@@ -40,7 +40,7 @@ export type IPCReceiverKeys =
 
 // renderer -> main -> renderer
 export const IPCInvokeKeys = {
-  GET_VA_CONFIG: "getVAConfig",
+  GET_VB_MAIN_STORE: "getVAConfig",
   UPDATE_VA_CONFIG: "updateVAConfig",
 
   GET_AUDIO_FOLDER_PATH: "getAudioFolderPath",

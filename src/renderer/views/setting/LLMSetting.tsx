@@ -14,51 +14,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { SecretTextField } from "../common/SecretTextField.jsx";
-import { useVAConfStore } from "../store/useVAConfStore.jsx";
+import { useVBMainStore } from "../store/useVBMainStore.jsx";
 
 export const LLMSetting = () => {
-  const vaConfStore = useVAConfStore();
+  const conf = useVBMainStore((state) => state.conf);
+  const update = useVBMainStore((state) => state.update);
+
   return (
     <div className="w-full flex flex-col space-y-6">
       <SecretTextField
-        initial={vaConfStore.conf!.OPENAI_API_KEY}
+        initial={conf!.OPENAI_API_KEY}
         label={"OpenAI API Key"}
         onBlur={(event) => {
-          vaConfStore.updateVAConf({
-            ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
+          update({
+            ...conf!, // loadされたあとなので必ず存在するはず
             OPENAI_API_KEY: event.target.value,
           });
         }}
       />
 
       <SecretTextField
-        initial={vaConfStore.conf!.ANTHROPIC_API_KEY}
+        initial={conf!.ANTHROPIC_API_KEY}
         label={"Anthropic API Key"}
         onBlur={(event) => {
-          vaConfStore.updateVAConf({
-            ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
+          update({
+            ...conf!, // loadされたあとなので必ず存在するはず
             ANTHROPIC_API_KEY: event.target.value,
           });
         }}
       />
 
       <SecretTextField
-        initial={vaConfStore.conf!.GROQ_API_KEY}
+        initial={conf!.GROQ_API_KEY}
         label={"Groq API Key"}
         onBlur={(event) => {
-          vaConfStore.updateVAConf({
-            ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
+          update({
+            ...conf!, // loadされたあとなので必ず存在するはず
             GROQ_API_KEY: event.target.value,
           });
         }}
       />
 
       <SecretTextField
-        initial={vaConfStore.conf!.GOOGLE_API_KEY}
+        initial={conf!.GOOGLE_API_KEY}
         label={"Google API Key"}
         onBlur={(event) => {
-          vaConfStore.updateVAConf({
-            ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
+          update({
+            ...conf!, // loadされたあとなので必ず存在するはず
             GOOGLE_API_KEY: event.target.value,
           });
         }}
