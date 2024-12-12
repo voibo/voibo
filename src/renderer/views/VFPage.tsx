@@ -25,7 +25,7 @@ import { VANodeStage } from "./flowComponent/VANodeStage.jsx";
 import { VFSettings } from "./setting/VFSettings.jsx";
 import { useTopicStore } from "./store/useTopicManagerStore.jsx";
 import { useVAConfEffect } from "./store/useVAConfStore.jsx";
-import { useVFStore } from "./store/useVFStore.jsx";
+import { useVBStore } from "./store/useVBStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
 import { MinutesTitleStore } from "./store/useMinutesTitle.jsx";
 import { useMinutesStore } from "./store/useMinutesStore.jsx";
@@ -62,8 +62,8 @@ export const VFPage = () => {
   //const minutesDB = useIndexedDB(DB_MINUTES);
 
   // == VF state / dispatch w/ Zustand ==
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   // ==  VA Config ==
   useVAConfEffect();

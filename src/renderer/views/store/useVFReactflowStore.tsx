@@ -60,7 +60,7 @@ import {
 } from "./useAssistantsStore.jsx";
 import { useMinutesContentStore } from "./useContentStore.js";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // ==== ReactFlow  ====
@@ -399,7 +399,7 @@ export const useVFReactflowStore = create<
     },
 
     updateSequencedSelectionsGroup(groups) {
-      const startTimestamp = useVFStore.getState().startTimestamp;
+      const startTimestamp = useVBStore.getState().startTimestamp;
       if (!startTimestamp) return;
 
       get().selectedSequences.forEach((id) => {
@@ -420,7 +420,7 @@ export const useVFReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVFStore.getState().vfDispatch({
+          useVBStore.getState().vfDispatch({
             type: "updateTopic",
             payload: {
               topic: {
@@ -462,7 +462,7 @@ export const useVFReactflowStore = create<
     },
 
     updateSequencedSelectionsAgenda(agendas) {
-      const startTimestamp = useVFStore.getState().startTimestamp;
+      const startTimestamp = useVBStore.getState().startTimestamp;
       if (!startTimestamp) return;
 
       get().selectedSequences.forEach((id) => {
@@ -482,7 +482,7 @@ export const useVFReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVFStore.getState().vfDispatch({
+          useVBStore.getState().vfDispatch({
             type: "updateTopic",
             payload: {
               topic: {
@@ -874,7 +874,7 @@ export const initTopicTree = (props: { topics: Topic[] }) => {
 };
 
 const updateNodePosition = (node: Node) => {
-  const startTimestamp = useVFStore.getState().startTimestamp;
+  const startTimestamp = useVBStore.getState().startTimestamp;
   if (!startTimestamp) return;
   switch (node.type) {
     case "topic":
@@ -888,7 +888,7 @@ const updateNodePosition = (node: Node) => {
         },
       });
       */
-      useVFStore.getState().vfDispatch({
+      useVBStore.getState().vfDispatch({
         type: "updateTopic",
         payload: {
           topic: {
@@ -1155,7 +1155,7 @@ const relocateTopicBothEndsNodes = (
 };
 
 // dispatch post process
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => state.lastAction,
   (lastAction) => {
     (async () => {
@@ -1163,7 +1163,7 @@ useVFStore.subscribe(
       let topicBothEndsNodes =
         useVFReactflowStore.getState().topicBothEndsNodes;
       const minutesStore = useMinutesStore(
-        useVFStore.getState().startTimestamp
+        useVBStore.getState().startTimestamp
       ).getState();
       switch (lastAction?.type) {
         case "updateTopic": // トピックの追加・削除・変更
@@ -1282,7 +1282,7 @@ const updateAssistantNodes = ({
 };
 
 let unsubscribeAssistantStore: (() => void) | null = null;
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => state.startTimestamp,
   async (startTimestamp) => {
     // content node
@@ -1408,7 +1408,7 @@ useVFReactflowStore.subscribe(
 // content の変更を検知して、content node を再構築
 
 let unsubscribeContentStore: (() => void) | null = null;
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => state.startTimestamp,
   (startTimestamp) => {
     // content node

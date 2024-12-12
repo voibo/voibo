@@ -24,7 +24,7 @@ import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";
 import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
 import { useVAConfStore } from "./useVAConfStore.jsx";
 import { useVFSettingsStore } from "./useVFSettingStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 
 export type TranscribeState = {
@@ -57,7 +57,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
     startTranscribe: async (): Promise<void> => {
       try {
         const startTimestamp =
-          useVFStore.getState().startTimestamp ?? Date.now();
+          useVBStore.getState().startTimestamp ?? Date.now();
         const settingsData = useVFSettingsStore.getState();
         console.log("startRecording", settingsData);
 
@@ -134,7 +134,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
           }
 
           console.log("start Recording", startTimestamp);
-          useVFStore.setState({
+          useVBStore.setState({
             startTimestamp: startTimestamp,
             recording: true,
           });
@@ -164,9 +164,9 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
       // reset
       // interim が設定されている場合には、最後の interim を message に変換する
-      const interimSegment = useVFStore.getState().interimSegment;
+      const interimSegment = useVBStore.getState().interimSegment;
 
-      useVFStore.setState({ recording: false, interimSegment: null });
+      useVBStore.setState({ recording: false, interimSegment: null });
       set({
         client: null,
         stream: null,
@@ -187,7 +187,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
 function setMinutesLines(segments: Segment[]) {
   const minutesStore = useMinutesStore(
-    useVFStore.getState().startTimestamp
+    useVBStore.getState().startTimestamp
   ).getState();
   const newMinutes = splitMinutes(
     appendMinutesList(segments, minutesStore.discussion, 5),
@@ -203,8 +203,8 @@ function setMinutesLines(segments: Segment[]) {
 }
 
 // == ON Transcribe ==
-const vfDispatch = useVFStore.getState().vfDispatch;
-const vfState = useVFStore.getState();
+const vfDispatch = useVBStore.getState().vfDispatch;
+const vfState = useVBStore.getState();
 window.electron.on(
   IPCReceiverKeys.ON_TRANSCRIBED,
   (

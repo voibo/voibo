@@ -26,7 +26,7 @@ import { MouseEventHandler, ReactNode, useReducer, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { GENERAL_ASSISTANT_NAME } from "../../../common/agentManagerDefinition.js";
 import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import {
   VirtualAssistantConfDialog,
   VirtualAssistantConfDialogMode,
@@ -81,9 +81,9 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   /**
    * General Assistant を除くすべての Assistant を管理する
    */
-  const vfState = useVFStore((state) => state);
+  const vfState = useVBStore((state) => state);
   const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   // VA conf dialog
   const [vfConfDialogState, vaConfDialogDispatch] = useReducer(

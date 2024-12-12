@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { Dialog, Tab } from "@mui/material";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import {
   AudioDeviceSettingsAction,
   AudioDeviceSettingsState,
@@ -42,8 +42,8 @@ export type VFSettingsState = AudioDeviceSettingsState &
 export type VFSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
 
 export const VFSettings = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   const handleClose = () => {
     vfDispatch({ type: "changeVADDialogOpen" });

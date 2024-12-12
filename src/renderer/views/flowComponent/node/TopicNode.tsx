@@ -20,7 +20,7 @@ import { TopicsElement } from "../../topic/TopicsElement.jsx";
 
 import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
-import { useVFStore } from "../../store/useVFStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
 
 export type TopicNodeParam = {
@@ -89,7 +89,7 @@ export default memo(TopicNodeComponent, (prevProps, nextProps) => {
 // Util
 
 export function removeTopic(topicID: string) {
-  useVFStore
+  useVBStore
     .getState()
     .vfDispatch({ type: "removeTopic", payload: { topicID } });
 }

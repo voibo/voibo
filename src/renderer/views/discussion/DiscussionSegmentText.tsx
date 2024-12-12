@@ -22,7 +22,7 @@ import {
 import { Button, Tooltip } from "@mui/material";
 import { Fragment, useEffect, useState } from "react";
 import { secondsToHMS } from "../../util.js";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 
 export const DiscussionSegmentText = (props: {
   segmentIndex: number;
@@ -45,8 +45,8 @@ export const DiscussionSegmentText = (props: {
     ...others
   } = props;
 
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
   const [editing, setEditing] = useState(false);
   const [currentText, setCurrentText] = useState(text ?? "");
   const currentStartTimestamp = Math.round(Number(timestamp));

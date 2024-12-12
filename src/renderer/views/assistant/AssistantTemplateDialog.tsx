@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { VirtualAssistantConf } from "../store/useAssistantsStore.jsx";
 import {
   Button,
@@ -35,7 +35,7 @@ export const AssistantTemplateDialog = (props: {
   closeDialog: Dispatch<SetStateAction<boolean>>;
 }) => {
   const { open, closeDialog } = props;
-  const vfStore = useVFStore.getState();
+  const vfStore = useVBStore.getState();
   const minutesStartTimestamp = vfStore.startTimestamp;
   if (!minutesStartTimestamp) return <></>;
 

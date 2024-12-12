@@ -24,7 +24,7 @@ import {
   makeTopicOrientedInvokeParam,
   useMinutesAssistantStore,
 } from "../../store/useAssistantsStore.jsx";
-import { useVFStore, VBAction, VBState } from "../../store/useVFStore.jsx";
+import { useVBStore, VBAction, VBState } from "../../store/useVBStore.js";
 import { useMinutesStore } from "../../store/useMinutesStore.js";
 
 export const AIAssistantManualInput = (props: {
@@ -34,11 +34,11 @@ export const AIAssistantManualInput = (props: {
   vfDispatch: Dispatch<VBAction>;
 }) => {
   const [message, setMessage] = useState<string>("");
-  if (useVFStore.getState().isNoMinutes()) {
+  if (useVBStore.getState().isNoMinutes()) {
     return <></>;
   }
 
-  const startTimestamp = useVFStore.getState().startTimestamp;
+  const startTimestamp = useVBStore.getState().startTimestamp;
   const minutesStore = useMinutesStore(startTimestamp).getState();
   const gaConf = minutesStore.assistants.find(
     (assistant) => assistant.assistantId === GENERAL_ASSISTANT_NAME

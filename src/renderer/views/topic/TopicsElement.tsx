@@ -31,7 +31,7 @@ import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
 import { useDiscussionHistory } from "../discussion/DiscussionHistory.jsx";
 import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
-import { useVFStore } from "../store/useVFStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { Topic } from "./Topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
@@ -43,7 +43,7 @@ export const TopicsElement = (props: {
 }) => {
   const { messageId, detailViewDialog, handleClose } = props;
   const minutesStore = useMinutesStore(
-    useVFStore.getState().startTimestamp
+    useVBStore.getState().startTimestamp
   ).getState();
   const topic = minutesStore.topics.find((topic) => topic.id === messageId);
 
@@ -147,8 +147,8 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
   const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -194,7 +194,7 @@ const TopicConfigDialog = (props: {
 }) => {
   const { topic, handleClose } = props;
 
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
   const agendaStore = useAgendaStore((state) => state);
 
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory({

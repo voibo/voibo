@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
 import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
-import { useVFStore, VBAction, VBState } from "../store/useVFStore.jsx";
+import { useVBStore, VBAction, VBState } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 const SplitterConfigList: Array<DiscussionSplitterConf> = [
@@ -79,7 +79,7 @@ export const DiscussionSplitter = ({
 }) => {
   const [open, setOpen] = useState(false);
   const discussionSplitterName = useMinutesStore(
-    useVFStore.getState().startTimestamp
+    useVBStore.getState().startTimestamp
   )((state) => state.discussionSplitter.name);
 
   return (
@@ -110,7 +110,7 @@ const DiscussionSplitterDialog = (props: {
   vfDispatch: Dispatch<VBAction>;
 }) => {
   const { open, setOpen, vfState, vfDispatch } = props;
-  const minutesStore = useMinutesStore(useVFStore.getState().startTimestamp);
+  const minutesStore = useMinutesStore(useVBStore.getState().startTimestamp);
   const discussionSplitter = minutesStore.getState().discussionSplitter;
 
   const handleChange = (e: SelectChangeEvent) => {

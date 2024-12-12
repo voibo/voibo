@@ -19,7 +19,7 @@ import {
   AssistantState,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVBStore.js";
 import { AIAssistantManualInput } from "./AIAssistantManualInput.jsx";
 import { AIAssistantModeSelector } from "./AIAssistantModeSelector.jsx";
 import { AIModelSelector } from "./AIModelSelector.jsx";

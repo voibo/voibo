@@ -21,7 +21,7 @@ import remarkGfm from "remark-gfm";
 import useClickHandler from "../../common/useClickHandler.jsx";
 import { Content } from "../../store/Content.js";
 import { useMinutesContentStore } from "../../store/useContentStore.js";
-import { useVFStore } from "../../store/useVFStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
 
 export type ContentNodeParam = {
@@ -33,7 +33,7 @@ export type ContentNode = Node<ContentNodeParam, "content">;
 const ContentNode = (props: NodeProps<ContentNode>) => {
   // pre process
   // minutesStartTimestamp と対象 content がない場合は何も表示しない
-  const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+  const minutesStartTimestamp = useVBStore.getState().startTimestamp;
   if (!minutesStartTimestamp) {
     return <></>;
   }
@@ -177,7 +177,7 @@ export default memo(ContentNode, (prevProps, nextProps) => {
 // Util
 
 export function removeContent(contentId: string) {
-  const startTimestamp = useVFStore.getState().startTimestamp;
+  const startTimestamp = useVBStore.getState().startTimestamp;
   if (startTimestamp) {
     useMinutesContentStore(startTimestamp).getState().removeContent(contentId);
   }

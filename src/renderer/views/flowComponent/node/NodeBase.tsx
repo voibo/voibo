@@ -32,7 +32,7 @@ import {
 } from "../../store/useAssistantsStore.jsx";
 import { useMinutesGroupStore } from "../../store/useGroupStore.jsx";
 import { useVFReactflowStore } from "../../store/useVFReactflowStore.jsx";
-import { useVFStore } from "../../store/useVFStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
 import { ContentNode } from "./ContentNode.jsx";
 import { TopicNode } from "./TopicNode.jsx";
@@ -43,7 +43,7 @@ export const NodeBase = (props: {
   children: React.ReactNode;
 }) => {
   const { nodeProps } = props;
-  const startTimestamp = useVFStore().startTimestamp;
+  const startTimestamp = useVBStore().startTimestamp;
   const minutesStore = useMinutesStore(startTimestamp).getState();
 
   // selectedSequence
@@ -187,7 +187,7 @@ export const NodeBase = (props: {
 
 const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
   const { assistantConfig } = props;
-  const minutesStartTimestamp = useVFStore().startTimestamp;
+  const minutesStartTimestamp = useVBStore().startTimestamp;
 
   // 状態とフック呼び出しを外に出し、後続処理で条件付きで使用
   const assistantStore = minutesStartTimestamp

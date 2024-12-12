@@ -34,7 +34,7 @@ import {
   VFReactflowDispatchStore,
   VFReactflowState,
 } from "../store/useVFReactflowStore.jsx";
-import { useVFStore, VBAction } from "../store/useVFStore.jsx";
+import { useVBStore, VBAction } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
@@ -99,7 +99,7 @@ const VANodeStageCore = (props: {}) => {
     lastVFAction: null,
   });
   // subscribe lastAction to update GUI
-  useVFStore.subscribe(
+  useVBStore.subscribe(
     (state) => state.lastAction,
     (lastAction) => {
       setGUIState((state) => ({
@@ -142,7 +142,7 @@ const VANodeStageCore = (props: {}) => {
   // DnD
   const reactFlowWrapper = useRef(null);
   const [type] = useDnD();
-  const startTimestamp = useVFStore((stat) => stat.startTimestamp) ?? 0;
+  const startTimestamp = useVBStore((stat) => stat.startTimestamp) ?? 0;
 
   const onDragOver = useCallback((event: any) => {
     event.preventDefault();

@@ -23,12 +23,12 @@ import {
   MenuList,
 } from "@mui/material";
 import { drawerWidth } from "./VFPage.jsx";
-import { useVFStore } from "./store/useVFStore.jsx";
+import { useVBStore } from "./store/useVBStore.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const MainMenuComponent = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   const handleLoad = (event: any) => {
     const startTimestamp =

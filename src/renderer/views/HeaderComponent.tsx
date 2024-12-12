@@ -36,14 +36,14 @@ import { formatTimestamp } from "../util.js";
 import { VirtualAssistantManager } from "./assistant/VirtualAssistantManager.jsx";
 import { useConfirmDialog } from "./common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "./common/useDetailViewDialog.jsx";
-import { useVFStore, VBAction, VBState } from "./store/useVFStore.jsx";
+import { useVBStore, VBAction, VBState } from "./store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
 import { useDownloadMinutes } from "./VFPage.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
 export const HeaderComponent = () => {
-  const vfState = useVFStore((state) => state);
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfState = useVBStore((state) => state);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   const handleOpenHome = () => {
     vfDispatch({
@@ -94,7 +94,7 @@ export const HeaderComponent = () => {
 };
 
 const MinutesTitle = (props: {}) => {
-  const vfState = useVFStore((state) => state);
+  const vfState = useVBStore((state) => state);
   const useMinutesTitle = useMinutesTitleStore((state) => state);
   const defaultTitle = `会議: ${formatTimestamp(vfState.startTimestamp)}`;
   let minutesTitle =

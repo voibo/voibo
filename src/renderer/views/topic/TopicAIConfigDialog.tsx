@@ -18,7 +18,7 @@ import { Dispatch, useEffect, useState } from "react";
 import { EnglishTopicPrompt } from "../../../common/agentManagerDefinition.js";
 import { AIConfig, AIConfigurator } from "../common/aiConfig.jsx";
 
-import { VBAction, VBState } from "../store/useVFStore.jsx";
+import { VBAction, VBState } from "../store/useVBStore.js";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const TopicAIConfigDialog = (props: {

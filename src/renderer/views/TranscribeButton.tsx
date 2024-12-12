@@ -16,10 +16,10 @@ limitations under the License.
 import { RadioButtonChecked } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import { useTranscribeStore } from "./store/useTranscribeStore.jsx";
-import { useVFStore } from "./store/useVFStore.jsx";
+import { useVBStore } from "./store/useVBStore.jsx";
 
 export const TranscribeButton = () => {
-  const recording = useVFStore((state) => state.recording);
+  const recording = useVBStore((state) => state.recording);
   const transcriber = useTranscribeStore((state) => state);
   return (
     <Button

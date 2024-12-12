@@ -30,7 +30,7 @@ import {
   AssistantState,
   makeTopicOrientedInvokeParam,
 } from "../../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVBStore.js";
 import { useMinutesStore } from "../../store/useMinutesStore.js";
 
 // requestor

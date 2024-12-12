@@ -37,7 +37,7 @@ import { isTopic, Topic, TopicSeed } from "../topic/Topic.js";
 import { Content, isContent } from "./Content.js";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { useAgendaStore } from "./useAgendaStore.jsx";
-import { useVFStore } from "./useVFStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 enableMapSet();
 
@@ -766,7 +766,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           const state = get().getOrInitAssistant(vaConfig);
           const dispatch = get().assistantDispatch(vaConfig);
 
-          const vfState = useVFStore.getState();
+          const vfState = useVBStore.getState();
           const minutesState = useMinutesStore(
             vfState.startTimestamp
           ).getState();
@@ -1351,7 +1351,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 // minutes 変更時
 let unsubscribeProcessInvoke: (() => void) | null = null;
 let unsubscribeTopic: (() => void) | null = null;
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => ({
     startTimestamp: state.startTimestamp,
   }),
@@ -1465,7 +1465,7 @@ useVFStore.subscribe(
 );
 
 // mode 変更時
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => ({
     startTimestamp: state.startTimestamp,
     mode: state.mode,
@@ -1489,7 +1489,7 @@ useVFStore.subscribe(
 );
 
 // assistants 変更時: enqueue
-useVFStore.subscribe(
+useVBStore.subscribe(
   (state) => ({
     startTimestamp: state.startTimestamp,
     lastAction: state.lastAction,

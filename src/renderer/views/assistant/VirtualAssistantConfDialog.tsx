@@ -55,7 +55,7 @@ import {
   VirtualAssistantType,
   VirtualAssistantUpdateMode,
 } from "../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../store/useVFStore.jsx";
+import { VBAction, VBState } from "../store/useVBStore.js";
 import {
   AssistantConfigAction,
   AssistantConfigState,

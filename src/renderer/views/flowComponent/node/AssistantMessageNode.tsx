@@ -24,7 +24,7 @@ import {
   useMinutesAssistantStore,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { useVFStore } from "../../store/useVFStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
 
 export type AssistantMessageNodeParam = {
@@ -95,7 +95,7 @@ export function removeAssistantMessage(data: AssistantMessageNodeParam) {
 
   if (messageId) {
     console.log("removeAssistantMessage", messageId, data.assistantConfig);
-    const minutesStartTimestamp = useVFStore.getState().startTimestamp;
+    const minutesStartTimestamp = useVBStore.getState().startTimestamp;
     if (minutesStartTimestamp) {
       const assistantStore = useMinutesAssistantStore(
         minutesStartTimestamp

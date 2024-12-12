@@ -23,7 +23,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { useVFStore, VBAction, VBState } from "../store/useVFStore.jsx";
+import { useVBStore, VBAction, VBState } from "../store/useVBStore.jsx";
 import { DiscussionSegment } from "./DiscussionSegment.jsx";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
@@ -31,7 +31,7 @@ import { useMinutesStore } from "../store/useMinutesStore.jsx";
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
 ): [ReactNode, (startTime: number) => void] => {
-  const vfState = useVFStore.getState();
+  const vfState = useVBStore.getState();
   const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
 
   // scroll to bottom
@@ -176,7 +176,7 @@ export const useDiscussionHistory = (
 
 const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
   const { index, segment } = props;
-  const vfDispatch = useVFStore((state) => state.vfDispatch);
+  const vfDispatch = useVBStore((state) => state.vfDispatch);
 
   const avatar = (
     <Avatar

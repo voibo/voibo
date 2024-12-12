@@ -22,7 +22,7 @@ import {
   AssistantState,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVBStore.js";
 
 export const AIModelSelector = (props: {
   vaConfig: VirtualAssistantConf;

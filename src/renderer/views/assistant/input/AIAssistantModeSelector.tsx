@@ -26,7 +26,7 @@ import {
   AssistantState,
   AttachmentMode,
 } from "../../store/useAssistantsStore.jsx";
-import { VBAction, VBState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVBStore.js";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 
 export const AIAssistantModeSelector = (props: {

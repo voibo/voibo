@@ -16,14 +16,12 @@ limitations under the License.
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { Segment } from "../../../common/Segment.js";
-import { AIConfig } from "../common/aiConfig.jsx";
-import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
-import { DiscussionSplitterConf } from "../topic/DiscussionSplitter.jsx";
+import { AIConfig } from "../common/aiConfig.js";
+import { DiscussionSegment } from "../discussion/DiscussionSegment.js";
+import { DiscussionSplitterConf } from "../topic/DiscussionSplitter.js";
 import { Topic } from "../topic/Topic.js";
-import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
+import { VirtualAssistantConf } from "./useAssistantsStore.js";
 import {
-  initMinutesState,
-  MinutesStore,
   NO_MINUTES_START_TIMESTAMP,
   useMinutesStore,
 } from "./useMinutesStore.jsx";
@@ -60,7 +58,7 @@ type VBDispatch = {
   isNoMinutes: () => boolean;
 };
 
-export const useVFStore = create<VBState & VBDispatch>()(
+export const useVBStore = create<VBState & VBDispatch>()(
   subscribeWithSelector((set, get) => ({
     // # State
     startTimestamp: NO_MINUTES_START_TIMESTAMP,
@@ -85,10 +83,7 @@ export const useVFStore = create<VBState & VBDispatch>()(
   }))
 );
 
-// VFState
-
 export type VBAction =
-  //| VAConfAction
   | {
       type: "createNewMinutes";
     }
@@ -220,7 +215,7 @@ export type VBAction =
 
 export const VBActionProcessor = async (action: VBAction) => {
   const minutesState = useMinutesStore(
-    useVFStore.getState().startTimestamp
+    useVBStore.getState().startTimestamp
   ).getState();
   switch (action.type) {
     case "addVirtualAssistantConf":
@@ -274,28 +269,28 @@ export const VBActionProcessor = async (action: VBAction) => {
       minutesState.setTopic(action.payload.topics);
       break;
     case "changeVADDialogOpen":
-      useVFStore.setState({
-        audioSettingsDialogOpen: !useVFStore().audioSettingsDialogOpen,
+      useVBStore.setState({
+        audioSettingsDialogOpen: !useVBStore().audioSettingsDialogOpen,
       });
       break;
     case "setAudioFolder":
-      useVFStore.setState({
+      useVBStore.setState({
         audioFolder: action.payload.audioFolder,
       });
       break;
     case "setMinutesLines":
       minutesState.setMinutesLines(action.payload.minutes);
-      useVFStore.setState({
+      useVBStore.setState({
         interimSegment: null,
       });
       break;
     case "togglePlayWavMute":
-      useVFStore.setState({
-        playWavMute: !useVFStore().playWavMute,
+      useVBStore.setState({
+        playWavMute: !useVBStore().playWavMute,
       });
       break;
     case "updateInterimSegment":
-      useVFStore.setState({
+      useVBStore.setState({
         interimSegment: action.payload.segment,
       });
       break;
@@ -319,7 +314,7 @@ export const VBActionProcessor = async (action: VBAction) => {
         title: makeDefaultTitle(startTimestamp),
         startTimestamp: startTimestamp,
       });
-      useVFStore.setState({
+      useVBStore.setState({
         startTimestamp,
         mode: "recordingStudio",
         recording: false,
@@ -336,7 +331,7 @@ export const VBActionProcessor = async (action: VBAction) => {
           console.warn("useVFStore: openMinutes: 1", newState);
         });
       console.warn("useVFStore: openMinutes: 2", action.payload.startTimestamp);
-      useVFStore.setState({
+      useVBStore.setState({
         startTimestamp: action.payload.startTimestamp,
         mode: "recordingStudio",
         mainMenuOpen: false,
@@ -354,7 +349,7 @@ export const VBActionProcessor = async (action: VBAction) => {
           console.log("useVFStore: openHomeMenu: 1", newState);
         });
       console.log("useVFStore: openHomeMenu: 2");
-      useVFStore.setState({
+      useVBStore.setState({
         startTimestamp: NO_MINUTES_START_TIMESTAMP,
         mode: "home",
         recording: false,
@@ -373,7 +368,7 @@ export const VBActionProcessor = async (action: VBAction) => {
           console.log("useVFStore: deleteMinutes: 1", newState);
         });
       console.log("useVFStore: deleteMinutes: 2");
-      useVFStore.setState({
+      useVBStore.setState({
         startTimestamp: NO_MINUTES_START_TIMESTAMP,
         mode: "home",
         mainMenuOpen: true,
@@ -384,7 +379,7 @@ export const VBActionProcessor = async (action: VBAction) => {
     default:
       console.log("vfActionProcessor: unexpected default", action);
   }
-  useVFStore.setState({
+  useVBStore.setState({
     lastAction: action,
   });
 };
@@ -397,7 +392,7 @@ export function filterSequentialTopics(
   topics.forEach((topic) => {
     if (!checked) return;
     // index 確認
-    const targetIndex = useMinutesStore(useVFStore.getState().startTimestamp)
+    const targetIndex = useMinutesStore(useVBStore.getState().startTimestamp)
       .getState()
       .topics.indexOf(topic);
     if (targetIndex === -1) {
