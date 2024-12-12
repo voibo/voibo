@@ -22,7 +22,7 @@ import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";
 import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
-import { useVAConfStore } from "./useVAConfStore.jsx";
+import { useVBMainStore } from "./useVBMainStore.jsx";
 import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
@@ -87,7 +87,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
           let newClient = null;
           let vad = null;
 
-          switch (useVAConfStore.getState().conf!.transcriber) {
+          switch (useVBMainStore.getState().conf!.transcriber) {
             case "localWav":
               vad = await MicVAD.new({
                 stream: unmixedOwnMicStream,

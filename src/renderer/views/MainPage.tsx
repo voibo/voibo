@@ -22,7 +22,7 @@ import { MainMenuComponent } from "./MainMenuComponent.jsx";
 import { VBNodeStage } from "./flowComponent/VBNodeStage.jsx";
 import { VBSettings } from "./setting/VBSettings.jsx";
 import { useTopicStore } from "./store/useTopicManagerStore.jsx";
-import { useVAConfEffect } from "./store/useVAConfStore.jsx";
+import { useVBMainStoreEffect } from "./store/useVBMainStore.jsx";
 import { useVBStore } from "./store/useVBStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
 
@@ -47,7 +47,7 @@ export const MainPage = () => {
   const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   // ==  VA Config ==
-  useVAConfEffect();
+  useVBMainStoreEffect();
 
   useEffect(() => {
     // == 初回処理 ==

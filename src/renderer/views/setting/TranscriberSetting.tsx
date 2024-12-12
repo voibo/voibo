@@ -22,16 +22,16 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
-import { useVAConfStore } from "../store/useVAConfStore.jsx";
+import { useVBMainStore } from "../store/useVBMainStore.jsx";
 import { VADSettings } from "./VADSettings.jsx";
 
 export const TranscriberSetting = () => {
-  const vaConfStore = useVAConfStore();
+  const vaConfStore = useVBMainStore();
 
   const handleTranscriberChange = (
     event: SelectChangeEvent<TranscriberType>
   ) => {
-    vaConfStore.updateVAConf({
+    vaConfStore.update({
       ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
       transcriber: event.target.value as TranscriberType,
     });
@@ -83,7 +83,7 @@ export const TranscriberSetting = () => {
             value={state_STT_PROJECT_ID}
             onChange={(event) => set_STT_PROJECT_ID(event.target.value)}
             onBlur={(event) => {
-              vaConfStore.updateVAConf({
+              vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
                 GOOGLE_TTS_PROJECT_ID: event.target.value,
               });
@@ -96,7 +96,7 @@ export const TranscriberSetting = () => {
             value={state_STT_CLIENT_EMAIL}
             onChange={(event) => set_STT_CLIENT_EMAIL(event.target.value)}
             onBlur={(event) => {
-              vaConfStore.updateVAConf({
+              vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
                 GOOGLE_TTS_CLIENT_EMAIL: event.target.value,
               });
@@ -111,7 +111,7 @@ export const TranscriberSetting = () => {
             className="w-96"
             onChange={(event) => set_STT_PRIVATE_KEY(event.target.value)}
             onBlur={(event) => {
-              vaConfStore.updateVAConf({
+              vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
                 GOOGLE_TTS_PRIVATE_KEY: event.target.value,
               });
@@ -130,7 +130,7 @@ export const TranscriberSetting = () => {
             value={state_WHISPER_EXEC_PATH}
             onChange={(event) => set_WHISPER_EXEC_PATH(event.target.value)}
             onBlur={(event) => {
-              vaConfStore.updateVAConf({
+              vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
                 WHISPER_EXEC_PATH: event.target.value,
               });
