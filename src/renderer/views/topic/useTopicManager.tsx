@@ -24,6 +24,7 @@ import { useAgendaStore } from "../store/useAgendaStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVFStore } from "../store/useVFStore.jsx";
 import { isTopic, Topic, TopicSeed } from "./Topic.js";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export type LLMAnalyzedTopics = {
   topics: Topic[];
@@ -137,7 +138,10 @@ export function useTopicManager(): {
   dispatcher: Dispatch<TopicManagerAction>;
 } {
   // openAIChat
-  const topicAIConf = useVFStore((state) => state.topicAIConf);
+  const minutesStore = useMinutesStore(
+    useVFStore.getState().startTimestamp
+  ).getState();
+  const topicAIConf = minutesStore.topicAIConf;
   const vfDispatch = useVFStore((state) => state.vfDispatch);
   const topicState = useTopicStore((state) => state);
   const topicDispatcher = useTopicStore((state) => state.topicDispatch);

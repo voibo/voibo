@@ -26,17 +26,18 @@ import {
   AssistantState,
   AttachmentMode,
 } from "../../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVFStore.jsx";
+import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 
 export const AIAssistantModeSelector = (props: {
   stateAI: AssistantState;
   dispatchAI: Dispatch<AssistantAction>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
 }) => {
-  const { stateAI, dispatchAI, vfState, vfDispatch } = props;
+  const { stateAI, dispatchAI, vfState } = props;
+  const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
 
-  const isSomeSelected = vfState.topics.some(
+  const isSomeSelected = minutesStore.topics.some(
     (topic) => topic.selected ?? false
   );
 

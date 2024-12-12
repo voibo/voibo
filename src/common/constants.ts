@@ -54,7 +54,6 @@ export const IPCInvokeKeys = {
   LANGCHAIN_ASSISTANT_INVOKE: "langchain_assistant_invoke",
   LANGCHAIN_PREPARE_TARGET_MINUTES: "langchain_prepare_targetMinutes",
   LANGCHAIN_INITIALIZE_TARGET_MINUTES: "langchain_initialize_targetMinutes",
-  LANGCHAIN_GET_ALL_ASSISTANT_DATA: "langchain_get_all_assistant_data",
   LANGCHAIN_GET_DETAIL_ON_OPEN_AI: "langchain_retrieve_message",
   LANGCHAIN_RETRIEVE_FILE: "langchain_retrieve_file",
 } as const;

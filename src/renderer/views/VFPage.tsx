@@ -18,23 +18,18 @@ import { styled } from "@mui/material/styles";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { useEffect } from "react";
-import { useIndexedDB } from "react-indexed-db-hook";
-import { IPCInvokeKeys, IPCSenderKeys } from "../../common/constants.js";
-import { AssistantAIData } from "../../common/agentManagerDefinition.js";
+import { IPCInvokeKeys } from "../../common/constants.js";
 import { HeaderComponent } from "./HeaderComponent.jsx";
 import { MainMenuComponent } from "./MainMenuComponent.jsx";
-import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
 import { VANodeStage } from "./flowComponent/VANodeStage.jsx";
 import { VFSettings } from "./setting/VFSettings.jsx";
 import { useTopicStore } from "./store/useTopicManagerStore.jsx";
 import { useVAConfEffect } from "./store/useVAConfStore.jsx";
 import { useVFStore } from "./store/useVFStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
-import {
-  makeDefaultTitle,
-  MinutesTitleStore,
-  useMinutesTitleStore,
-} from "./store/useMinutesTitle.jsx";
+import { MinutesTitleStore } from "./store/useMinutesTitle.jsx";
+import { useMinutesStore } from "./store/useMinutesStore.jsx";
+import { useMinutesAssistantStore } from "./store/useAssistantsStore.jsx";
 
 export const drawerWidth = 240;
 
@@ -64,128 +59,14 @@ const MainComponent = styled("div", {
  * @returns
  */
 export const VFPage = () => {
-  const minutesDB = useIndexedDB(DB_MINUTES);
+  //const minutesDB = useIndexedDB(DB_MINUTES);
 
   // == VF state / dispatch w/ Zustand ==
   const vfState = useVFStore((state) => state);
   const vfDispatch = useVFStore((state) => state.vfDispatch);
-  const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
-  const useMinutesTitle = useMinutesTitleStore();
 
   // ==  VA Config ==
   useVAConfEffect();
-
-  // == Save to IndexedDB ==
-  useEffect(() => {
-    let needToUpdateMinutes = false;
-
-    switch (vfState.needToSaveOnDB) {
-      // == minutes ==
-      case "createNewMinutes":
-        // renderer
-        useMinutesTitle.setMinutesTitle({
-          title: makeDefaultTitle(vfState.startTimestamp!),
-          startTimestamp: vfState.startTimestamp!,
-        });
-        // server
-        window.electron.send(
-          IPCSenderKeys.CREATE_MINUTES,
-          vfState.startTimestamp
-        );
-        // indexedDB
-        needToUpdateMinutes = true;
-        break;
-      case "setMinutesLines":
-        console.log(
-          "setMinutesLines: updateTopicSeeds(false)",
-          vfState.startTimestamp
-        );
-        updateTopicSeeds(false);
-        needToUpdateMinutes = true;
-        break;
-      case "updateMinutesText":
-      case "removeMinutesText":
-      case "splitMinutesText":
-      case "mergeUpMinutesText":
-      case "changeTopicStartedPoint":
-      case "changeTopicAIConfig":
-        needToUpdateMinutes = true;
-        break;
-      case "setTopic":
-      case "updateTopic":
-      case "removeTopic":
-      case "deleteAllTopic":
-        needToUpdateMinutes = true;
-        break;
-      case "addVirtualAssistantConf":
-      case "setVirtualAssistantConf":
-      case "removeVirtualAssistantConf":
-        needToUpdateMinutes = true;
-        break;
-      case "deleteMinutes":
-        if (vfState.startTimestamp) {
-          // server
-          window.electron.send(
-            IPCSenderKeys.DELETE_MINUTES,
-            vfState.startTimestamp
-          );
-
-          useMinutesTitle.removeMinutesTitle(vfState.startTimestamp);
-
-          // indexedDB
-          minutesDB
-            .deleteRecord(vfState.startTimestamp)
-            .then(() => {
-              console.log("deleted");
-            })
-            .catch((error: Error) => {
-              console.log(error);
-            })
-            .finally(() => {
-              vfDispatch({
-                type: "savedOnDB",
-                payload: {
-                  db: DB_MINUTES,
-                  key: undefined,
-                },
-              });
-            });
-        }
-        break;
-    }
-    // update
-    if (needToUpdateMinutes) {
-      //console.log("update minutes: assistants", vfState.assistants);
-      minutesDB
-        .update({
-          id: vfState.startTimestamp,
-          json: JSON.stringify({
-            //title: vfState.minutesTitle,
-            startTimestamp: vfState.startTimestamp,
-            minutes: vfState.discussion,
-            topics: vfState.topics,
-            assistants: vfState.assistants,
-            topicAIConf: vfState.topicAIConf,
-            interimSegment: vfState.interimSegment,
-          }),
-        })
-        .then((id) => {
-          //console.log("created", id);
-        })
-        .catch((error: Error) => {
-          console.log(error);
-        })
-        .finally(() => {
-          vfDispatch({
-            type: "savedOnDB",
-            payload: {
-              db: DB_MINUTES,
-              key: undefined,
-            },
-          });
-        });
-    }
-  }, [vfState.needToSaveOnDB]);
 
   useEffect(() => {
     // == 初回処理 ==
@@ -200,12 +81,22 @@ export const VFPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (vfState.lastAction) {
+      switch (vfState.lastAction.type) {
+        case "setMinutesLines":
+          useTopicStore.getState().updateTopicSeeds(false);
+          break;
+      }
+    }
+  }, [vfState.lastAction]);
+
   // Topic Manager
   useTopicManager();
 
   return (
     <div className="flex bg-indigo-950  text-zinc-600">
-      <MainMenuComponent vfState={vfState} vfDispatch={vfDispatch} />
+      <MainMenuComponent />
       <MainComponent open={vfState.mainMenuOpen}>
         <audio id="globalAudio"></audio>
 
@@ -227,108 +118,78 @@ export const VFPage = () => {
 export function useDownloadMinutes(
   useMinutesTitle: MinutesTitleStore
 ): (targetMinutes: number) => void {
-  const minutesDB = useIndexedDB(DB_MINUTES);
-
   const handleDownload = (targetMinutes: number) => {
-    minutesDB.getByID<MinutesRecord>(targetMinutes).then((minutesRecord) => {
-      const minutes = JSON.parse(minutesRecord.json) as Minutes;
-      const zip = new JSZip();
-      const results: JSZip[] = [];
+    const zip = new JSZip();
+    const results: JSZip[] = [];
 
-      // minutesTitle
-      const minutesTitle = useMinutesTitle.getMinutesTitle(targetMinutes);
-      if (minutesTitle) {
-        results.push(
-          zip.file("minutesTitle.json", JSON.stringify(minutesTitle))
-        );
-        results.push(zip.file("minutesTitle.md", minutesTitle));
+    const minutesTitle = useMinutesTitle.getMinutesTitle(targetMinutes);
+    const minutesStore = useMinutesStore(targetMinutes).getState();
+    const assistantStore = useMinutesAssistantStore(targetMinutes).getState();
 
-        // assistants
-        window.electron
-          .invoke(
-            IPCInvokeKeys.LANGCHAIN_GET_ALL_ASSISTANT_DATA,
-            targetMinutes,
-            minutes.assistants.map((assistant) => {
-              return {
-                dataThreadId: assistant.assistantId,
-                assistantName: assistant.assistantName,
-              };
+    if (minutesTitle && minutesStore && assistantStore) {
+      results.push(zip.file("minutesTitle.json", JSON.stringify(minutesTitle)));
+      results.push(zip.file("minutesTitle.md", minutesTitle));
+
+      // topics
+      results.push(
+        zip.file("topics.json", JSON.stringify(Array.from(minutesStore.topics)))
+      );
+      results.push(
+        zip.file(
+          "topics.md",
+          Array.from(minutesStore.topics)
+            .map((item) => {
+              return `# ${item.title}\n\n${
+                item.topic instanceof Array ? item.topic.join("\n") : item.topic
+              }`;
             })
-          )
-          .then((res: AssistantAIData[]) => {
-            res.map((assistantData) => {
-              results.push(
-                zip.file(
-                  `assistant_${assistantData.startTimestamp}.json`,
-                  JSON.stringify(assistantData)
-                )
-              );
-              results.push(
-                zip.file(
-                  `assistant_${assistantData.startTimestamp}.md`,
-                  assistantData.messages
-                    .map((message) => {
-                      if ((message as any).type === "ai") {
-                        return `#${(message as any).type}\n\n${
-                          (message as any).data.content
-                        }`;
-                      }
-                    })
-                    .join("\n\n")
-                )
-              );
-            });
+            .join("\n\n\n")
+        )
+      );
 
-            // topics
-            results.push(
-              zip.file(
-                "topics.json",
-                JSON.stringify(Array.from(minutes.topics))
-              )
-            );
-            results.push(
-              zip.file(
-                "topics.md",
-                Array.from(minutes.topics)
-                  .map((item) => {
-                    return `# ${item.title}\n\n${
-                      item.topic instanceof Array
-                        ? item.topic.join("\n")
-                        : item.topic
-                    }`;
-                  })
-                  .join("\n\n\n")
-              )
-            );
+      // discussion
+      results.push(
+        zip.file("discussion.json", JSON.stringify(minutesStore.discussion))
+      );
+      results.push(
+        zip.file(
+          "discussion.md",
+          Array.from(minutesStore.discussion)
+            .map((discussionSegment) => {
+              return `${discussionSegment.texts
+                .map((text) => text.text)
+                .join("\n")}`;
+            })
+            .join("\n\n")
+        )
+      );
 
-            // discussion
-            results.push(
-              zip.file("discussion.json", JSON.stringify(minutes.minutes))
-            );
-            results.push(
-              zip.file(
-                "discussion.md",
-                Array.from(minutes.minutes)
-                  .map((discussionSegment) => {
-                    return `${discussionSegment.texts
-                      .map((text) => text.text)
-                      .join("\n")}`;
-                  })
-                  .join("\n\n")
-              )
-            );
+      // assistants
+      assistantStore.assistantsMap.forEach((assistant) => {
+        (assistant.messages ?? []).forEach((message) => {
+          results.push(
+            zip.file(
+              `assistant/${assistant.vaConfig.assistantId}/${message.id}.json`,
+              JSON.stringify(message)
+            )
+          );
+          results.push(
+            zip.file(
+              `assistant/${assistant.vaConfig.assistantId}/${message.id}.md`,
+              message.content
+            )
+          );
+        });
+      });
 
-            console.log("DL: minutes", minutes);
-
-            // construct contents
-            Promise.all(results).then(() => {
-              zip.generateAsync({ type: "blob" }).then((content) => {
-                saveAs(content, `va_${targetMinutes}.zip`);
-              });
-            });
-          });
-      }
-    });
+      console.log("DL: minutes", minutesStore);
+      // construct contents
+      Promise.all(results).then(() => {
+        zip.generateAsync({ type: "blob" }).then((content) => {
+          saveAs(content, `va_${targetMinutes}.zip`);
+        });
+      });
+    }
   };
   return handleDownload;
 }

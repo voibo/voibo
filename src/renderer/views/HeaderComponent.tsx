@@ -36,7 +36,7 @@ import { formatTimestamp } from "../util.js";
 import { VirtualAssistantManager } from "./assistant/VirtualAssistantManager.jsx";
 import { useConfirmDialog } from "./common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "./common/useDetailViewDialog.jsx";
-import { useVFStore, VFAction, VFState } from "./store/useVFStore.jsx";
+import { useVFStore, VBAction, VBState } from "./store/useVFStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
 import { useDownloadMinutes } from "./VFPage.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
@@ -168,8 +168,8 @@ const AssistantButton = (props: {}) => {
 };
 
 const OthersMenuButton = (props: {
-  state: VFState;
-  dispatch: Dispatch<VFAction>;
+  state: VBState;
+  dispatch: Dispatch<VBAction>;
 }) => {
   const { state, dispatch } = props;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

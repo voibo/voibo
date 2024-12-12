@@ -23,23 +23,25 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { useVFStore, VFAction, VFState } from "../store/useVFStore.jsx";
+import { useVFStore, VBAction, VBState } from "../store/useVFStore.jsx";
 import { DiscussionSegment } from "./DiscussionSegment.jsx";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
 ): [ReactNode, (startTime: number) => void] => {
-  const vfState = useVFStore((state) => state);
+  const vfState = useVFStore.getState();
+  const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
 
   // scroll to bottom
   const endOfMinutesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // scroll
-    if (endOfMinutesRef.current && vfState.needToScrollMinutes) {
+    if (endOfMinutesRef.current) {
       endOfMinutesRef.current.scrollIntoView(option);
     }
-  }, [vfState.discussion, vfState.needToScrollMinutes]);
+  }, [minutesStore.discussion]);
 
   // scroll to all badges
   // hint: https://stackoverflow.com/questions/37620694/how-to-scroll-to-an-element
@@ -49,7 +51,7 @@ export const useDiscussionHistory = (
 
   const discussion = useMemo(
     () =>
-      vfState.discussion.map((v) => ({
+      minutesStore.discussion.map((v) => ({
         id: v.timestamp.toString(),
         refCallbackFunction: (node: HTMLDivElement | null) => {
           if (
@@ -65,7 +67,7 @@ export const useDiscussionHistory = (
         },
         segment: v,
       })),
-    [vfState.discussion]
+    [minutesStore.discussion]
   );
 
   const scrollToBadge = useCallback((startTimestamp: number) => {
@@ -217,8 +219,8 @@ const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
 };
 
 const PlayWavMuteOnOffButton = (props: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
 }) => {
   const { vfState, vfDispatch } = props;
   return (

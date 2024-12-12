@@ -25,6 +25,7 @@ import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
 import { useVAConfStore } from "./useVAConfStore.jsx";
 import { useVFSettingsStore } from "./useVFSettingStore.jsx";
 import { useVFStore } from "./useVFStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 export type TranscribeState = {
   // vad
@@ -185,9 +186,12 @@ export const useTranscribeStore = create<TranscribeStore>()(
 );
 
 function setMinutesLines(segments: Segment[]) {
+  const minutesStore = useMinutesStore(
+    useVFStore.getState().startTimestamp
+  ).getState();
   const newMinutes = splitMinutes(
-    appendMinutesList(segments, vfState.discussion, 5),
-    vfState.discussionSplitter.duration
+    appendMinutesList(segments, minutesStore.discussion, 5),
+    minutesStore.discussionSplitter.duration
   );
   //console.log("setMinutesLines", newMinutes, segments);
   vfDispatch({

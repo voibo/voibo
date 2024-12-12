@@ -19,7 +19,7 @@ import {
   AssistantState,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVFStore.jsx";
 import { AIAssistantManualInput } from "./AIAssistantManualInput.jsx";
 import { AIAssistantModeSelector } from "./AIAssistantModeSelector.jsx";
 import { AIModelSelector } from "./AIModelSelector.jsx";
@@ -28,8 +28,8 @@ import { VirtualAssistantRequester } from "./VirtualAssistantRequester.jsx";
 export const ManualModeInputComponent = (props: {
   state: AssistantState;
   dispatch: Dispatch<AssistantAction>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
   vaConfig: VirtualAssistantConf;
 }) => {
   const { state, dispatch, vfState, vfDispatch, vaConfig } = props;
@@ -39,7 +39,6 @@ export const ManualModeInputComponent = (props: {
         state={state}
         dispatch={dispatch}
         vfState={vfState}
-        vfDispatch={vfDispatch}
       />
       <AIAssistantManualInput
         state={state}
@@ -53,7 +52,6 @@ export const ManualModeInputComponent = (props: {
             stateAI={state}
             dispatchAI={dispatch}
             vfState={vfState}
-            vfDispatch={vfDispatch}
           />
         </div>
         <div className="flex-0">

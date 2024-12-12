@@ -55,7 +55,7 @@ import {
   VirtualAssistantType,
   VirtualAssistantUpdateMode,
 } from "../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../store/useVFStore.jsx";
+import { VBAction, VBState } from "../store/useVFStore.jsx";
 import {
   AssistantConfigAction,
   AssistantConfigState,
@@ -104,8 +104,8 @@ export type VirtualAssistantConfAction =
 
 export type VirtualAssistantConfDialogMode = "create" | "edit";
 export const VirtualAssistantConfDialog = (props: {
-  vfDispatch: Dispatch<VFAction>;
-  vfState: VFState;
+  vfDispatch: Dispatch<VBAction>;
+  vfState: VBState;
   dialogState: AssistantConfigState;
   dialogDispatch: Dispatch<AssistantConfigAction>;
 }) => {

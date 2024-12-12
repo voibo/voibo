@@ -34,7 +34,7 @@ import {
   VFReactflowDispatchStore,
   VFReactflowState,
 } from "../store/useVFReactflowStore.jsx";
-import { useVFStore, VFAction } from "../store/useVFStore.jsx";
+import { useVFStore, VBAction } from "../store/useVFStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
@@ -75,7 +75,7 @@ const selector = (state: VFReactflowState & VFReactflowDispatchStore) => ({
 });
 
 export type VANodeStageGUIState = {
-  lastVFAction: VFAction | null;
+  lastVFAction: VBAction | null;
 };
 
 const VANodeStageCore = (props: {}) => {

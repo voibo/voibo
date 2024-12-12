@@ -33,6 +33,7 @@ import {
 } from "./VirtualAssistantConfDialog.jsx";
 import { AIAssistantAvatar } from "./message/AIAssistantAvatar.jsx";
 import { AssistantTemplateDialog } from "./AssistantTemplateDialog.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 function createCommonAssistantConfTemple(): VirtualAssistantConf {
   return {
@@ -81,6 +82,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
    * General Assistant を除くすべての Assistant を管理する
    */
   const vfState = useVFStore((state) => state);
+  const minutesStore = useMinutesStore(vfState.startTimestamp).getState();
   const vfDispatch = useVFStore((state) => state.vfDispatch);
 
   // VA conf dialog
@@ -110,7 +112,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
 
   const handleEditVAConf: MouseEventHandler<HTMLButtonElement> = (event) => {
     const assistantId = event.currentTarget.value;
-    const assistantConfig = vfState.assistants.find((assistantConfig) => {
+    const assistantConfig = minutesStore.assistants.find((assistantConfig) => {
       return assistantConfig.assistantId === assistantId;
     });
     if (!assistantConfig) return;
@@ -146,7 +148,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   };
 
   const avatarIconStyle = { width: "1.5rem", height: "1.5rem" };
-  const assistants = vfState.assistants.filter(
+  const assistants = minutesStore.assistants.filter(
     (assistant) => assistant.assistantId !== GENERAL_ASSISTANT_NAME
   );
 

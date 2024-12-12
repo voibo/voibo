@@ -22,54 +22,25 @@ import {
   MenuItem,
   MenuList,
 } from "@mui/material";
-import { Dispatch } from "react";
-import { useIndexedDB } from "react-indexed-db-hook";
-import { TopicSchema } from "../../common/agentManagerDefinition.js";
 import { drawerWidth } from "./VFPage.jsx";
-import { DB_MINUTES, Minutes, MinutesRecord } from "./db/DBConfig.jsx";
-import { VFAction, VFState } from "./store/useVFStore.jsx";
+import { useVFStore } from "./store/useVFStore.jsx";
 import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
 
-export const MainMenuComponent = (props: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
-}) => {
-  const { vfState, vfDispatch } = props;
-  const minutesDB = useIndexedDB(DB_MINUTES);
+export const MainMenuComponent = () => {
+  const vfState = useVFStore((state) => state);
+  const vfDispatch = useVFStore((state) => state.vfDispatch);
 
   const handleLoad = (event: any) => {
-    const loadTargetSavedMinutes =
+    const startTimestamp =
       event.currentTarget.closest("[data-minutes]").dataset?.minutes;
-    const loadTargetTitle =
-      event.currentTarget.closest("[data-title]").dataset?.title;
     // load
-    if (loadTargetSavedMinutes) {
-      minutesDB
-        .getByID<MinutesRecord>(Number(loadTargetSavedMinutes))
-        .then((record) => {
-          if (record) {
-            const data = JSON.parse(record.json) as Minutes;
-            console.log("load minutes from IDB:", data, loadTargetTitle);
-            vfDispatch({
-              type: "openMinutes",
-              payload: {
-                title: loadTargetTitle,
-                startTimestamp: Number(data.startTimestamp),
-                minutes: data.minutes ?? [],
-                topics: data.topics ?? [],
-                assistants: data.assistants ?? [],
-                topicAIConf: {
-                  ...data.topicAIConf, // 過去にstructuredOutputSchemaがないものを考慮
-                  structuredOutputSchema:
-                    data.topicAIConf.structuredOutputSchema ?? TopicSchema,
-                },
-              },
-            });
-          }
-        })
-        .catch((error: Error) => {
-          console.log(error);
-        });
+    if (startTimestamp) {
+      vfDispatch({
+        type: "openMinutes",
+        payload: {
+          startTimestamp: Number(startTimestamp),
+        },
+      });
     }
   };
 
@@ -127,7 +98,6 @@ export const MainMenuComponent = (props: {
               <MenuItem
                 key={storedMinute.startTimestamp}
                 data-minutes={storedMinute.startTimestamp}
-                data-title={storedMinute.title}
                 onClick={handleLoad}
               >
                 <div className="flex flex-col pl-4 py-1">

@@ -23,9 +23,10 @@ import {
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
-import { VFAction, VFState } from "../store/useVFStore.jsx";
+import { useVFStore, VBAction, VBState } from "../store/useVFStore.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 const SplitterConfigList: Array<DiscussionSplitterConf> = [
   {
@@ -73,17 +74,13 @@ export const DiscussionSplitter = ({
   vfState,
   vfDispatch,
 }: {
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
 }) => {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    console.log(
-      "vfState.discussionSplitter changed:",
-      vfState.discussionSplitter
-    );
-  }, [vfState.discussionSplitter]);
+  const discussionSplitterName = useMinutesStore(
+    useVFStore.getState().startTimestamp
+  )((state) => state.discussionSplitter.name);
 
   return (
     <div className="flex flex-row items-center">
@@ -94,7 +91,7 @@ export const DiscussionSplitter = ({
         }}
       >
         <TimerOutlined sx={{ fontSize: "1rem" }} className="mr-2" />
-        {vfState.discussionSplitter.name}
+        {discussionSplitterName}
       </Button>
       <DiscussionSplitterDialog
         open={open}
@@ -109,10 +106,12 @@ export const DiscussionSplitter = ({
 const DiscussionSplitterDialog = (props: {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
 }) => {
   const { open, setOpen, vfState, vfDispatch } = props;
+  const minutesStore = useMinutesStore(useVFStore.getState().startTimestamp);
+  const discussionSplitter = minutesStore.getState().discussionSplitter;
 
   const handleChange = (e: SelectChangeEvent) => {
     const selected = SplitterConfigList.filter(
@@ -128,14 +127,14 @@ const DiscussionSplitterDialog = (props: {
   };
 
   const handleSplit = () => {
-    const duration = vfState.discussionSplitter.duration;
+    const duration = discussionSplitter.duration;
     if (duration === 0) return;
 
     let lastStartTimestamp = 0;
     vfDispatch({
       type: "setMinutesLines",
       payload: {
-        minutes: vfState.discussion.map((v, index) => {
+        minutes: minutesStore.getState().discussion.map((v, index) => {
           if (index === 0) {
             lastStartTimestamp = Number(v.timestamp);
             return { ...v, topicStartedPoint: true };
@@ -160,7 +159,7 @@ const DiscussionSplitterDialog = (props: {
             <div className="flex-1">
               <FormControl fullWidth>
                 <Select
-                  value={String(vfState.discussionSplitter.duration)}
+                  value={String(discussionSplitter.duration)}
                   label=""
                   onChange={handleChange}
                 >

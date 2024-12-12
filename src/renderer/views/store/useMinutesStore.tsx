@@ -46,7 +46,7 @@ import {
   subscribeWithSelector,
 } from "zustand/middleware";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
-import { create } from "zustand";
+import { create, StoreApi } from "zustand";
 import { enableMapSet } from "immer";
 enableMapSet();
 
@@ -104,13 +104,12 @@ const NoMinutesState = {
   ...initMinutesState(NO_MINUTES_START_TIMESTAMP),
 };
 
-export type MinutesDispatchStore =
-  | AssistantConfDispatch
-  | DiscussionSplitterConfDispatch
-  | TopicAIConfDispatch
-  | TopicDispatch
-  | DiscussionDispatch
-  | MinutesDispatch;
+export type MinutesDispatchStore = AssistantConfDispatch &
+  DiscussionSplitterConfDispatch &
+  TopicAIConfDispatch &
+  TopicDispatch &
+  DiscussionDispatch &
+  MinutesDispatch;
 
 type AssistantConfDispatch = {
   addVirtualAssistantConf: (assistant: VirtualAssistantConf) => void;
@@ -150,7 +149,10 @@ type MinutesDispatch = {
   deleteMinutes: () => void;
   createNewMinutes: () => void;
   openHomeMenu: () => void;
-  openMinutes: (startTimestamp: number) => void;
+  waitForHydration: () => Promise<
+    MinutesStore & MinutesDispatchStore & HydrateState
+  >;
+  isNoMinutes: () => boolean;
 };
 
 // Zustand Store
@@ -172,13 +174,13 @@ export const useMinutesStore = (minutesStartTimestamp: number) => {
 type QueuedAction = () => void;
 const useMinutesStoreCore = (minutesStartTimestamp: number) => {
   //console.log("useMinutesStoreCore", minutesStartTimestamp);
-  // Hydration が完了するまでの操作を保存する Queue
-  const actionQueue: QueuedAction[] = [];
-  // Queue に操作を積むメソッド
+  let actionQueue: QueuedAction[] = [];
   const enqueueAction = (action: QueuedAction) => {
     actionQueue.push(action);
   };
-  // Hydration が完了したら Queue の操作を実行するメソッド
+  const clearQueue = () => {
+    actionQueue = [];
+  };
   const flushQueue = () => {
     while (actionQueue.length > 0) {
       const action = actionQueue.shift();
@@ -190,7 +192,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
 
   return create<MinutesStore & MinutesDispatchStore & HydrateState>()(
     persist(
-      subscribeWithSelector((set, get) => ({
+      subscribeWithSelector((set, get, api) => ({
         // Hydration
         _hasHydrated: false,
         _setHasHydrated: (state) => {
@@ -203,7 +205,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         // State
-        ...initMinutesState(NO_MINUTES_START_TIMESTAMP),
+        ...initMinutesState(minutesStartTimestamp),
 
         // Dispatch
         // == AssistantConfDispatch ==
@@ -413,66 +415,52 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         // == MinutesDispatch ==
-        deleteMinutes: () => {
-          const action = () => {
-            useMinutesStoreCore(minutesStartTimestamp).persist.clearStorage();
-          };
-          if (!get()._hasHydrated) {
-            enqueueAction(action);
-          } else {
-            action();
+
+        waitForHydration: async () => {
+          const store = get();
+          if (store._hasHydrated) {
+            return Promise.resolve(store);
           }
+          return new Promise<
+            MinutesStore & MinutesDispatchStore & HydrateState
+          >((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state._hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve(get());
+                }
+              }
+            );
+          });
+        },
+
+        isNoMinutes: () => {
+          return get().startTimestamp === NO_MINUTES_START_TIMESTAMP;
+        },
+
+        openHomeMenu: () => {
+          // 即時反映
+          clearQueue();
+          // 実際に Home 用の state を呼び出すのは、VFStore で行う
+        },
+        deleteMinutes: () => {
+          // 即時反映
+          clearQueue();
+          storeCache.delete(minutesStartTimestamp);
+          useMinutesStoreCore(minutesStartTimestamp).persist.clearStorage();
         },
         createNewMinutes: () => {
-          const action = () => {
-            set({ _hasHydrated: false });
-            const minutesStartTimestamp = Date.now();
-            useMinutesStoreCore(minutesStartTimestamp).persist.setOptions({
-              name: minutesStartTimestamp.toString(),
-            });
-            (
-              useMinutesStoreCore(
-                minutesStartTimestamp
-              ).persist.rehydrate() as Promise<void>
-            ).then(() => {
-              set({
-                ...initMinutesState(minutesStartTimestamp),
-                assistants: SystemDefaultTemplate.map((template) => ({
-                  ...template.config,
-                  assistantId: uuidv4(),
-                })),
-              });
-            });
-          };
-          if (!get()._hasHydrated) {
-            enqueueAction(action);
-          } else {
-            action();
-          }
-        },
-        openHomeMenu: () => {
-          const action = () => {
-            set(NoMinutesState);
-          };
-          if (!get()._hasHydrated) {
-            enqueueAction(action);
-          } else {
-            action();
-          }
-        },
-        openMinutes: (minutesStartTimestamp) => {
-          const action = () => {
-            set({ _hasHydrated: false });
-            useMinutesStoreCore(minutesStartTimestamp).persist.setOptions({
-              name: minutesStartTimestamp.toString(),
-            });
-            useMinutesStoreCore(minutesStartTimestamp).persist.rehydrate();
-          };
-          if (!get()._hasHydrated) {
-            enqueueAction(action);
-          } else {
-            action();
-          }
+          // 即時反映
+          clearQueue();
+          set({
+            ...initMinutesState(minutesStartTimestamp),
+            assistants: SystemDefaultTemplate.map((template) => ({
+              ...template.config,
+              assistantId: uuidv4(),
+            })),
+          });
         },
       })),
       {

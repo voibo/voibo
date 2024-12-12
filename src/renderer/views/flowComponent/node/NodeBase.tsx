@@ -36,13 +36,15 @@ import { useVFStore } from "../../store/useVFStore.jsx";
 import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
 import { ContentNode } from "./ContentNode.jsx";
 import { TopicNode } from "./TopicNode.jsx";
+import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 
 export const NodeBase = (props: {
   nodeProps: NodeProps<TopicNode | AssistantMessageNode | ContentNode>;
   children: React.ReactNode;
 }) => {
   const { nodeProps } = props;
-  const minutesStartTimestamp = useVFStore().startTimestamp;
+  const startTimestamp = useVFStore().startTimestamp;
+  const minutesStore = useMinutesStore(startTimestamp).getState();
 
   // selectedSequence
   const cssStyle = nodeProps.selected
@@ -75,13 +77,11 @@ export const NodeBase = (props: {
   );
 
   // assistant
-  const assistants = useVFStore
-    .getState()
-    .assistants.filter(
-      (assistant) =>
-        assistant.assistantId !== GENERAL_ASSISTANT_NAME &&
-        assistant.updateMode === "manual"
-    );
+  const assistants = minutesStore.assistants.filter(
+    (assistant) =>
+      assistant.assistantId !== GENERAL_ASSISTANT_NAME &&
+      assistant.updateMode === "manual"
+  );
 
   // agendaList
   const agendaList = (props.nodeProps.data.content.agendaIds ?? []) // 過渡期のためのデータ変換
@@ -93,11 +93,11 @@ export const NodeBase = (props: {
     useDetailViewDialog();
 
   const handleGroup = (event: any) => {
-    if (!minutesStartTimestamp) return;
+    if (!startTimestamp) return;
     detailViewDialog({
       content: (
         <GroupSelectorDialogBody
-          minutesStartTimestamp={minutesStartTimestamp}
+          minutesStartTimestamp={startTimestamp}
           initialGroupIds={nodeProps.data.content.groupIds ?? []}
           handleClose={handleClose}
         />
@@ -110,7 +110,7 @@ export const NodeBase = (props: {
 
   // change agenda
   const handleAgenda = (event: any) => {
-    if (!minutesStartTimestamp) return;
+    if (!startTimestamp) return;
     detailViewDialog({
       content: (
         <AgendaSelectorDialogBody
@@ -170,9 +170,9 @@ export const NodeBase = (props: {
         >
           <div className="flex justify-between items-start">
             <BelongAgendaChips agendaList={agendaList} />
-            {minutesStartTimestamp && (
+            {startTimestamp && (
               <BelongGroupChips
-                minutesStartTimestamp={minutesStartTimestamp}
+                minutesStartTimestamp={startTimestamp}
                 groupIds={nodeProps.data.content.groupIds ?? []}
               />
             )}

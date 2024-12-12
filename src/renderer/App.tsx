@@ -19,13 +19,7 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
-
-import { initDB } from "react-indexed-db-hook";
-
-import { DBConfig } from "./views/db/DBConfig.jsx";
 import { VFPage } from "./views/VFPage.jsx";
-
-initDB(DBConfig);
 
 export const App = () => {
   // router

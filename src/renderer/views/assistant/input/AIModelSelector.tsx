@@ -22,14 +22,14 @@ import {
   AssistantState,
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../../store/useVFStore.jsx";
+import { VBAction, VBState } from "../../store/useVFStore.jsx";
 
 export const AIModelSelector = (props: {
   vaConfig: VirtualAssistantConf;
   stateAI: AssistantState;
   dispatchAI: Dispatch<AssistantAction>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
 }) => {
   const { vaConfig, stateAI, dispatchAI, vfState, vfDispatch } = props;
 

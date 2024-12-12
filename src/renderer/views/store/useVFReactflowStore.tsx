@@ -26,7 +26,6 @@ import {
   OnNodeDrag,
   OnNodesChange,
   OnNodesDelete,
-  useReactFlow,
   Viewport,
 } from "@xyflow/react";
 import { create } from "zustand";
@@ -62,6 +61,7 @@ import {
 import { useMinutesContentStore } from "./useContentStore.js";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVFStore } from "./useVFStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // ==== ReactFlow  ====
 
@@ -849,7 +849,7 @@ const updateTopicNode = (props: { targetTopic: Topic }) => {
   }
 };
 
-const initTopicTree = (props: { topics: Topic[] }) => {
+export const initTopicTree = (props: { topics: Topic[] }) => {
   const { topics } = props;
 
   // == 1. Construct ==
@@ -1162,6 +1162,9 @@ useVFStore.subscribe(
       let topicNodes: TopicNode[] = [];
       let topicBothEndsNodes =
         useVFReactflowStore.getState().topicBothEndsNodes;
+      const minutesStore = useMinutesStore(
+        useVFStore.getState().startTimestamp
+      ).getState();
       switch (lastAction?.type) {
         case "updateTopic": // トピックの追加・削除・変更
           topicNodes = useVFReactflowStore
@@ -1222,8 +1225,16 @@ useVFStore.subscribe(
         case "deleteAllTopic": // minutes 再構築時
         case "removeTopic": // topic 削除時
           // topic
+          const topics = minutesStore.topics;
+          console.log(
+            "useVFReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 0",
+            topics
+          );
           useVFReactflowStore.setState({ ...DefaultVFReactflowState });
-          initTopicTree({ topics: useVFStore.getState().topics });
+          initTopicTree({ topics });
+          console.log(
+            "useVFReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 1"
+          );
           break;
         default:
           break;

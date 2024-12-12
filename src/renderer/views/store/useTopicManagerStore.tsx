@@ -24,6 +24,7 @@ import {
 } from "../topic/useTopicManager.jsx";
 import { useAgendaStore } from "./useAgendaStore.jsx";
 import { useVFStore } from "./useVFStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.jsx";
 
 // ==== Zustand ====
 
@@ -46,7 +47,10 @@ export const useTopicStore = create<
   updateTopicSeeds: (enforceUpdateAll: boolean) => {
     // 現在の全discussionから、全topicSeedを再構築する
     const topicSeeds: TopicSeed[] = [];
-    useVFStore.getState().discussion.forEach((segment) => {
+    const minutesStore = useMinutesStore(
+      useVFStore.getState().startTimestamp
+    ).getState();
+    minutesStore.discussion.forEach((segment) => {
       const currentStartTimestamp = Number(segment.timestamp);
       const currentEndTimestamp = segment.texts.reduce(
         (pre, current) => pre + Number(current.length) / 1000,

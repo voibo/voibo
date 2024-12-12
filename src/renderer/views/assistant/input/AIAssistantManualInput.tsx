@@ -24,33 +24,30 @@ import {
   makeTopicOrientedInvokeParam,
   useMinutesAssistantStore,
 } from "../../store/useAssistantsStore.jsx";
-import { VFAction, VFState } from "../../store/useVFStore.jsx";
+import { useVFStore, VBAction, VBState } from "../../store/useVFStore.jsx";
+import { useMinutesStore } from "../../store/useMinutesStore.js";
 
 export const AIAssistantManualInput = (props: {
   state: AssistantState;
   dispatch: Dispatch<AssistantAction>;
-  vfState: VFState;
-  vfDispatch: Dispatch<VFAction>;
+  vfState: VBState;
+  vfDispatch: Dispatch<VBAction>;
 }) => {
-  const {
-    state: parentState,
-    dispatch: parentDispatch,
-    vfState,
-    vfDispatch,
-  } = props;
   const [message, setMessage] = useState<string>("");
-  const gaConf = vfState.assistants.find(
-    (assistant) => assistant.assistantId === GENERAL_ASSISTANT_NAME
-  )!; // Parentで確認済み
-
-  if (!vfState.startTimestamp) {
+  if (useVFStore.getState().isNoMinutes()) {
     return <></>;
   }
 
-  const statePromise = useMinutesAssistantStore(vfState.startTimestamp)
+  const startTimestamp = useVFStore.getState().startTimestamp;
+  const minutesStore = useMinutesStore(startTimestamp).getState();
+  const gaConf = minutesStore.assistants.find(
+    (assistant) => assistant.assistantId === GENERAL_ASSISTANT_NAME
+  )!; // Parentで確認済み
+
+  const statePromise = useMinutesAssistantStore(startTimestamp)
     .getState()
     .getOrInitAssistant(gaConf);
-  const dispatch = useMinutesAssistantStore(vfState.startTimestamp)
+  const dispatch = useMinutesAssistantStore(startTimestamp)
     .getState()
     .assistantDispatch(gaConf);
 
@@ -58,6 +55,7 @@ export const AIAssistantManualInput = (props: {
   const assistantLoad = async () => {
     state = await statePromise;
   };
+
   useEffect(() => {
     assistantLoad();
   }, [statePromise]);
@@ -117,7 +115,7 @@ export const AIAssistantManualInput = (props: {
         queue: [
           makeTopicOrientedInvokeParam({
             basePrompt: message,
-            topics: vfState.topics.filter((topic) => topic.selected),
+            topics: minutesStore.topics.filter((topic) => topic.selected),
             attachOption,
             customField: field,
             withoutAgenda: true,

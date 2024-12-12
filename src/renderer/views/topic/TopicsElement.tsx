@@ -34,6 +34,7 @@ import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVFStore } from "../store/useVFStore.jsx";
 import { Topic } from "./Topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
+import { useMinutesStore } from "../store/useMinutesStore.jsx";
 
 export const TopicsElement = (props: {
   messageId: string;
@@ -41,9 +42,10 @@ export const TopicsElement = (props: {
   handleClose: () => void;
 }) => {
   const { messageId, detailViewDialog, handleClose } = props;
-  const topic = useVFStore((state) => state.topics).find(
-    (topic) => topic.id === messageId
-  );
+  const minutesStore = useMinutesStore(
+    useVFStore.getState().startTimestamp
+  ).getState();
+  const topic = minutesStore.topics.find((topic) => topic.id === messageId);
 
   if (!topic) return <></>;
 

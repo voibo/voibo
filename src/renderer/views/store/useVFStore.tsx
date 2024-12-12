@@ -13,112 +13,82 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { MicVAD } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { Segment } from "../../../common/Segment.js";
-import { CaptureClient } from "../../lib/capture.js";
 import { AIConfig } from "../common/aiConfig.jsx";
-import { Minutes } from "../db/DBConfig.jsx";
-import {
-  changeTopicStartedPoint,
-  DiscussionSegment,
-  mergeUpMinutesText,
-  removeMinutesText,
-  splitMinutesText,
-  updateMinutesText,
-} from "../discussion/DiscussionSegment.jsx";
+import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
 import { DiscussionSplitterConf } from "../topic/DiscussionSplitter.jsx";
 import { Topic } from "../topic/Topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
-import { SystemDefaultTemplate } from "../assistant/AssistantTemplates.js";
-import { v4 as uuidv4 } from "uuid";
 import {
   initMinutesState,
   MinutesStore,
   NO_MINUTES_START_TIMESTAMP,
   useMinutesStore,
 } from "./useMinutesStore.jsx";
+import { makeDefaultTitle, useMinutesTitleStore } from "./useMinutesTitle.jsx";
+import { IPCSenderKeys } from "../../../common/constants.js";
 
-// ==== VF Core ====
+// ==== VB Core ====
 
 export type VFStateMode = "home" | "recordingStudio";
-export type VFNeedToSaveMode =
-  | undefined
-  | "createNewMinutes"
-  | "setMinutesLines"
-  | "deleteMinutes"
-  | "setTopic"
-  | "updateMinutesText"
-  | "removeMinutesText"
-  | "splitMinutesText"
-  | "mergeUpMinutesText"
-  | "changeTopicStartedPoint"
-  | "changeTopicAIConfig"
-  | "removeTopic"
-  | "deleteAllTopic"
-  | "addVirtualAssistantConf"
-  | "setVirtualAssistantConf"
-  | "removeVirtualAssistantConf"
-  | "updateTopic";
 
-type GUIState = {
-  // db
-  needToSaveOnDB: VFNeedToSaveMode;
+export type VBState = {
+  // current minutes start timestamp.
+  // if no minutes, it is NO_MINUTES_START_TIMESTAMP
+  startTimestamp: number;
 
   // gui
   mode: VFStateMode;
   mainMenuOpen: boolean;
   recording: boolean;
-  needToScrollMinutes: boolean;
   playWavMute: boolean;
 
   // config
-  audioFolder: string;
   // == audio ==
+  audioFolder: string;
   audioSettingsDialogOpen: boolean;
   // == Topic ==
   interimSegment: Segment | null;
   // == zustand subscript ==
-  lastAction: VFAction | null;
+  lastAction: VBAction | null;
 };
 
-export const useVFCoreStore = create<GUIState>()(
+type VBDispatch = {
+  vfDispatch: (action: VBAction) => void;
+  isNoMinutes: () => boolean;
+};
+
+export const useVFStore = create<VBState & VBDispatch>()(
   subscribeWithSelector((set, get) => ({
-    // db
-    needToSaveOnDB: undefined,
+    // # State
+    startTimestamp: NO_MINUTES_START_TIMESTAMP,
 
     // gui
     mode: "home",
     mainMenuOpen: true,
     recording: false,
-    needToScrollMinutes: true,
     playWavMute: true,
 
     // config
-    audioFolder: "/",
     // == audio ==
+    audioFolder: "/",
     audioSettingsDialogOpen: false,
     // == Topic ==
     interimSegment: null,
     // == zustand subscript ==
     lastAction: null,
+
+    vfDispatch: (action) => VBActionProcessor(action),
+    isNoMinutes: () => get().startTimestamp === NO_MINUTES_START_TIMESTAMP,
   }))
 );
 
 // VFState
 
-export type VFState = MinutesStore & GUIState;
-
-export type VFAction =
+export type VBAction =
   //| VAConfAction
-  | {
-      type: "savedOnDB";
-      payload: {
-        db: string;
-        key: string | undefined;
-      };
-    }
   | {
       type: "createNewMinutes";
     }
@@ -136,15 +106,8 @@ export type VFAction =
     }
   | {
       type: "openMinutes";
-      payload: Minutes;
-    }
-  | {
-      type: "reTranscribeAll";
       payload: {
         startTimestamp: number;
-        client: CaptureClient | null;
-        stream: MediaStream | null;
-        vad: MicVAD | null;
       };
     }
   | {
@@ -255,287 +218,176 @@ export type VFAction =
       };
     };
 
-const vfCoreReducerBase = (state: VFState, action: VFAction): VFState => {
+export const VBActionProcessor = async (action: VBAction) => {
+  const minutesState = useMinutesStore(
+    useVFStore.getState().startTimestamp
+  ).getState();
   switch (action.type) {
     case "addVirtualAssistantConf":
-      return {
-        ...state,
-        assistants: [...state.assistants, action.payload.assistant],
-        needToSaveOnDB: "addVirtualAssistantConf" as VFNeedToSaveMode,
-      };
+      minutesState.addVirtualAssistantConf(action.payload.assistant);
+      break;
     case "removeVirtualAssistantConf":
-      return {
-        ...state,
-        assistants: state.assistants.filter(
-          (item) => item.assistantId !== action.payload.assistantId
-        ),
-        needToSaveOnDB: "removeVirtualAssistantConf" as VFNeedToSaveMode,
-      };
+      minutesState.removeVirtualAssistantConf(action.payload.assistantId);
+      break;
     case "setVirtualAssistantConf":
-      console.log(
-        "useVFStore: setVirtualAssistantConf",
-        action.payload.assistant
-      );
-      return {
-        ...state,
-        assistants: state.assistants.map((assistantConfig) =>
-          assistantConfig.assistantId == action.payload.assistant.assistantId
-            ? { ...action.payload.assistant }
-            : assistantConfig
-        ),
-        needToSaveOnDB: "setVirtualAssistantConf" as VFNeedToSaveMode,
-      };
+      minutesState.setVirtualAssistantConf(action.payload.assistant);
+      break;
     case "removeTopic":
-      return {
-        ...state,
-        topics: state.topics.filter(
-          (topic) => topic.id !== action.payload.topicID
-        ),
-        needToSaveOnDB: "removeTopic" as VFNeedToSaveMode,
-      };
+      minutesState.removeTopic(action.payload.topicID);
+      break;
     case "deleteAllTopic":
-      return {
-        ...state,
-        topics: [],
-        needToSaveOnDB: "deleteAllTopic" as VFNeedToSaveMode,
-      };
+      minutesState.deleteAllTopic();
+      break;
     case "changeTopicStartedPoint":
-      return {
-        ...state,
-        discussion: changeTopicStartedPoint(
-          state.discussion,
-          action.payload.segmentIndex
-        ),
-        needToSaveOnDB: "changeTopicStartedPoint" as VFNeedToSaveMode,
-        needToScrollMinutes: false,
-      };
+      minutesState.changeTopicStartedPoint(action.payload.segmentIndex);
+
+      break;
     case "changeTopicAIConfig":
-      return {
-        ...state,
-        topicAIConf: action.payload.aiConfig,
-        needToSaveOnDB: "changeTopicAIConfig" as VFNeedToSaveMode,
-      };
+      minutesState.changeTopicAIConfig(action.payload.aiConfig);
+      break;
     case "updateMinutesText":
-      return {
-        ...state,
-        discussion: updateMinutesText(
-          state.discussion,
-          action.payload.segmentIndex,
-          action.payload.segmentTextIndex,
-          action.payload.content
-        ),
-        needToSaveOnDB: "updateMinutesText" as VFNeedToSaveMode,
-        needToScrollMinutes: false,
-      };
+      minutesState.updateMinutesText(
+        action.payload.segmentIndex,
+        action.payload.segmentTextIndex,
+        action.payload.content
+      );
+      break;
     case "removeMinutesText":
-      return {
-        ...state,
-        discussion: removeMinutesText(
-          state.discussion,
-          action.payload.segmentIndex,
-          action.payload.segmentTextIndex
-        ),
-        needToSaveOnDB: "removeMinutesText" as VFNeedToSaveMode,
-        needToScrollMinutes: false,
-      };
+      minutesState.removeMinutesText(
+        action.payload.segmentIndex,
+        action.payload.segmentTextIndex
+      );
+      break;
     case "splitMinutesText":
-      return {
-        ...state,
-        discussion: splitMinutesText(
-          state.discussion,
-          action.payload.segmentIndex,
-          action.payload.segmentTextIndex
-        ),
-        needToSaveOnDB: "splitMinutesText" as VFNeedToSaveMode,
-        needToScrollMinutes: false,
-      };
+      minutesState.splitMinutesText(
+        action.payload.segmentIndex,
+        action.payload.segmentTextIndex
+      );
+      break;
     case "mergeUpMinutesText":
-      return {
-        ...state,
-        discussion: mergeUpMinutesText(
-          state.discussion,
-          action.payload.segmentIndex,
-          action.payload.segmentTextIndex
-        ),
-        needToSaveOnDB: "mergeUpMinutesText" as VFNeedToSaveMode,
-        needToScrollMinutes: false,
-      };
+      minutesState.mergeUpMinutesText(
+        action.payload.segmentIndex,
+        action.payload.segmentTextIndex
+      );
+      break;
     case "setTopic":
-      // 直前の内容をTopicから排除しきれなかった場合は、最新新しいトピックを無視する
-      return {
-        ...state,
-        topics: [...state.topics, ...action.payload.topics],
-        needToSaveOnDB: "setTopic" as VFNeedToSaveMode,
-      };
-    case "deleteMinutes":
-      return {
-        ...state,
-        needToSaveOnDB: "deleteMinutes" as VFNeedToSaveMode,
-        mode: "home" as VFStateMode,
-        mainMenuOpen: true,
-        startTimestamp: action.payload.startTimestamp,
-        recording: false,
-        discussion: [],
-        topics: [],
-        assistants: [],
-      };
-    case "savedOnDB":
-      //console.log("savedOnDB", action.payload);
-      return {
-        ...state,
-        needToSaveOnDB: undefined,
-      };
+      minutesState.setTopic(action.payload.topics);
+      break;
+    case "changeVADDialogOpen":
+      useVFStore.setState({
+        audioSettingsDialogOpen: !useVFStore().audioSettingsDialogOpen,
+      });
+      break;
+    case "setAudioFolder":
+      useVFStore.setState({
+        audioFolder: action.payload.audioFolder,
+      });
+      break;
+    case "setMinutesLines":
+      minutesState.setMinutesLines(action.payload.minutes);
+      useVFStore.setState({
+        interimSegment: null,
+      });
+      break;
+    case "togglePlayWavMute":
+      useVFStore.setState({
+        playWavMute: !useVFStore().playWavMute,
+      });
+      break;
+    case "updateInterimSegment":
+      useVFStore.setState({
+        interimSegment: action.payload.segment,
+      });
+      break;
+    case "changeDiscussionSplitterConf":
+      minutesState.changeDiscussionSplitterConf(action.payload.splitterConf);
+      break;
+    case "updateTopic":
+      minutesState.updateTopic(action.payload.topic);
+      break;
+
+    /** == MinutesDispatch関係 == */
+
     case "createNewMinutes":
       const startTimestamp = Date.now();
-      return {
-        ...state,
-        mode: "recordingStudio" as VFStateMode,
+      console.warn("useVFStore: createNewMinutes: 0", startTimestamp);
+      useMinutesStore(startTimestamp).getState().createNewMinutes();
+      // server
+      window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
+      // title
+      useMinutesTitleStore.getState().setMinutesTitle({
+        title: makeDefaultTitle(startTimestamp),
         startTimestamp: startTimestamp,
+      });
+      useVFStore.setState({
+        startTimestamp,
+        mode: "recordingStudio",
         recording: false,
-        discussion: [],
         mainMenuOpen: false,
-        needToSaveOnDB: "createNewMinutes" as VFNeedToSaveMode,
-        needToScrollMinutes: true,
-        assistants: SystemDefaultTemplate.map((template) => {
-          return {
-            ...template.config,
-            assistantId: uuidv4(),
-          };
-        }),
-      };
-    case "openHomeMenu":
-      return {
-        ...state,
-        mode: "home" as VFStateMode,
-        startTimestamp: NO_MINUTES_START_TIMESTAMP,
-        recording: false,
-        discussion: [],
-        mainMenuOpen: true,
-        topics: [],
-        assistants: [],
-        interimSegment: null,
-      };
-    case "changeVADDialogOpen":
-      return {
-        ...state,
-        audioSettingsDialogOpen: !state.audioSettingsDialogOpen,
-      };
-    case "reTranscribeAll":
-      return {
-        ...state,
-        startTimestamp: action.payload.startTimestamp,
-        recording: true,
-      };
-    case "setAudioFolder":
-      return {
-        ...state,
-        audioFolder: action.payload.audioFolder,
-      };
-    case "setMinutesLines":
-      return {
-        ...state,
-        discussion: [...state.discussion, ...action.payload.minutes],
-        needToSaveOnDB: "setMinutesLines" as VFNeedToSaveMode,
-        needToScrollMinutes: true,
-        // remove interimSegment
-        interimSegment: null,
-      };
+      });
+      console.warn("useVFStore: createNewMinutes: 1", startTimestamp);
+      break;
     case "openMinutes":
-      console.log("vfCoreReducerBase: openMinutes", action.payload);
-      return {
-        ...state,
-        mode: "recordingStudio" as VFStateMode,
-        recording: false,
+      console.warn("useVFStore: openMinutes: 0", action.payload.startTimestamp);
+      await useMinutesStore(action.payload.startTimestamp)
+        .getState()
+        .waitForHydration()
+        .then((newState) => {
+          console.warn("useVFStore: openMinutes: 1", newState);
+        });
+      console.warn("useVFStore: openMinutes: 2", action.payload.startTimestamp);
+      useVFStore.setState({
         startTimestamp: action.payload.startTimestamp,
-        discussion: action.payload.minutes,
-        topics: action.payload.topics,
+        mode: "recordingStudio",
         mainMenuOpen: false,
-        needToScrollMinutes: true,
-        assistants: action.payload.assistants,
+        recording: false,
         interimSegment: null,
-        topicAIConf: action.payload.topicAIConf,
-      };
-    case "togglePlayWavMute":
-      return {
-        ...state,
-        playWavMute: !state.playWavMute,
-      };
-    case "updateInterimSegment":
-      return {
-        ...state,
-        interimSegment: action.payload.segment,
-      };
-    case "changeDiscussionSplitterConf":
-      const result = {
-        ...state,
-        discussionSplitter: { ...action.payload.splitterConf },
-      };
-      return result;
-    case "updateTopic":
-      return {
-        ...state,
-        topics: state.topics.map((topic) =>
-          topic.id === action.payload.topic.id ? action.payload.topic : topic
-        ),
-        needToSaveOnDB: "updateTopic" as VFNeedToSaveMode,
-      };
+      });
+      console.warn("useVFStore: openMinutes: 3", action.payload.startTimestamp);
+      break;
+    case "openHomeMenu":
+      console.log("useVFStore: openHomeMenu: 0");
+      await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
+        .getState()
+        .waitForHydration()
+        .then((newState) => {
+          console.log("useVFStore: openHomeMenu: 1", newState);
+        });
+      console.log("useVFStore: openHomeMenu: 2");
+      useVFStore.setState({
+        startTimestamp: NO_MINUTES_START_TIMESTAMP,
+        mode: "home",
+        recording: false,
+        mainMenuOpen: true,
+        interimSegment: null,
+      });
+      console.log("useVFStore: openHomeMenu: 3");
+      break;
+    case "deleteMinutes":
+      console.log("useVFStore: deleteMinutes: 0");
+      minutesState.deleteMinutes();
+      await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
+        .getState()
+        .waitForHydration()
+        .then((newState) => {
+          console.log("useVFStore: deleteMinutes: 1", newState);
+        });
+      console.log("useVFStore: deleteMinutes: 2");
+      useVFStore.setState({
+        startTimestamp: NO_MINUTES_START_TIMESTAMP,
+        mode: "home",
+        mainMenuOpen: true,
+        recording: false,
+      });
+      console.log("useVFStore: deleteMinutes: 3");
+      break;
     default:
-      console.log("vfReducer: unexpected default", action);
-      return state;
+      console.log("vfActionProcessor: unexpected default", action);
   }
+  useVFStore.setState({
+    lastAction: action,
+  });
 };
-
-export const vfCoreReducer = (state: VFState, action: VFAction): VFState => {
-  const result = vfCoreReducerBase(state, action);
-  result.lastAction = action;
-  return result;
-};
-
-export type VFDispatchStore = {
-  vfDispatch: (action: VFAction) => void;
-};
-
-export const useVFStore = create<VFState & VFDispatchStore>()(
-  subscribeWithSelector((set, get) => ({
-    ...initMinutesState(NO_MINUTES_START_TIMESTAMP),
-
-    // VF Conf
-    needToSaveOnDB: undefined,
-    // gui
-    mode: "home",
-    mainMenuOpen: true,
-    audioSettingsDialogOpen: false,
-    minutesTitle: "",
-    recording: false,
-    needToScrollMinutes: true,
-    playWavMute: true,
-    // config
-    audioFolder: "/",
-    // llm
-    interimSegment: null,
-    // == zustand subscript ==
-    lastAction: null,
-
-    // Dispatch
-    vfDispatch: (action) => set((state) => vfCoreReducer(state, action)),
-  }))
-);
-
-useVFStore.subscribe(
-  (state) => ({
-    startTimestamp: state.startTimestamp,
-    discussionSplitter: state.discussionSplitter,
-    discussion: state.discussion,
-    topicAIConf: state.topicAIConf,
-    topics: state.topics,
-    assistants: state.assistants,
-  }),
-  (state) => {
-    useMinutesStore(state.startTimestamp).setState({
-      ...state,
-    });
-  }
-);
 
 export function filterSequentialTopics(
   topics: Topic[]
@@ -545,7 +397,9 @@ export function filterSequentialTopics(
   topics.forEach((topic) => {
     if (!checked) return;
     // index 確認
-    const targetIndex = useVFStore.getState().topics.indexOf(topic);
+    const targetIndex = useMinutesStore(useVFStore.getState().startTimestamp)
+      .getState()
+      .topics.indexOf(topic);
     if (targetIndex === -1) {
       checked = false;
       return;
