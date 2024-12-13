@@ -193,10 +193,10 @@ function setMinutesLines(segments: Segment[]) {
     useVBStore.getState().startTimestamp
   ).getState();
   const newMinutes = splitMinutes(
-    appendMinutesList(segments, minutesStore.discussion, 5),
+    appendMinutesList(segments, 5),
     minutesStore.discussionSplitter.duration
   );
-  //console.log("setMinutesLines", newMinutes, segments);
+  console.log("setMinutesLines", newMinutes, segments);
   processVBAction({
     type: "setMinutesLines",
     payload: {
