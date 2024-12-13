@@ -17,10 +17,7 @@ import {
   EnglishTopicPrompt,
   TopicSchema,
 } from "../../../common/agentManagerDefinition.js";
-import {
-  AssistantTemplates,
-  SystemDefaultTemplate,
-} from "../assistant/AssistantTemplates.js";
+import { SystemDefaultTemplate } from "../assistant/AssistantTemplates.js";
 import { AIConfig } from "../common/aiConfig.jsx";
 import {
   changeTopicStartedPoint,
@@ -37,7 +34,6 @@ import {
 import { Topic } from "../topic/Topic.jsx";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
 import { v4 as uuidv4 } from "uuid";
-
 import { createStore, del, get, set } from "idb-keyval";
 import {
   createJSONStorage,
@@ -46,9 +42,12 @@ import {
   subscribeWithSelector,
 } from "zustand/middleware";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
-import { create, StoreApi } from "zustand";
+import { create } from "zustand";
+import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
+/*
 import { enableMapSet } from "immer";
 enableMapSet();
+*/
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -59,16 +58,19 @@ const MinutesPersistStorage: StateStorage = {
     return (await get(name, minutesIDBStore)) || null;
   },
   setItem: async (name: string, value: string): Promise<void> => {
-    //console.log("MinutesPersistStorage.setItem:", name, value);
+    const current = await get(name, minutesIDBStore);
+    if (current === value) {
+      console.warn("MinutesPersistStorage.setItem: same value skipped", name);
+      return;
+    }
+    console.log("MinutesPersistStorage.setItem:", name);
     await set(name, value, minutesIDBStore);
   },
   removeItem: async (name: string): Promise<void> => {
+    console.warn("MinutesPersistStorage: removeItem", name);
     await del(name, minutesIDBStore);
   },
 };
-
-// MinutesState
-export const NO_MINUTES_START_TIMESTAMP = 0;
 
 export type MinutesStore = {
   startTimestamp: number;
@@ -98,10 +100,6 @@ export const initMinutesState = (startTimestamp: number): MinutesStore => {
     ...DefaultMinutesStore,
     startTimestamp: startTimestamp,
   };
-};
-
-const NoMinutesState = {
-  ...initMinutesState(NO_MINUTES_START_TIMESTAMP),
 };
 
 export type MinutesDispatchStore = AssistantConfDispatch &
@@ -148,7 +146,6 @@ type DiscussionDispatch = {
 type MinutesDispatch = {
   deleteMinutes: () => void;
   createNewMinutes: () => void;
-  openHomeMenu: () => void;
   waitForHydration: () => Promise<
     MinutesStore & MinutesDispatchStore & HydrateState
   >;
@@ -161,10 +158,8 @@ const storeCache = new Map<number, ReturnType<typeof useMinutesStoreCore>>();
 export const useMinutesStore = (minutesStartTimestamp: number) => {
   let newStore;
   if (storeCache.has(minutesStartTimestamp)) {
-    // 既にキャッシュに存在する場合はそれを利用
     newStore = storeCache.get(minutesStartTimestamp)!;
   } else {
-    // ない場合は新たに作成してキャッシュに保存
     newStore = useMinutesStoreCore(minutesStartTimestamp);
     storeCache.set(minutesStartTimestamp, newStore);
   }
@@ -172,7 +167,7 @@ export const useMinutesStore = (minutesStartTimestamp: number) => {
 };
 
 type QueuedAction = () => void;
-const useMinutesStoreCore = (minutesStartTimestamp: number) => {
+const useMinutesStoreCore = (startTimestamp: number) => {
   //console.log("useMinutesStoreCore", minutesStartTimestamp);
   let actionQueue: QueuedAction[] = [];
   const enqueueAction = (action: QueuedAction) => {
@@ -205,7 +200,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         // State
-        ...initMinutesState(minutesStartTimestamp),
+        ...initMinutesState(startTimestamp),
 
         // Dispatch
         // == AssistantConfDispatch ==
@@ -415,7 +410,9 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         // == MinutesDispatch ==
-
+        isNoMinutes: () => {
+          return get().startTimestamp === NO_MINUTES_START_TIMESTAMP;
+        },
         waitForHydration: async () => {
           const store = get();
           if (store._hasHydrated) {
@@ -435,36 +432,29 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             );
           });
         },
-
-        isNoMinutes: () => {
-          return get().startTimestamp === NO_MINUTES_START_TIMESTAMP;
-        },
-
-        openHomeMenu: () => {
-          // 即時反映
-          clearQueue();
-          // 実際に Home 用の state を呼び出すのは、VBStore で行う
-        },
-        deleteMinutes: () => {
-          // 即時反映
-          clearQueue();
-          storeCache.delete(minutesStartTimestamp);
-          useMinutesStoreCore(minutesStartTimestamp).persist.clearStorage();
-        },
         createNewMinutes: () => {
           // 即時反映
           clearQueue();
           set({
-            ...initMinutesState(minutesStartTimestamp),
+            ...initMinutesState(startTimestamp),
             assistants: SystemDefaultTemplate.map((template) => ({
               ...template.config,
               assistantId: uuidv4(),
             })),
           });
         },
+        deleteMinutes: () => {
+          // 即時反映
+          console.warn("useMinutesStore: deleteMinutes: 0", startTimestamp);
+          clearQueue();
+          //useMinutesStoreCore(startTimestamp).persist.clearStorage();
+          api.persist.clearStorage();
+          storeCache.delete(startTimestamp);
+          console.warn("useMinutesStore: deleteMinutes: 1", startTimestamp);
+        },
       })),
       {
-        name: minutesStartTimestamp.toString(),
+        name: startTimestamp.toString(),
         storage: createJSONStorage(
           () => MinutesPersistStorage,
           ExpandJSONOptions

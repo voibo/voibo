@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Message } from "../../../../common/agentManagerDefinition.js";
-import { TypicalRequestType } from "../input/VirtualAssistantRequester.jsx";
+import {
+  Message,
+  TypicalRequestType,
+} from "../../../../common/agentManagerDefinition.js";
 
 export function detectVAMessageType(message: Message): VAMessageResponse {
   let res: VAMessageResponse = { type: "Unknown", value: message };

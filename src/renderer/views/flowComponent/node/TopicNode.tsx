@@ -22,6 +22,7 @@ import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";
+import { processVBAction } from "../../store/VBActionProcessor.js";
 
 export type TopicNodeParam = {
   content: Topic;
@@ -89,7 +90,5 @@ export default memo(TopicNodeComponent, (prevProps, nextProps) => {
 // Util
 
 export function removeTopic(topicID: string) {
-  useVBStore
-    .getState()
-    .vbDispatch({ type: "removeTopic", payload: { topicID } });
+  processVBAction({ type: "removeTopic", payload: { topicID } });
 }

@@ -35,6 +35,7 @@ import { useVBStore } from "../store/useVBStore.jsx";
 import { Topic } from "./Topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export const TopicsElement = (props: {
   messageId: string;
@@ -149,12 +150,11 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
   const [openDialog, setOpenDialog] = useState(false);
 
   const handleClick = () => {
-    vbDispatch({ type: "deleteAllTopic" });
+    processVBAction({ type: "deleteAllTopic" });
     updateTopicSeeds(true);
   };
 
@@ -192,7 +192,6 @@ const TopicConfigDialog = (props: {
   handleClose: () => void;
 }) => {
   const { topic, handleClose } = props;
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const getAgenda = useAgendaStore((state) => state.getAgenda);
 
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory({
@@ -212,7 +211,7 @@ const TopicConfigDialog = (props: {
           color="error"
           onClick={() => {
             handleClose();
-            vbDispatch({
+            processVBAction({
               type: "removeTopic",
               payload: { topicID: topic.id },
             });

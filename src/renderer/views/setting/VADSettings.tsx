@@ -16,28 +16,6 @@ limitations under the License.
 import { TextField } from "@mui/material";
 import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 
-export type VADSettingsState = {
-  positiveSpeechThreshold: number;
-  negativeSpeechThreshold: number;
-  preSpeechPadFrames: number;
-  minSpeechFrames: number;
-  redemptionFrames: number;
-};
-
-export const VADSettingsDefault: VADSettingsState = {
-  positiveSpeechThreshold: 0.55, // 確率
-  negativeSpeechThreshold: 0.4, // 確率
-  // == 0.096 sec / 1 frame => about 0.1 sec ==
-  preSpeechPadFrames: 3,
-  minSpeechFrames: 3,
-  redemptionFrames: 4,
-};
-
-export type VADSettingsAction = {
-  type: "setVADSettings";
-  payload: Partial<VADSettingsState>;
-};
-
 export const VADSettings = () => {
   const state = useVBSettingsStore((state) => state);
   const dispatch = useVBSettingsStore((state) => state.settingDispatch);

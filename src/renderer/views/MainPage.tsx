@@ -21,10 +21,10 @@ import { HeaderComponent } from "./HeaderComponent.jsx";
 import { MainMenuComponent } from "./MainMenuComponent.jsx";
 import { VBNodeStage } from "./flowComponent/VBNodeStage.jsx";
 import { VBSettings } from "./setting/VBSettings.jsx";
-import { useTopicStore } from "./store/useTopicManagerStore.jsx";
 import { useVBMainStoreEffect } from "./store/useVBMainStore.jsx";
 import { useVBStore } from "./store/useVBStore.jsx";
 import { useTopicManager } from "./topic/useTopicManager.jsx";
+import { processVBAction } from "./store/VBActionProcessor.js";
 
 export const drawerWidth = 240;
 
@@ -42,9 +42,7 @@ const MainComponent = styled("div", {
 }));
 
 export const MainPage = () => {
-  const lastAction = useVBStore((state) => state.lastAction);
   const mainMenuOpen = useVBStore((state) => state.mainMenuOpen);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   // ==  VA Config ==
   useVBMainStoreEffect();
@@ -53,7 +51,7 @@ export const MainPage = () => {
     // == 初回処理 ==
     // 音声フォルダを取得
     window.electron.invoke(IPCInvokeKeys.GET_AUDIO_FOLDER_PATH).then((res) => {
-      vbDispatch({
+      processVBAction({
         type: "setAudioFolder",
         payload: {
           audioFolder: res,
@@ -61,16 +59,6 @@ export const MainPage = () => {
       });
     });
   }, []);
-
-  useEffect(() => {
-    if (lastAction) {
-      switch (lastAction.type) {
-        case "setMinutesLines":
-          useTopicStore.getState().updateTopicSeeds(false);
-          break;
-      }
-    }
-  }, [lastAction]);
 
   // Topic Manager
   useTopicManager();

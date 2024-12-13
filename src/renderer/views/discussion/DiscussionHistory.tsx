@@ -20,6 +20,7 @@ import { useVBStore } from "../store/useVBStore.jsx";
 import { DiscussionSegment } from "./DiscussionSegment.jsx";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
@@ -170,7 +171,6 @@ export const useDiscussionHistory = (
 
 const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
   const { index, segment } = props;
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const avatar = (
     <Avatar
@@ -183,7 +183,7 @@ const TopicBadge = (props: { index: number; segment: DiscussionSegment }) => {
   const handleClick = (e: any) => {
     switch (e.detail) {
       case 2:
-        vbDispatch({
+        processVBAction({
           type: "changeTopicStartedPoint",
           payload: { segmentIndex: index },
         });

@@ -19,10 +19,6 @@ import {
   persist,
   subscribeWithSelector,
 } from "zustand/middleware";
-import { AudioDeviceSettingsDefault } from "../setting/AudioDeviceSettings.jsx";
-import { DecibelDividerSettingDefault } from "../setting/DecibelDividerSetting.jsx";
-import { VADSettingsDefault } from "../setting/VADSettings.jsx";
-import { VBSettingsAction, VBSettingsState } from "../setting/VBSettings.jsx";
 import {
   ExpandJSONOptions,
   HydrateState,
@@ -30,14 +26,80 @@ import {
   IDBKeyValPersistStorage,
 } from "./IDBKeyValPersistStorage.jsx";
 
-export type VBSettingsStoreAction = {
-  settingDispatch: (action: VBSettingsAction) => void;
+// == VADSettingsState ==
+
+export type VADSettingsState = {
+  positiveSpeechThreshold: number;
+  negativeSpeechThreshold: number;
+  preSpeechPadFrames: number;
+  minSpeechFrames: number;
+  redemptionFrames: number;
 };
 
-export type VBSettingsStore = VBSettingsState &
-  VBSettingsStoreAction &
-  HydrateState;
-export const useVBSettingsStore = create<VBSettingsStore>()(
+export const VADSettingsDefault: VADSettingsState = {
+  positiveSpeechThreshold: 0.55, // 確率
+  negativeSpeechThreshold: 0.4, // 確率
+  // == 0.096 sec / 1 frame => about 0.1 sec ==
+  preSpeechPadFrames: 3,
+  minSpeechFrames: 3,
+  redemptionFrames: 4,
+};
+
+export type VADSettingsAction = {
+  type: "setVADSettings";
+  payload: Partial<VADSettingsState>;
+};
+
+// == AudioDeviceSettings ==
+
+export type AudioDeviceSettingsState = {
+  selectedOwnDeviceId: string;
+  selectedParticipantsDeviceId: string;
+  selectedOutputDeviceId: string;
+};
+
+export const AudioDeviceSettingsDefault: AudioDeviceSettingsState = {
+  selectedOwnDeviceId: "default",
+  selectedParticipantsDeviceId: "default",
+  selectedOutputDeviceId: "default",
+};
+
+export type AudioDeviceSettingsAction = {
+  type: "setMicSettings";
+  payload: Partial<AudioDeviceSettingsState>;
+};
+
+// == DecibelDividerSetting ==
+
+export type DecibelDividerSettingState = {
+  silenceLevel: number; //db
+  silenceLength: number; // sec
+  maxLength: number; // sec
+  minLength: number;
+};
+
+export const DecibelDividerSettingDefault: DecibelDividerSettingState = {
+  silenceLevel: -60, //db
+  silenceLength: 0.5, // sec
+  maxLength: 30, // sec
+  minLength: 5, // sec
+};
+
+// === Store ==
+
+export type VBSettingsStoreAction = {
+  settingDispatch: (
+    action: AudioDeviceSettingsAction | VADSettingsAction
+  ) => void;
+};
+
+export const useVBSettingsStore = create<
+  AudioDeviceSettingsState &
+    VADSettingsState &
+    DecibelDividerSettingState &
+    VBSettingsStoreAction &
+    HydrateState
+>()(
   persist(
     subscribeWithSelector((set, get) => ({
       // state
@@ -47,7 +109,7 @@ export const useVBSettingsStore = create<VBSettingsStore>()(
 
       // action
       settingDispatch: (action) => {
-        set((state: VBSettingsStore) => {
+        set((state) => {
           switch (action.type) {
             case "setVADSettings":
             case "setMicSettings":
