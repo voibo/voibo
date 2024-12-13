@@ -150,18 +150,12 @@ export function mergeUpMinutesText(
 
 /**
  * OpenAI API から取得した Segment を DiscussionSegment に変換して追加する
- * @param newSegments
- * @param minutes
- * @param limitSec
- * @param autoSplitDuration
- * @returns
  */
 export function appendMinutesList(
   newSegments: Segment[],
-  minutes: DiscussionSegment[],
   limitSec: number = 5
 ): DiscussionSegment[] {
-  let result: DiscussionSegment[] = [...minutes];
+  let result: DiscussionSegment[] = [];
   newSegments.map((newSegment) => {
     result = _appendMinutes(newSegment, result, limitSec);
   });
@@ -173,7 +167,7 @@ function _appendMinutes(
   minutes: DiscussionSegment[],
   limitSec: number
 ): DiscussionSegment[] {
-  //console.log("_appendMinutes: 0", minutes);
+  console.log("_appendMinutes: 0", minutes);
   let result: DiscussionSegment[] = minutes;
   if (newSegment.timestamp != undefined && newSegment.texts != undefined) {
     result = [...minutes];
@@ -250,7 +244,7 @@ function _appendMinutes(
       result.push(..._splitEndedTextsToSegment(target));
     }
   }
-  //console.log("_appendMinutes", result);
+  console.log("_appendMinutes", result);
   return result;
 }
 
