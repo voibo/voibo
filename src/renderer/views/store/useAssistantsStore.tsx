@@ -1486,55 +1486,6 @@ useVBStore.subscribe(
   }
 );
 
-// assistants 変更時: enqueue
-useVBStore.subscribe(
-  (state) => ({
-    startTimestamp: state.startTimestamp,
-    lastAction: state.lastAction,
-  }),
-  (state) => {
-    if (
-      state.startTimestamp &&
-      state.lastAction &&
-      (state.lastAction.type === "addVirtualAssistantConf" ||
-        state.lastAction.type === "setVirtualAssistantConf" ||
-        state.lastAction.type === "removeVirtualAssistantConf")
-    ) {
-      const assistantsStore = useMinutesAssistantStore(state.startTimestamp);
-      switch (state.lastAction.type) {
-        case "addVirtualAssistantConf":
-          assistantsStore
-            .getState()
-            .getOrInitAssistant(state.lastAction.payload.assistant);
-        // break しないで　setVirtualAssistantConfと同様の処理へ
-        case "setVirtualAssistantConf":
-          assistantsStore
-            .getState()
-            .enqueueTopicRelatedInvoke(state.lastAction.payload.assistant);
-          break;
-        case "removeVirtualAssistantConf":
-          assistantsStore
-            .getState()
-            .removeAssistant(state.lastAction.payload.assistantId);
-          break;
-      }
-    }
-  },
-  {
-    equalityFn: (prev, next) => {
-      if (
-        next.lastAction &&
-        (next.lastAction.type === "addVirtualAssistantConf" ||
-          next.lastAction.type === "setVirtualAssistantConf" ||
-          next.lastAction.type === "removeVirtualAssistantConf")
-      ) {
-        return false;
-      }
-      return true;
-    },
-  }
-);
-
 // == Assistant Template ==
 export type AssistantTemplate = {
   templateId: string;

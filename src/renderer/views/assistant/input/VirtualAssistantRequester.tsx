@@ -32,18 +32,9 @@ import {
 } from "../../store/useAssistantsStore.jsx";
 import { useVBStore } from "../../store/useVBStore.js";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
+import { TypicalRequest } from "../../../../common/agentManagerDefinition.js";
 
 // requestor
-export type TypicalRequestType =
-  | "MindMap"
-  | "Ideation"
-  | "Facilitate"
-  | "Summarize";
-export type TypicalRequest = {
-  type: TypicalRequestType;
-  label: string;
-  value: string;
-};
 
 export const VirtualAssistantRequester = (props: {
   state: AssistantState;

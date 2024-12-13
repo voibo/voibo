@@ -361,6 +361,20 @@ export function isLangChainBaseMessage(obj: any): obj is BaseMessage {
   return isBaseMessage(obj);
 }
 
+// Custom Field
+// request type related VirtualAssistantRequester
+export type TypicalRequestType =
+  | "MindMap"
+  | "Ideation"
+  | "Facilitate"
+  | "Summarize";
+
+export type TypicalRequest = {
+  type: TypicalRequestType;
+  label: string;
+  value: string;
+};
+
 // == Zod Schema ==
 
 /*

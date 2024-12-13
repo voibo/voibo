@@ -62,6 +62,7 @@ import { useMinutesContentStore } from "./useContentStore.jsx";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
+import { processVBAction } from "./VBActionProcessor.js";
 
 // ==== ReactFlow  ====
 
@@ -245,7 +246,7 @@ const makeAssistantMessageEdge = (props: {
 
 // Content
 
-export const makeContentNode = (props: { content: Content }): ContentNode => {
+const makeContentNode = (props: { content: Content }): ContentNode => {
   const { content } = props;
   return {
     id: content.id,
@@ -331,6 +332,11 @@ export type VBReactflowDispatchStore = {
   deselectAll: () => void;
   updateSequencedSelectionsGroup: (groups: Group[]) => void;
   updateSequencedSelectionsAgenda: (agendas: Agenda[]) => void;
+
+  // topic util
+  updateTopic: (topic: Topic) => void;
+  setTopics: (topics: Topic[]) => void;
+  relocateTopics: () => void;
 };
 
 export const DefaultVBReactflowState: VBReactflowState = {
@@ -420,7 +426,7 @@ export const useVBReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVBStore.getState().vbDispatch({
+          processVBAction({
             type: "updateTopic",
             payload: {
               topic: {
@@ -482,7 +488,7 @@ export const useVBReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          useVBStore.getState().vbDispatch({
+          processVBAction({
             type: "updateTopic",
             payload: {
               topic: {
@@ -575,7 +581,6 @@ export const useVBReactflowStore = create<
       set({
         topicTreeEdges: applyEdgeChanges(changes, get().topicTreeEdges),
         assistantTreeEdges: applyEdgeChanges(changes, get().assistantTreeEdges),
-        //agendaTreeEdges: applyEdgeChanges(changes, get().agendaTreeEdges),
         contentTreeEdges: applyEdgeChanges(changes, get().contentTreeEdges),
       });
     },
@@ -583,7 +588,6 @@ export const useVBReactflowStore = create<
       set({
         topicTreeEdges: addEdge(connection, get().topicTreeEdges),
         assistantTreeEdges: addEdge(connection, get().assistantTreeEdges),
-        //agendaTreeEdges: addEdge(connection, get().agendaTreeEdges),
         contentTreeEdges: addEdge(connection, get().contentTreeEdges),
       });
     },
@@ -767,7 +771,7 @@ export const useVBReactflowStore = create<
         set({
           _layoutTopicsQueue: remainedQueue,
           topicNodes: topicNodes,
-          topicBothEndsNodes: relocateTopicBothEndsNodes(
+          topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
             topicNodes,
             topicBothEndsNodes
           ),
@@ -779,6 +783,79 @@ export const useVBReactflowStore = create<
           }),
         });
       }
+    },
+
+    // Topic util
+    updateTopic: (topic) => {
+      const topicNodes = get().topicNodes.map((node) =>
+        node.id === topic.id ? makeTopicNode({ topic }) : node
+      );
+      set({
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          get().topicBothEndsNodes
+        ),
+      });
+    },
+
+    setTopics: (topics) => {
+      const newTopicNodes = topics.map((topic) => makeTopicNode({ topic }));
+      const topicNodes = [...get().topicNodes];
+      const topicBothEndsNodes = get().topicBothEndsNodes;
+      let lastNode =
+        topicNodes.length > 0
+          ? topicNodes[topicNodes.length - 1]
+          : topicBothEndsNodes[0];
+      let lastBounds = {
+        measured: {
+          height: lastNode.measured?.height ?? 0,
+          width: lastNode.measured?.width ?? 0,
+        },
+        position: lastNode.position,
+      };
+      const _layoutTopicsQueue: Array<TopicNode> = [];
+      for (const topicNode of newTopicNodes) {
+        const located = locateTopic(topicNode, lastBounds);
+        updateNodePosition(located.updatedTopicNode); // 変更を永続化
+        _layoutTopicsQueue.push(located.updatedTopicNode as TopicNode);
+        topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
+        lastBounds = located.bounds;
+      }
+      set({
+        _layoutTopicsQueue: _layoutTopicsQueue,
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          topicBothEndsNodes
+        ),
+      });
+    },
+
+    relocateTopics: () => {
+      set({ ...DefaultVBReactflowState }); // 一旦リセット??
+
+      const topics = useMinutesStore(
+        useVBStore.getState().startTimestamp
+      ).getState().topics;
+      const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
+      const topicBothEndsNodes = calcRelocatedTopicBothEndsNodes(
+        topicNodes,
+        get().topicBothEndsNodes
+      );
+      set({
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          topicBothEndsNodes
+        ),
+        topicTreeEdges: makeTopicEdges({
+          nodes: constructTopicTreeNodes({
+            topicNodes,
+            topicBothEndsNodes,
+          }),
+        }),
+      });
     },
   }))
 );
@@ -849,57 +926,20 @@ const updateTopicNode = (props: { targetTopic: Topic }) => {
   }
 };
 
-export const initTopicTree = (props: { topics: Topic[] }) => {
-  const { topics } = props;
-
-  // == 1. Construct ==
-  const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
-  const topicBothEndsNodes = relocateTopicBothEndsNodes(
-    topicNodes,
-    useVBReactflowStore.getState().topicBothEndsNodes
-  );
-  useVBReactflowStore.setState({
-    topicNodes,
-    topicBothEndsNodes: relocateTopicBothEndsNodes(
-      topicNodes,
-      topicBothEndsNodes
-    ),
-    topicTreeEdges: makeTopicEdges({
-      nodes: constructTopicTreeNodes({
-        topicNodes,
-        topicBothEndsNodes,
-      }),
-    }),
-  });
-};
-
 const updateNodePosition = (node: Node) => {
   const startTimestamp = useVBStore.getState().startTimestamp;
-  if (!startTimestamp) return;
+  if (useVBStore.getState().isNoMinutes()) return;
   switch (node.type) {
     case "topic":
-      /*
-      // ここで vbDispatch を経由してはいけない。 => この方法だと VBStore の永続化は Zustand の middleware が担当していないので、変更できない。
-      useVBStore.getState().updateTopic({
-        ...(node as TopicNode).data.content,
-        position: {
-          x: node.position.x,
-          y: node.position.y,
-        },
-      });
-      */
-      useVBStore.getState().vbDispatch({
-        type: "updateTopic",
-        payload: {
-          topic: {
-            ...(node as TopicNode).data.content,
-            position: {
-              x: node.position.x,
-              y: node.position.y,
-            },
+      useMinutesStore(startTimestamp)
+        .getState()
+        .updateTopic({
+          ...(node as TopicNode).data.content,
+          position: {
+            x: node.position.x,
+            y: node.position.y,
           },
-        },
-      });
+        });
       break;
     case "agenda":
       const targetAgenda = useAgendaStore
@@ -1104,8 +1144,7 @@ useVBReactflowStore.subscribe(
   }
 );
 
-// VBStore
-const relocateTopicBothEndsNodes = (
+const calcRelocatedTopicBothEndsNodes = (
   topicNodes: TopicNode[],
   topicBothEndsNodes: TopicBothEndsNode[]
 ): TopicBothEndsNode[] => {
@@ -1151,95 +1190,6 @@ const relocateTopicBothEndsNodes = (
     updatedDiscussionNode ?? topicBothEndsNodes[1],
   ];
 };
-
-// dispatch post process
-useVBStore.subscribe(
-  (state) => state.lastAction,
-  (lastAction) => {
-    (async () => {
-      let topicNodes: TopicNode[] = [];
-      let topicBothEndsNodes =
-        useVBReactflowStore.getState().topicBothEndsNodes;
-      const minutesStore = useMinutesStore(
-        useVBStore.getState().startTimestamp
-      ).getState();
-      switch (lastAction?.type) {
-        case "updateTopic": // トピックの追加・削除・変更
-          topicNodes = useVBReactflowStore
-            .getState()
-            .topicNodes.map((node) =>
-              node.id === lastAction.payload.topic.id
-                ? makeTopicNode({ topic: lastAction.payload.topic })
-                : node
-            );
-          useVBReactflowStore.setState({
-            topicNodes,
-            topicBothEndsNodes: relocateTopicBothEndsNodes(
-              topicNodes,
-              topicBothEndsNodes
-            ),
-          });
-          break;
-        case "setTopic": // Topicを仮配置する。 measure されたあとに正式に配置し直す。
-          const newTopicNodes = lastAction.payload.topics.map((topic) =>
-            makeTopicNode({ topic })
-          );
-          topicNodes = [...useVBReactflowStore.getState().topicNodes];
-          topicBothEndsNodes =
-            useVBReactflowStore.getState().topicBothEndsNodes;
-
-          let lastNode =
-            topicNodes.length > 0
-              ? topicNodes[topicNodes.length - 1]
-              : topicBothEndsNodes[0];
-          let lastBounds = {
-            measured: {
-              height: lastNode.measured?.height ?? 0,
-              width: lastNode.measured?.width ?? 0,
-            },
-            position: lastNode.position,
-          };
-          const _layoutTopicsQueue: Array<TopicNode> = [];
-          for (const topicNode of newTopicNodes) {
-            const located = locateTopic(topicNode, lastBounds);
-            updateNodePosition(located.updatedTopicNode); // 変更を永続化
-            _layoutTopicsQueue.push(located.updatedTopicNode as TopicNode);
-            topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
-            lastBounds = located.bounds;
-          }
-          useVBReactflowStore.setState({
-            _layoutTopicsQueue: _layoutTopicsQueue,
-            topicNodes,
-            topicBothEndsNodes: relocateTopicBothEndsNodes(
-              topicNodes,
-              topicBothEndsNodes
-            ),
-          });
-          break;
-        // トピックツリーの初期化
-        case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
-        case "createNewMinutes": //　minutes 作成時
-        case "openMinutes": // minutes open時
-        case "deleteAllTopic": // minutes 再構築時
-        case "removeTopic": // topic 削除時
-          // topic
-          const topics = minutesStore.topics;
-          console.log(
-            "useVBReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 0",
-            topics
-          );
-          useVBReactflowStore.setState({ ...DefaultVBReactflowState });
-          initTopicTree({ topics });
-          console.log(
-            "useVBReactflowStore: openMinutes/openHomeMenu/createNewMinutes: 1"
-          );
-          break;
-        default:
-          break;
-      }
-    })();
-  }
-);
 
 // Assistant
 const updateAssistantNodes = ({

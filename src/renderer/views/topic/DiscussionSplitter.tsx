@@ -27,6 +27,7 @@ import { Dispatch, SetStateAction, useState } from "react";
 import { DiscussionSegment } from "../discussion/DiscussionSegment.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 const SplitterConfigList: Array<DiscussionSplitterConf> = [
   {
@@ -97,7 +98,6 @@ const DiscussionSplitterDialog = (props: {
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   const { open, setOpen } = props;
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const minutesStore = useMinutesStore(
     useVBStore((state) => state.startTimestamp)
   );
@@ -108,7 +108,7 @@ const DiscussionSplitterDialog = (props: {
     const selected = SplitterConfigList.filter(
       (config) => String(config.duration) === e.target.value
     )[0];
-    vbDispatch({
+    processVBAction({
       type: "changeDiscussionSplitterConf",
       payload: {
         splitterConf: { ...selected }, // 新オブジェクトにするため
@@ -122,7 +122,7 @@ const DiscussionSplitterDialog = (props: {
     if (duration === 0) return;
 
     let lastStartTimestamp = 0;
-    vbDispatch({
+    processVBAction({
       type: "setMinutesLines",
       payload: {
         minutes: discussion.map((v, index) => {
@@ -183,36 +183,3 @@ const DiscussionSplitterDialog = (props: {
     </Dialog>
   );
 };
-
-export function splitMinutes(
-  minutes: DiscussionSegment[],
-  duration: number
-): {
-  minutes: DiscussionSegment[];
-  hasNewStartPoint: boolean;
-} {
-  let hasNewStartPoint = false;
-  if (duration === 0) return { minutes, hasNewStartPoint };
-  // メインケース
-  let lastStartTimestamp = 0;
-  const newMinutes = minutes.map((v, index) => {
-    if (index === 0) {
-      // 強制的に最初のトピックは開始点にする
-      // この場合は新しく開始点が設定されたとはみなさない
-      lastStartTimestamp = Number(v.timestamp);
-      return { ...v, topicStartedPoint: true };
-    } else if (v.topicStartedPoint) {
-      // 設定済みの開始点はそのまま
-      lastStartTimestamp = Number(v.timestamp);
-      return v;
-    } else if (Number(v.timestamp) - lastStartTimestamp > duration) {
-      // 設定された時間を超えたら開始点にする
-      lastStartTimestamp = Number(v.timestamp);
-      hasNewStartPoint = true; // 新しく開始点が設定された
-      return { ...v, topicStartedPoint: true };
-    } else {
-      return { ...v, topicStartedPoint: false };
-    }
-  });
-  return { minutes: newMinutes, hasNewStartPoint };
-}

@@ -36,23 +36,20 @@ import { formatTimestamp } from "../util.js";
 import { VirtualAssistantManager } from "./assistant/VirtualAssistantManager.jsx";
 import { useConfirmDialog } from "./common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "./common/useDetailViewDialog.jsx";
-import { useVBStore, VBAction, VBState } from "./store/useVBStore.jsx";
+import { useVBStore, VBState } from "./store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
-import {
-  MinutesTitleStore,
-  useMinutesTitleStore,
-} from "./store/useMinutesTitle.jsx";
+import { useMinutesTitleStore } from "./store/useMinutesTitleStore.jsx";
 import { useMinutesStore } from "./store/useMinutesStore.jsx";
 import { useMinutesAssistantStore } from "./store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
+import { processVBAction } from "./store/VBActionProcessor.js";
 
 export const HeaderComponent = () => {
   const vbState = useVBStore((state) => state);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleOpenHome = () => {
-    vbDispatch({
+    processVBAction({
       type: "openHomeMenu",
     });
   };
@@ -93,7 +90,7 @@ export const HeaderComponent = () => {
       </div>
       <div className="flex flex-row items-center space-x-2 justify-end">
         <AssistantButton />
-        <OthersMenuButton state={vbState} dispatch={vbDispatch} />
+        <OthersMenuButton />
       </div>
     </div>
   );
@@ -173,11 +170,10 @@ const AssistantButton = (props: {}) => {
   );
 };
 
-const OthersMenuButton = (props: {
-  state: VBState;
-  dispatch: Dispatch<VBAction>;
-}) => {
-  const { state, dispatch } = props;
+const OthersMenuButton = () => {
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const recording = useVBStore((state) => state.recording);
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -273,7 +269,7 @@ const OthersMenuButton = (props: {
   // menu item events
   const handleBack = () => {
     setAnchorEl(null);
-    dispatch({
+    processVBAction({
       type: "openHomeMenu",
     });
   };
@@ -296,10 +292,10 @@ const OthersMenuButton = (props: {
 
     if (!accepted) return; // キャンセル時は処理に進まない
 
-    dispatch({
+    processVBAction({
       type: "deleteMinutes",
       payload: {
-        startTimestamp: state.startTimestamp ?? 0,
+        startTimestamp: startTimestamp,
       },
     });
   };
@@ -310,7 +306,7 @@ const OthersMenuButton = (props: {
         aria-haspopup="true"
         aria-expanded={open ? "true" : undefined}
         onClick={handleClick}
-        disabled={state.recording}
+        disabled={recording}
         className="text-white"
       >
         <MenuIcon />
@@ -329,11 +325,7 @@ const OthersMenuButton = (props: {
           </ListItemIcon>
           <ListItemText>Back</ListItemText>
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            downloadMinutes(state.startTimestamp ?? 0);
-          }}
-        >
+        <MenuItem onClick={() => downloadMinutes(startTimestamp)}>
           <ListItemIcon>
             <Download fontSize="small" />
           </ListItemIcon>

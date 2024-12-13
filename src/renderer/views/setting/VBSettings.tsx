@@ -15,38 +15,26 @@ limitations under the License.
 */
 import { Dialog, Tab } from "@mui/material";
 import { useVBStore } from "../store/useVBStore.jsx";
-import {
-  AudioDeviceSettingsAction,
-  AudioDeviceSettingsState,
-  MicSettings,
-} from "./AudioDeviceSettings.jsx";
-import { DecibelDividerSettingState } from "./DecibelDividerSetting.jsx";
+import { MicSettings } from "./AudioDeviceSettings.jsx";
 import { LLMSetting } from "./LLMSetting.jsx";
 import { TranscriberSetting } from "./TranscriberSetting.jsx";
-import { VADSettingsAction, VADSettingsState } from "./VADSettings.jsx";
 
 import { Settings } from "@mui/icons-material";
 import TabContext_ from "@mui/lab/TabContext";
 import TabList_ from "@mui/lab/TabList";
 import TabPanel_ from "@mui/lab/TabPanel";
 import { useState } from "react";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 const TabContext = TabContext_ as unknown as typeof TabContext_.default;
 const TabList = TabList_ as unknown as typeof TabList_.default;
 const TabPanel = TabPanel_ as unknown as typeof TabPanel_.default;
 
-export type VBSettingsState = AudioDeviceSettingsState &
-  VADSettingsState &
-  DecibelDividerSettingState;
-
-export type VBSettingsAction = AudioDeviceSettingsAction | VADSettingsAction;
-
 export const VBSettings = () => {
   const vbState = useVBStore((state) => state);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleClose = () => {
-    vbDispatch({ type: "changeVADDialogOpen" });
+    processVBAction({ type: "changeVADDialogOpen" });
   };
 
   const [selectedTab, selectTab] = useState("1");

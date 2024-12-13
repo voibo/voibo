@@ -29,6 +29,7 @@ import { Add, SmartToyOutlined } from "@mui/icons-material";
 import { AIAssistantAvatar } from "./message/AIAssistantAvatar.jsx";
 import { v4 as uuidv4 } from "uuid";
 import { AssistantTemplates } from "./AssistantTemplates.js";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export const AssistantTemplateDialog = (props: {
   open: boolean;
@@ -56,7 +57,7 @@ export const AssistantTemplateDialog = (props: {
     };
 
     console.log("handleAddTemplate", newAssistantConf);
-    useVBStore((state) => state.vbDispatch)({
+    processVBAction({
       type: "addVirtualAssistantConf",
       payload: {
         assistant: newAssistantConf,

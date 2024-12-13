@@ -23,6 +23,7 @@ import { Button, Tooltip } from "@mui/material";
 import { Fragment, useEffect, useState } from "react";
 import { secondsToHMS } from "../../util.js";
 import { useVBStore } from "../store/useVBStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export const DiscussionSegmentText = (props: {
   segmentIndex: number;
@@ -45,7 +46,6 @@ export const DiscussionSegmentText = (props: {
   } = props;
 
   const playWavMute = useVBStore((state) => state.playWavMute);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const [editing, setEditing] = useState(false);
   const [currentText, setCurrentText] = useState(text ?? "");
   const currentStartTimestamp = Math.round(Number(timestamp));
@@ -78,7 +78,7 @@ export const DiscussionSegmentText = (props: {
             className="col-span-12"
             onClick={(e) => {
               setEditing(false);
-              vbDispatch({
+              processVBAction({
                 type: "mergeUpMinutesText",
                 payload: {
                   segmentIndex,
@@ -99,7 +99,7 @@ export const DiscussionSegmentText = (props: {
             console.log("input:onBlur", currentText);
             // todo save
             setEditing(false);
-            vbDispatch({
+            processVBAction({
               type: "removeMinutesText",
               payload: {
                 segmentIndex,
@@ -122,7 +122,7 @@ export const DiscussionSegmentText = (props: {
           className="col-span-1 min-w-0"
           onClick={(e) => {
             setEditing(false);
-            vbDispatch({
+            processVBAction({
               type: "updateMinutesText",
               payload: {
                 segmentIndex,
@@ -141,7 +141,7 @@ export const DiscussionSegmentText = (props: {
             className="col-span-12"
             onClick={(e) => {
               setEditing(false);
-              vbDispatch({
+              processVBAction({
                 type: "splitMinutesText",
                 payload: {
                   segmentIndex,

@@ -34,7 +34,7 @@ import {
   VBReactflowDispatchStore,
   VBReactflowState,
 } from "../store/useVBReactflowStore.jsx";
-import { useVBStore, VBAction } from "../store/useVBStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
@@ -44,6 +44,7 @@ import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
 import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
 import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
+import { VBAction } from "../store/VBActionProcessor.js";
 
 const ZOOM_MIN = 0.001;
 
@@ -99,6 +100,7 @@ const VANodeStageCore = (props: {}) => {
     lastAction: null,
   });
   // subscribe lastAction to update GUI
+  /*
   useVBStore.subscribe(
     (state) => state.lastAction,
     (lastAction) => {
@@ -108,6 +110,7 @@ const VANodeStageCore = (props: {}) => {
       }));
     }
   );
+  */
 
   const reactFlow = useReactFlow();
   const flowState = useVBReactflowStore((state) => state);

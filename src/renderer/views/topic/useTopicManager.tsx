@@ -25,6 +25,7 @@ import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { isTopic, Topic, TopicSeed } from "./Topic.js";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export type LLMAnalyzedTopics = {
   topics: Topic[];
@@ -142,7 +143,6 @@ export function useTopicManager(): {
   const topicAIConf = useMinutesStore(startTimestamp)(
     (state) => state.topicAIConf
   );
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const topicState = useTopicStore((state) => state);
   const topicDispatcher = useTopicStore((state) => state.topicDispatch);
   const agendaStore = useAgendaStore((state) => state);
@@ -276,7 +276,7 @@ export function useTopicManager(): {
   useEffect(() => {
     if (topicState.res) {
       console.log("useTopicManager: setTopic", topicState.res.data.topics);
-      vbDispatch({
+      processVBAction({
         type: "setTopic",
         payload: {
           topics: topicState.res.data.topics,

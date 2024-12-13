@@ -18,8 +18,9 @@ import { Dispatch, useEffect, useState } from "react";
 import { EnglishTopicPrompt } from "../../../common/agentManagerDefinition.js";
 import { AIConfig, AIConfigurator } from "../common/aiConfig.jsx";
 
-import { useVBStore, VBAction, VBState } from "../store/useVBStore.jsx";
+import { useVBStore } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 export const TopicAIConfigDialog = (props: {
   dialogState: boolean;
@@ -27,7 +28,6 @@ export const TopicAIConfigDialog = (props: {
 }) => {
   const { dialogState, dialogDispatch } = props;
   const startTimestamp = useVBStore((state) => state.startTimestamp);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
   const minutesStore = useMinutesStore(startTimestamp);
   const topicAIConf = minutesStore((state) => state.topicAIConf);
   const [stateAIConfig, setAIConfig] = useState<AIConfig>(topicAIConf);
@@ -38,7 +38,7 @@ export const TopicAIConfigDialog = (props: {
 
   const handleUpdate = () => {
     console.log("Update AI Config", stateAIConfig);
-    vbDispatch({
+    processVBAction({
       type: "changeTopicAIConfig",
       payload: {
         aiConfig: {

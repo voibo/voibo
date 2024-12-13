@@ -216,12 +216,6 @@ export const useAgendaStore = create<AgendaStore>()(
       },
       getDiscussedAgendas: (timeRange: TimeRange): Agenda[] => {
         const discussing = get().getDiscussingAgenda();
-        console.log(
-          "getDiscussedAgendas",
-          timeRange,
-          discussing,
-          get().getAllAgendas()
-        );
         return [
           // related agendas
           ...get()

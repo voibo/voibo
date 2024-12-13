@@ -24,18 +24,18 @@ import {
 } from "@mui/material";
 import { drawerWidth } from "./MainPage.jsx";
 import { useVBStore } from "./store/useVBStore.jsx";
-import { useMinutesTitleStore } from "./store/useMinutesTitle.jsx";
+import { useMinutesTitleStore } from "./store/useMinutesTitleStore.jsx";
+import { processVBAction } from "./store/VBActionProcessor.js";
 
 export const MainMenuComponent = () => {
   const mainMenuOpen = useVBStore((state) => state.mainMenuOpen);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   const handleLoad = (event: any) => {
     const startTimestamp =
       event.currentTarget.closest("[data-minutes]").dataset?.minutes;
     // load
     if (startTimestamp) {
-      vbDispatch({
+      processVBAction({
         type: "openMinutes",
         payload: {
           startTimestamp: Number(startTimestamp),
@@ -72,7 +72,7 @@ export const MainMenuComponent = () => {
         <Divider />
         <MenuItem
           onClick={() => {
-            vbDispatch({
+            processVBAction({
               type: "createNewMinutes",
             });
           }}
@@ -119,7 +119,7 @@ export const MainMenuComponent = () => {
           <Divider />
           <MenuItem
             onClick={() => {
-              vbDispatch({
+              processVBAction({
                 type: "changeVADDialogOpen",
               });
             }}

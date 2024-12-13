@@ -24,23 +24,6 @@ import {
 import { useEffect, useReducer } from "react";
 import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 
-export type AudioDeviceSettingsState = {
-  selectedOwnDeviceId: string;
-  selectedParticipantsDeviceId: string;
-  selectedOutputDeviceId: string;
-};
-
-export const AudioDeviceSettingsDefault: AudioDeviceSettingsState = {
-  selectedOwnDeviceId: "default",
-  selectedParticipantsDeviceId: "default",
-  selectedOutputDeviceId: "default",
-};
-
-export type AudioDeviceSettingsAction = {
-  type: "setMicSettings";
-  payload: Partial<AudioDeviceSettingsState>;
-};
-
 export const MicSettings = () => {
   const state = useVBSettingsStore((state) => state);
   const dispatch = useVBSettingsStore((state) => state.settingDispatch);

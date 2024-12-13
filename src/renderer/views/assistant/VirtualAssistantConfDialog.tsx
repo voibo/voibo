@@ -65,6 +65,7 @@ import { AIAssistantAvatar } from "./message/AIAssistantAvatar.jsx";
 import TabContext_ from "@mui/lab/TabContext";
 import TabList_ from "@mui/lab/TabList";
 import TabPanel_ from "@mui/lab/TabPanel";
+import { processVBAction } from "../store/VBActionProcessor.js";
 
 const Editor = Editor_ as unknown as typeof Editor_.default;
 const TabContext = TabContext_ as unknown as typeof TabContext_.default;
@@ -110,7 +111,6 @@ export const VirtualAssistantConfDialog = (props: {
   const { dialogState, dialogDispatch } = props;
   const mode = dialogState.dialogMode;
   const startTimestamp = useVBStore((state) => state.startTimestamp);
-  const vbDispatch = useVBStore((state) => state.vbDispatch);
 
   if (useVBStore((state) => state.isNoMinutes)) return <></>;
   if (!dialogState.assistantConfig) return <></>;
@@ -204,7 +204,7 @@ export const VirtualAssistantConfDialog = (props: {
 
     dialogDispatch({ type: "close" });
     if (!isGeneralAssistant) {
-      vbDispatch({
+      processVBAction({
         type: "removeVirtualAssistantConf",
         payload: {
           assistantId: state.assistantId,
@@ -216,7 +216,7 @@ export const VirtualAssistantConfDialog = (props: {
   // handle update
   const handleUpdateAssistant = () => {
     console.log("handleUpdateAssistant", state);
-    vbDispatch({
+    processVBAction({
       type: "setVirtualAssistantConf",
       payload: {
         assistant: state,
@@ -228,7 +228,7 @@ export const VirtualAssistantConfDialog = (props: {
   // handle create
   const handleCreateAssistant = () => {
     console.log("handleCreateAssistant", state);
-    vbDispatch({
+    processVBAction({
       type: "addVirtualAssistantConf",
       payload: {
         assistant: state,

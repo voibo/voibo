@@ -20,12 +20,15 @@ import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { Segment } from "../../../common/Segment.js";
 import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
-import { appendMinutesList } from "../discussion/DiscussionSegment.jsx";
-import { splitMinutes } from "../topic/DiscussionSplitter.jsx";
+import {
+  appendMinutesList,
+  DiscussionSegment,
+} from "../discussion/DiscussionSegment.jsx";
 import { useVBMainStore } from "./useVBMainStore.jsx";
 import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
+import { processVBAction } from "./VBActionProcessor.js";
 
 export type TranscribeState = {
   // vad
@@ -194,12 +197,45 @@ function setMinutesLines(segments: Segment[]) {
     minutesStore.discussionSplitter.duration
   );
   //console.log("setMinutesLines", newMinutes, segments);
-  useVBStore.getState().vbDispatch({
+  processVBAction({
     type: "setMinutesLines",
     payload: {
       minutes: newMinutes.minutes,
     },
   });
+}
+
+export function splitMinutes(
+  minutes: DiscussionSegment[],
+  duration: number
+): {
+  minutes: DiscussionSegment[];
+  hasNewStartPoint: boolean;
+} {
+  let hasNewStartPoint = false;
+  if (duration === 0) return { minutes, hasNewStartPoint };
+  // メインケース
+  let lastStartTimestamp = 0;
+  const newMinutes = minutes.map((v, index) => {
+    if (index === 0) {
+      // 強制的に最初のトピックは開始点にする
+      // この場合は新しく開始点が設定されたとはみなさない
+      lastStartTimestamp = Number(v.timestamp);
+      return { ...v, topicStartedPoint: true };
+    } else if (v.topicStartedPoint) {
+      // 設定済みの開始点はそのまま
+      lastStartTimestamp = Number(v.timestamp);
+      return v;
+    } else if (Number(v.timestamp) - lastStartTimestamp > duration) {
+      // 設定された時間を超えたら開始点にする
+      lastStartTimestamp = Number(v.timestamp);
+      hasNewStartPoint = true; // 新しく開始点が設定された
+      return { ...v, topicStartedPoint: true };
+    } else {
+      return { ...v, topicStartedPoint: false };
+    }
+  });
+  return { minutes: newMinutes, hasNewStartPoint };
 }
 
 // == ON Transcribe ==
@@ -231,7 +267,7 @@ window.electron.on(
     }
   ) => {
     //console.log("ON_TRANSCRIBED_INTERIM", response.id, response.segments)
-    useVBStore.getState().vbDispatch({
+    processVBAction({
       type: "updateInterimSegment",
       payload: {
         segment: response.segments[0],
