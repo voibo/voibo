@@ -13,16 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Handle, Position } from "@xyflow/react";
-import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";
-import { Topic } from "../../topic/Topic.js";
-import { TopicsElement } from "../../topic/TopicsElement.jsx";
 
-import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
-import { useVBStore } from "../../store/useVBStore.jsx";
+import { Handle, Position, Node, NodeProps } from "@xyflow/react";
+import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
+import { TopicsElement } from "../../component/topic/TopicsElement.jsx";
 import { NodeBase } from "./NodeBase.jsx";
-import { processVBAction } from "../../store/VBActionProcessor.js";
+import { Topic } from "../../../../common/Topic.js";
 
 export type TopicNodeParam = {
   content: Topic;
@@ -89,6 +86,8 @@ export default memo(TopicNodeComponent, (prevProps, nextProps) => {
 
 // Util
 
+/*
 export function removeTopic(topicID: string) {
-  processVBAction({ type: "removeTopic", payload: { topicID } });
+  processTopicAction({ type: "removeTopic", payload: { topicID } });
 }
+  */

@@ -13,12 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import { create } from "zustand";
+import {
+  createJSONStorage,
+  persist,
+  StateStorage,
+  subscribeWithSelector,
+} from "zustand/middleware";
+import { createStore, del, get, set } from "idb-keyval";
+import { v4 as uuidv4 } from "uuid";
+import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
+import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
 import {
   EnglishTopicPrompt,
   TopicSchema,
 } from "../../../common/agentManagerDefinition.js";
-import { SystemDefaultTemplate } from "../assistant/AssistantTemplates.js";
-import { AIConfig } from "../common/aiConfig.jsx";
+import { SystemDefaultTemplate } from "../component/assistant/AssistantTemplates.js";
+import { AIConfig } from "../component/common/aiConfig.jsx";
 import {
   changeTopicStartedPoint,
   DiscussionSegment,
@@ -26,28 +37,13 @@ import {
   removeMinutesText,
   splitMinutesText,
   updateMinutesText,
-} from "../discussion/DiscussionSegment.jsx";
+} from "../component/discussion/DiscussionSegment.jsx";
 import {
   DefaultSplitter,
   DiscussionSplitterConf,
-} from "../topic/DiscussionSplitter.jsx";
-import { Topic } from "../topic/Topic.jsx";
+} from "../component/topic/DiscussionSplitter.jsx";
+import { Topic } from "../../../common/Topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
-import { v4 as uuidv4 } from "uuid";
-import { createStore, del, get, set } from "idb-keyval";
-import {
-  createJSONStorage,
-  persist,
-  StateStorage,
-  subscribeWithSelector,
-} from "zustand/middleware";
-import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
-import { create } from "zustand";
-import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
-/*
-import { enableMapSet } from "immer";
-enableMapSet();
-*/
 
 // === IDBKeyVal ===
 //  Custom storage object

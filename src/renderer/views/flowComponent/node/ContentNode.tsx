@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import { memo, useEffect, useState } from "react";
 import { TextField } from "@mui/material";
 import { Handle, Node, NodeProps, Position } from "@xyflow/react";
-import { memo, useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import useClickHandler from "../../common/useClickHandler.jsx";
-import { Content } from "../../store/Content.js";
+import useClickHandler from "../../component/common/useClickHandler.jsx";
+import { Content } from "../../../../common/Content.js";
 import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";

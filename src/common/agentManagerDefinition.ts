@@ -13,6 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import {
+  AIMessage,
+  BaseMessage,
+  HumanMessage,
+  isBaseMessage,
+} from "@langchain/core/messages";
+import { z } from "zod";
+import { Content, getDefaultContent } from "./Content.js";
+
 // == Key of CustomField
 export const ATTACHED_MESSAGE_ID = "ATTACHED_MESSAGE_ID";
 export const IS_JSON = "IS_JSON";
@@ -340,15 +349,6 @@ export type VAMessageConf = {
   attachHistoryLimit?: number;
   reactComponent?: string;
 };
-
-import {
-  AIMessage,
-  BaseMessage,
-  HumanMessage,
-  isBaseMessage,
-} from "@langchain/core/messages";
-import { z } from "zod";
-import { Content, getDefaultContent } from "../renderer/views/store/Content.js";
 
 export type LangChainMessage = AIMessage | HumanMessage;
 export function isLangChainHumanMessage(obj: any): obj is HumanMessage {

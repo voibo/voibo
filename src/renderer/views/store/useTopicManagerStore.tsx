@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { create } from "zustand";
-import { TopicSeed } from "../topic/Topic.js";
+import { TopicSeed } from "../../../common/Topic.js";
 import {
   initTopicManagerState,
   TopicManagerAction,
   topicManagerReducer,
   TopicManagerState,
   TopicRequest,
-} from "../topic/useTopicManager.jsx";
+} from "../component/topic/useTopicManager.jsx";
 import { useAgendaStore } from "./useAgendaStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";

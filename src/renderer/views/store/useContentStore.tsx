@@ -25,7 +25,7 @@ import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 // == Store ==
 import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
-import { Content } from "./Content.js";
+import { Content } from "../../../common/Content.js";
 
 // === IDBKeyVal ===
 //  Custom storage object

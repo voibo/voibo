@@ -19,7 +19,7 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
-import { MainPage } from "./views/MainPage.jsx";
+import { MainPage } from "./views/component/main/MainPage.jsx";
 
 export const App = () => {
   // router
