@@ -38,11 +38,12 @@ export const processMinutesAction = async (action: MinutesAction) => {
   switch (action.type) {
     case "createNewMinutes":
       startTimestamp = Date.now();
+      // title
+      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
       // renderer
       useVBStore.setState({ startTimestamp });
-      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
       useMinutesStore(startTimestamp).getState().createNewMinutes();
       useVBReactflowStore.getState().relocateTopics();
       renderStage();
@@ -50,13 +51,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
     case "openMinutes":
       startTimestamp = action.payload.startTimestamp;
       // renderer
-      useVBStore.setState({ startTimestamp });
-      await Promise.all([
-        useMinutesStore(startTimestamp).getState().waitForHydration(),
-        useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
-        useMinutesContentStore(startTimestamp).getState().waitForHydration(),
-        useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
-      ]);
+      switchStoresCurrentMinutes(startTimestamp);
 
       useVBReactflowStore.getState().relocateTopics();
       renderStage();
@@ -72,6 +67,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
       useMinutesTitleStore
         .getState()
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
+
       // open home
       openHomeMenu();
       break;
@@ -80,24 +76,20 @@ export const processMinutesAction = async (action: MinutesAction) => {
   }
 };
 
-const openHomeMenu = async () => {
-  useVBStore.setState({ startTimestamp: NO_MINUTES_START_TIMESTAMP });
-  await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
-    .getState()
-    .waitForHydration();
+const switchStoresCurrentMinutes = async (startTimestamp: number) => {
+  // renderer
+  useVBStore.setState({ startTimestamp });
+  await Promise.all([
+    useMinutesStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
+    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
+    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
+  ]);
+};
 
-  const assistantsStore = useMinutesAssistantStore(
-    NO_MINUTES_START_TIMESTAMP
-  ).getState();
-  if (assistantsStore.hasHydrated) {
-    useMinutesStore(NO_MINUTES_START_TIMESTAMP)
-      .getState()
-      .assistants.forEach((vaConfig) =>
-        assistantsStore.assistantDispatch(vaConfig)({
-          type: "clearAll",
-        })
-      );
-  }
+const openHomeMenu = async () => {
+  await switchStoresCurrentMinutes(NO_MINUTES_START_TIMESTAMP);
 
   // reactflow
   useVBReactflowStore.getState().relocateTopics();

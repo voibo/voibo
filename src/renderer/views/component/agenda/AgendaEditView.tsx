@@ -48,9 +48,11 @@ export const AgendaEditView = (props: {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
   const [currentAgenda, setCurrentAgenda] = useState(originalAgenda);
   const handleUpdateAgenda = () => {
-    useMinutesAgendaStore(startTimestamp)((state) => state.setAgenda)({
-      ...currentAgenda,
-    });
+    useMinutesAgendaStore(startTimestamp)
+      .getState() // handler の中なので getState で利用する
+      .setAgenda({
+        ...currentAgenda,
+      });
     setEditMode(false);
   };
 
@@ -71,9 +73,9 @@ export const AgendaEditView = (props: {
       cancelButtonColor: "error",
     });
     if (!accepted) return; // キャンセル時は処理に進まない
-    useMinutesAgendaStore(startTimestamp)((state) => state.removeAgenda)(
-      currentAgenda.id
-    );
+    useMinutesAgendaStore(startTimestamp)
+      .getState() // handler の中なので getState で利用する
+      .removeAgenda(currentAgenda.id);
   };
 
   // == FORM ==
