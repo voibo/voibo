@@ -25,7 +25,7 @@ import {
 import JsxParser_ from "react-jsx-parser";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Message } from "../../../../../common/agentManagerDefinition.js";
+import { Message } from "../../../../../common/content/assisatant.js";
 import { DetailViewDialogState } from "../../common/useDetailViewDialog.jsx";
 import { VirtualAssistantConf } from "../../../store/useAssistantsStore.jsx";
 import { AttachedPromptParts } from "../input/AttachedPromptParts.jsx";

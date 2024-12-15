@@ -23,7 +23,7 @@ import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
 import { ChunkSplitter } from "../audio/chunkSplitter.js";
 import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
-import { Segment } from "../../../common/Segment.js";
+import { Segment } from "../../../common/discussion.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
 import { AudioCapture } from "@voibo/desktop-audio-capture";
 
@@ -296,7 +296,7 @@ export class TranscribeFromStream {
               result.stability != null &&
               result.stability > 0.7 &&
               this.lastTranscriptInterim.length <=
-              result.alternatives[0].transcript!.length
+                result.alternatives[0].transcript!.length
             ) {
               this._transcribedInterim(
                 this.currentStartMsec + this.lastSegmentElapsedMsec,
@@ -430,8 +430,8 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
       if (availableDesktopSampleCount < webMicSampleCount) {
         console.log(
           `WARNING: desktop audio underflow in requestDesktopBufferCallback, ` +
-          `wanted ${webMicSampleCount} but only got ${availableDesktopSampleCount} ` +
-          `desktop samples`
+            `wanted ${webMicSampleCount} but only got ${availableDesktopSampleCount} ` +
+            `desktop samples`
         );
       }
     }

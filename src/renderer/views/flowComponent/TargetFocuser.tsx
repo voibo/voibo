@@ -21,7 +21,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { useEffect, useState } from "react";
-import { useAgendaStore } from "../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../store/useAgendaStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import {
   getLayoutParam,
@@ -41,7 +41,7 @@ type TargetFocuserOption = {
 };
 
 export const TargetFocuser = () => {
-  const startTimestamp = useVBStore.getState().startTimestamp ?? 0;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
 
   const reactFlow = useReactFlow();
   const nodesInitialized = useNodesInitialized({
@@ -55,7 +55,9 @@ export const TargetFocuser = () => {
     { type: "system", label: "First topic", id: "first_topic" },
     { type: "system", label: "Last topic", id: "last_topic" },
   ];
-  const agendaList = useAgendaStore.getState().getAllAgendas();
+  const agendaList = useMinutesAgendaStore(startTimestamp)(
+    (state) => state.getAllAgendas
+  )();
   const groupList = useMinutesGroupStore(startTimestamp)
     .getState()
     .getAllGroup();

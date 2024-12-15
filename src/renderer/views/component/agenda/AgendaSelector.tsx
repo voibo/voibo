@@ -15,8 +15,10 @@ limitations under the License.
 */
 import { useState } from "react";
 import { Autocomplete, Button, Chip, TextField } from "@mui/material";
-import { Agenda, useAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
+import { Agenda } from "../../../../common/content/agenda.js";
+import { useVBStore } from "../../store/useVBStore.jsx";
 
 /**
  * Agenda 選択コンポーネント
@@ -28,7 +30,9 @@ export const AgendaSelector = (props: {
   initialAgendaIds?: string[]; // 初期選択グループ
 }) => {
   const { onChange, initialAgendaIds } = props;
-  const options: Agenda[] = useAgendaStore.getState().getAllAgendas();
+  const options: Agenda[] = useMinutesAgendaStore(
+    useVBStore((state) => state.startTimestamp)
+  )((state) => state.getAllAgendas)();
   const initialAgendas = (initialAgendaIds ?? [])
     .map((id) => options.find((option) => option.id == id))
     .filter((agenda) => agenda !== undefined)

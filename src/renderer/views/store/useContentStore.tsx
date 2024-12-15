@@ -25,7 +25,7 @@ import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 // == Store ==
 import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
-import { Content } from "../../../common/Content.js";
+import { Content } from "../../../common/content/content.js";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -61,7 +61,6 @@ const storeCache = new Map<
   number,
   ReturnType<typeof useMinutesContentStoreCore>
 >();
-
 export const useMinutesContentStore = (minutesStartTimestamp: number) => {
   let newStore;
   if (storeCache.has(minutesStartTimestamp)) {
@@ -98,16 +97,33 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
 
   return create<MinutesContentStore & ContentDispatchStore & HydrateState>()(
     persist(
-      subscribeWithSelector((set, get) => ({
+      subscribeWithSelector((set, get, api) => ({
         // Hydration state
-        _hasHydrated: false,
-        _setHasHydrated: (state) => {
+        hasHydrated: false,
+        setHasHydrated: (state) => {
           set({
-            _hasHydrated: state,
+            hasHydrated: state,
           });
           if (state) {
             flushQueue(); // Queue に積まれた操作を実行
           }
+        },
+        waitForHydration: async () => {
+          const store = get();
+          if (store.hasHydrated) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state.hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve();
+                }
+              }
+            );
+          });
         },
 
         // State
@@ -122,7 +138,7 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
           };
 
           // Hydration が完了していない場合は Queue に積む
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action(); // 完了していればすぐに実行
@@ -140,7 +156,7 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
           };
 
           // Hydration が完了していない場合は Queue に積む
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action(); // 完了していればすぐに実行
@@ -162,7 +178,7 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
                 error
               );
             } else if (state) {
-              state._setHasHydrated(true);
+              state.setHasHydrated(true);
             }
           };
         },

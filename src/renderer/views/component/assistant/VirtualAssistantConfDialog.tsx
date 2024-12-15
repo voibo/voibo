@@ -42,7 +42,7 @@ import Editor_ from "@monaco-editor/react";
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../../common/agentManagerDefinition.js";
+} from "../../../../common/content/assisatant.js";
 import {
   AIConfig,
   AIConfigurator,

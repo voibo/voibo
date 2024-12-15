@@ -17,7 +17,7 @@ import { MicVAD, utils } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
-import { Segment } from "../../../common/Segment.jsx";
+import { Segment } from "../../../common/discussion.js";
 import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import {
@@ -65,7 +65,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
         const settingsData = useVBSettingsStore.getState();
         console.log("startRecording", settingsData);
 
-        if (settingsData && settingsData._hasHydrated) {
+        if (settingsData && settingsData.hasHydrated) {
           // closeAudio
           get().vad?.destroy();
           get()

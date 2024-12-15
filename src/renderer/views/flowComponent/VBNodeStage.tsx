@@ -26,7 +26,7 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
-import { Content, getDefaultContent } from "../../../common/Content.js";
+import { Content, getDefaultContent } from "../../../common/content/content.js";
 import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
   useVBReactflowStore,

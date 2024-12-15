@@ -19,7 +19,7 @@ import { Handle, Position, Node, NodeProps } from "@xyflow/react";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { TopicsElement } from "../../component/topic/TopicsElement.jsx";
 import { NodeBase } from "./NodeBase.jsx";
-import { Topic } from "../../../../common/Topic.js";
+import { Topic } from "../../../../common/content/topic.js";
 
 export type TopicNodeParam = {
   content: Topic;

@@ -16,17 +16,26 @@ limitations under the License.
 import { useEffect, useState } from "react";
 import { Add, ExpandLess, ExpandMore, ViewAgenda } from "@mui/icons-material";
 import { Button } from "@mui/material";
-import { getDefaultContent } from "../../../../common/Content.js";
+import { getDefaultContent } from "../../../../common/content/content.js";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { AgendaEditView } from "./AgendaEditView.jsx";
 import { AgendaReadableView } from "./AgendaReadableView.jsx";
-import { Agenda, useAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
+import { Agenda } from "../../../../common/content/agenda.js";
+import { useVBStore } from "../../store/useVBStore.jsx";
 
 export const AgendaPanel = () => {
-  const agendasStore = useAgendaStore((state) => state);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const allAgendas = useMinutesAgendaStore(startTimestamp)(
+    (state) => state // agenda の中身は map 管理されているので、state そのものを監視
+  ).getAllAgendas();
+  const setAgenda = useMinutesAgendaStore(startTimestamp)(
+    (state) => state.setAgenda
+  );
+
   const agendaList: Array<{ agenda: Agenda; isNext: boolean }> = [];
   let nextIndex = -1;
-  agendasStore.getAllAgendas().forEach((agenda, index) => {
+  allAgendas.forEach((agenda, index) => {
     // next は　一番最初の未完了のアジェンダ
     if (agenda.status === "waiting" && nextIndex === -1) {
       nextIndex = index;
@@ -39,7 +48,7 @@ export const AgendaPanel = () => {
 
   const handleAdd = () => {
     const agenda = getDefaultContent();
-    agendasStore.setAgenda({
+    setAgenda({
       ...agenda,
       type: "agenda",
       title: "New Agenda",

@@ -15,13 +15,11 @@ limitations under the License.
 */
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { Segment } from "../../../common/Segment.jsx";
+import { Segment } from "../../../common/discussion.js";
 
 // ==== VB Core ====
 
 export const NO_MINUTES_START_TIMESTAMP = 0;
-
-export type VBStateMode = "home" | "recordingStudio";
 
 export type VBState = {
   // current minutes start timestamp.
@@ -29,7 +27,6 @@ export type VBState = {
   startTimestamp: number;
 
   // gui
-  //mode: VBStateMode;
   mainMenuOpen: boolean;
   vbSettingsDialogOpen: boolean;
   recording: boolean;
@@ -51,7 +48,6 @@ export const useVBStore = create<VBState & VBDispatch>()(
     startTimestamp: NO_MINUTES_START_TIMESTAMP,
 
     // gui
-    //mode: "home",
     mainMenuOpen: true,
     vbSettingsDialogOpen: false,
     recording: false,

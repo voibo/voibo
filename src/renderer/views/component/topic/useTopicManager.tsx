@@ -19,11 +19,11 @@ import { IPCInvokeKeys } from "../../../../common/constants.js";
 import {
   EnglishTopicPrompt,
   TopicInvokeParam,
-} from "../../../../common/agentManagerDefinition.js";
-import { useAgendaStore } from "../../store/useAgendaStore.jsx";
+} from "../../../../common/content/assisatant.js";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import { useTopicStore } from "../../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { isTopic, Topic, TopicSeed } from "../../../../common/Topic.js";
+import { isTopic, Topic, TopicSeed } from "../../../../common/content/topic.js";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
 
@@ -145,7 +145,9 @@ export function useTopicManager(): {
   );
   const topicState = useTopicStore((state) => state);
   const topicDispatcher = useTopicStore((state) => state.topicDispatch);
-  const agendaStore = useAgendaStore((state) => state);
+  const getAgenda = useMinutesAgendaStore(startTimestamp)(
+    (state) => state.getAgenda
+  );
 
   // process stocked prompts
   useEffect(() => {
@@ -170,7 +172,7 @@ export function useTopicManager(): {
 
           if (lastTopic.seedData && lastTopic.seedData.agendaIdList) {
             lastTopic.seedData.agendaIdList.forEach((agendaId) => {
-              const relatedAgenda = agendaStore.getAgenda(agendaId);
+              const relatedAgenda = getAgenda(agendaId);
               console.log(
                 "useTopicManager: lastTopic agendaIdList",
                 relatedAgenda
@@ -182,7 +184,7 @@ export function useTopicManager(): {
         // agenda
         if (currentTopic.seedData.agendaIdList) {
           currentTopic.seedData.agendaIdList.forEach((agendaId) => {
-            const relatedAgenda = agendaStore.getAgenda(agendaId);
+            const relatedAgenda = getAgenda(agendaId);
             console.log(
               "useTopicManager: currentTopic agendaIdList",
               relatedAgenda

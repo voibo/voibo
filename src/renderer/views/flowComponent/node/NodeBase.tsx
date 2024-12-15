@@ -18,12 +18,12 @@ import { Button, ButtonGroup } from "@mui/material";
 import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
 import { useEffect, useState } from "react";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import { AgendaSelectorDialogBody } from "../../component/agenda/AgendaSelector.jsx";
 import { AIAssistantAvatar } from "../../component/assistant/message/AIAssistantAvatar.jsx";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { GroupSelectorDialogBody } from "../../component/group/GroupSelector.jsx";
-import { Agenda, useAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import {
   AssistantState,
   makeInvokeParam,
@@ -37,6 +37,7 @@ import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
 import { ContentNode } from "./ContentNode.jsx";
 import { TopicNode } from "./TopicNode.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
+import { Agenda } from "../../../../common/content/agenda.js";
 
 export const NodeBase = (props: {
   nodeProps: NodeProps<TopicNode | AssistantMessageNode | ContentNode>;
@@ -85,7 +86,9 @@ export const NodeBase = (props: {
 
   // agendaList
   const agendaList = (props.nodeProps.data.content.agendaIds ?? []) // 過渡期のためのデータ変換
-    .map((agendaId) => useAgendaStore.getState().getAgenda(agendaId))
+    .map((agendaId) =>
+      useMinutesAgendaStore(startTimestamp).getState().getAgenda(agendaId)
+    )
     .filter((agenda) => agenda !== undefined);
 
   // change group
@@ -201,7 +204,7 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
     if (
       !minutesStartTimestamp ||
       !assistantStore ||
-      !assistantStore.getState()._hasHydrated
+      !assistantStore.getState().hasHydrated
     )
       return;
 
@@ -231,7 +234,7 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
   }, [minutesStartTimestamp, assistantConfig, assistantStore]);
 
   const handleAssistantButtonClick = () => {
-    if (!state || !assistantStore || !assistantStore.getState()._hasHydrated)
+    if (!state || !assistantStore || !assistantStore.getState().hasHydrated)
       return;
 
     assistantStore.getState().assistantDispatch(assistantConfig)({
@@ -304,13 +307,13 @@ const BelongGroupChips = (props: {
 
   // Hydration の完了を監視
   const isHydrated = useMinutesGroupStore(minutesStartTimestamp)(
-    (state) => state._hasHydrated
+    (state) => state.hasHydrated
   );
   const [hydrated, setHydrated] = useState(isHydrated);
   useEffect(() => {
     if (!isHydrated) {
       const unsubscribe = useMinutesGroupStore(minutesStartTimestamp).subscribe(
-        (state) => state._hasHydrated,
+        (state) => state.hasHydrated,
         (newHydrated) => {
           if (newHydrated) {
             setHydrated(true);

@@ -15,7 +15,7 @@ limitations under the License.
 */
 import { memo } from "react";
 import { Node, NodeProps, Handle, Position } from "@xyflow/react";
-import { Message } from "../../../../common/agentManagerDefinition.js";
+import { Message } from "../../../../common/content/assisatant.js";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { VAMessage } from "../../component/assistant/message/VAMessage.jsx";
 import {
@@ -98,7 +98,7 @@ export function removeAssistantMessage(data: AssistantMessageNodeParam) {
       const assistantStore = useMinutesAssistantStore(
         minutesStartTimestamp
       ).getState();
-      if (!assistantStore || !assistantStore._hasHydrated) return;
+      if (!assistantStore || !assistantStore.hasHydrated) return;
       assistantStore.assistantDispatch(data.assistantConfig)({
         type: "removeMessage",
         payload: { messageId },

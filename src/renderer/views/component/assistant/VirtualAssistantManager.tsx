@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import {
   VirtualAssistantConfDialog,
   VirtualAssistantConfDialogMode,

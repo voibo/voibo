@@ -15,12 +15,11 @@ limitations under the License.
 */
 import { ExecFileException, execFile } from "child_process";
 import * as fs from "fs";
-import * as os from 'os';
+import * as os from "os";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
-import { Segment } from "../../../common/Segment.js";
-import { Text } from "../../../common/Text.js";
+import { Segment, Text } from "../../../common/discussion.js";
 
 // ==== For Server Side Only ====
 
@@ -181,9 +180,9 @@ export class TranscribeFromWav {
   ): void {
     this._localWhisperRunning = true;
     const whisperPath: string = this._getWhisperPath();
-    let whisperMain = 'main';
-    if (os.platform() == 'win32') {
-      whisperMain = whisperMain + '.exe';
+    let whisperMain = "main";
+    if (os.platform() == "win32") {
+      whisperMain = whisperMain + ".exe";
     }
     execFile(
       `${whisperPath}/${whisperMain}`,

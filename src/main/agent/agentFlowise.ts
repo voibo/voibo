@@ -26,7 +26,7 @@ import {
 } from "@langchain/core/messages";
 import { ChatResult } from "@langchain/core/outputs";
 import { net } from "electron";
-import { isLangChainHumanMessage } from "../../common/agentManagerDefinition.js";
+import { isLangChainHumanMessage } from "../../common/content/assisatant.js";
 
 export interface AgentFlowiseInput extends BaseChatModelParams {
   apiKey: string;

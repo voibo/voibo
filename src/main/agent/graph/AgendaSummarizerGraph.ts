@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
-import { Agenda } from "../../../renderer/views/store/useAgendaStore.jsx";
 import { LangGraphInvokeParams } from "../agentLangGraph.js";
 import {
   getTargetCategoryDetail,
   getTargetClassificationDetail,
-} from "../../../common/agentManagerDefinition.js";
+} from "../../../common/content/assisatant.js";
 import { VABaseGraph, VAGraphOutput } from "../VABaseGraph.js";
 import { DuckDuckGoSearch } from "./tool/duckduckgoSearch.js";
+import { Agenda } from "../../../common/content/agenda.js";
 
 export class AgendaSummarizerGraph extends VABaseGraph {
   public invoke(input: LangGraphInvokeParams): Promise<VAGraphOutput> {

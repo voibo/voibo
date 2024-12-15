@@ -20,7 +20,7 @@ import {
   isBaseMessage,
 } from "@langchain/core/messages";
 import { z } from "zod";
-import { Content, getDefaultContent } from "./Content.js";
+import { Content, getDefaultContent } from "./content.js";
 
 // == Key of CustomField
 export const ATTACHED_MESSAGE_ID = "ATTACHED_MESSAGE_ID";

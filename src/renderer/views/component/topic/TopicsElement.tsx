@@ -29,10 +29,10 @@ import { useEffect, useState } from "react";
 import { secondsToHMS } from "../../../util.js";
 import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
 import { useDiscussionHistory } from "../discussion/DiscussionHistory.jsx";
-import { useAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import { useTopicStore } from "../../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { Topic } from "../../../../common/Topic.js";
+import { Topic } from "../../../../common/content/topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
@@ -192,7 +192,9 @@ const TopicConfigDialog = (props: {
   handleClose: () => void;
 }) => {
   const { topic, handleClose } = props;
-  const getAgenda = useAgendaStore((state) => state.getAgenda);
+  const getAgenda = useMinutesAgendaStore(
+    useVBStore((state) => state.startTimestamp)
+  )((state) => state.getAgenda);
 
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory({
     behavior: "instant",

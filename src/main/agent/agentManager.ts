@@ -42,7 +42,7 @@ import {
   TopicInvokeParam,
   TopicZodSchema,
   VAMessageConf,
-} from "../../common/agentManagerDefinition.js";
+} from "../../common/content/assisatant.js";
 
 import { isBaseMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
