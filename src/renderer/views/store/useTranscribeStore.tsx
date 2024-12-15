@@ -29,6 +29,7 @@ import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 import { processDiscussionAction } from "../action/DiscussionAction.js";
+import { processVBAction } from "../action/VBAction.js";
 
 export type TranscribeState = {
   // vad
