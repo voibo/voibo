@@ -53,8 +53,7 @@ export type MinutesTitleStore = MinutesTitles &
 
 export const useMinutesTitleStore = create<MinutesTitleStore>()(
   persist(
-    subscribeWithSelector((set, get) => ({
-      // == MinutesTitle IDB ==
+    subscribeWithSelector((set, get, api) => ({
       // data
       minutesTitleMap: new Map<string, string>(),
 
@@ -100,10 +99,27 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
       },
 
       // Hydrate
-      _hasHydrated: false,
-      _setHasHydrated: (state) => {
+      hasHydrated: false,
+      setHasHydrated: (state) => {
         set({
-          _hasHydrated: state,
+          hasHydrated: state,
+        });
+      },
+      waitForHydration: async () => {
+        const store = get();
+        if (store.hasHydrated) {
+          return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+          const unsubscribe = api.subscribe(
+            (state) => state.hasHydrated,
+            (hasHydrated) => {
+              if (hasHydrated) {
+                unsubscribe();
+                resolve();
+              }
+            }
+          );
         });
       },
     })),
@@ -124,7 +140,7 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
             console.error("an error happened during hydration", error);
           } else if (state) {
             console.log("useMinutesTitleStore hydrated");
-            state._setHasHydrated(true);
+            state.setHasHydrated(true);
           }
         };
       },

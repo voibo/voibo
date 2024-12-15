@@ -107,16 +107,33 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
 
   return create<MinutesGroupStore & GroupDispatchStore & HydrateState>()(
     persist(
-      subscribeWithSelector((set, get) => ({
+      subscribeWithSelector((set, get, api) => ({
         // Hydration state
-        _hasHydrated: false,
-        _setHasHydrated: (state) => {
+        hasHydrated: false,
+        setHasHydrated: (state) => {
           set({
-            _hasHydrated: state,
+            hasHydrated: state,
           });
           if (state) {
             flushQueue(); // Queue に積まれた操作を実行
           }
+        },
+        waitForHydration: async () => {
+          const store = get();
+          if (store.hasHydrated) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state.hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve();
+                }
+              }
+            );
+          });
         },
 
         // State
@@ -131,7 +148,7 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
           };
 
           // Hydration が完了していない場合は Queue に積む
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action(); // 完了していればすぐに実行
@@ -149,7 +166,7 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
           };
 
           // Hydration が完了していない場合は Queue に積む
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action(); // 完了していればすぐに実行
@@ -200,7 +217,7 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
           };
 
           // Hydration が完了していない場合は Queue に積む
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action(); // 完了していればすぐに実行
@@ -222,7 +239,7 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
                 error
               );
             } else if (state) {
-              state._setHasHydrated(true);
+              state.setHasHydrated(true);
               console.log("useMinutesGroupStoreCore: rehydrated", state);
             }
           };

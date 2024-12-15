@@ -42,7 +42,7 @@ import Editor_ from "@monaco-editor/react";
 import {
   TargetCategory,
   TargetClassification,
-} from "../../../../common/agentManagerDefinition.js";
+} from "../../../../common/content/assisatant.js";
 import {
   AIConfig,
   AIConfigurator,
@@ -54,6 +54,7 @@ import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import {
   InvokeAssistantAttachOption,
   useMinutesAssistantStore,
+  VirtualAssistantConf,
   VirtualAssistantType,
   VirtualAssistantUpdateMode,
 } from "../../store/useAssistantsStore.jsx";
@@ -107,15 +108,33 @@ export const VirtualAssistantConfDialog = (props: {
   dialogDispatch: Dispatch<AssistantConfigAction>;
 }) => {
   const { dialogState, dialogDispatch } = props;
-  const mode = dialogState.dialogMode;
-  const startTimestamp = useVBStore((state) => state.startTimestamp);
-
-  if (useVBStore((state) => state.isNoMinutes)) return <></>;
+  if (useVBStore((state) => state.isNoMinutes)()) return <></>;
   if (!dialogState.assistantConfig) return <></>;
+  return (
+    <VirtualAssistantConfDialogCore
+      dialogMode={dialogState.dialogMode}
+      dialogOpen={dialogState.dialogOpen}
+      assistantConfig={dialogState.assistantConfig}
+      dialogDispatch={dialogDispatch}
+    />
+  );
+};
 
-  const targetDispatch = useMinutesAssistantStore(startTimestamp)(
+const VirtualAssistantConfDialogCore = (props: {
+  dialogMode: VirtualAssistantConfDialogMode;
+  dialogOpen: boolean;
+  assistantConfig: VirtualAssistantConf;
+  dialogDispatch: Dispatch<AssistantConfigAction>;
+}) => {
+  const { dialogMode, dialogOpen, assistantConfig, dialogDispatch } = props;
+  const mode = dialogMode;
+
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const assistantDispatch = useMinutesAssistantStore(startTimestamp)(
     (state) => state.assistantDispatch
-  )(dialogState.assistantConfig);
+  );
+  const { confirmDialog, renderConfirmDialog } = useConfirmDialog();
+  const [selectedTab, setSelectedTab] = useState("1");
 
   const [state, dispatch] = useReducer(
     (state: VirtualAssistantConfState, action: VirtualAssistantConfAction) => {
@@ -149,18 +168,18 @@ export const VirtualAssistantConfDialog = (props: {
       }
     },
     {
-      assistantId: dialogState.assistantConfig.assistantId,
-      assistantName: dialogState.assistantConfig.assistantName,
-      icon: dialogState.assistantConfig.icon ?? "",
-      label: dialogState.assistantConfig.label,
-      updateMode: dialogState.assistantConfig.updateMode,
-      messageViewMode: dialogState.assistantConfig.messageViewMode,
-      initialPrompt: dialogState.assistantConfig.initialPrompt ?? "",
-      updatePrompt: dialogState.assistantConfig.updatePrompt ?? "",
-      attachOption: dialogState.assistantConfig.attachOption ?? {
+      assistantId: assistantConfig.assistantId,
+      assistantName: assistantConfig.assistantName,
+      icon: assistantConfig.icon ?? "",
+      label: assistantConfig.label,
+      updateMode: assistantConfig.updateMode,
+      messageViewMode: assistantConfig.messageViewMode,
+      initialPrompt: assistantConfig.initialPrompt ?? "",
+      updatePrompt: assistantConfig.updatePrompt ?? "",
+      attachOption: assistantConfig.attachOption ?? {
         attachment: "none",
       },
-      aiConfig: dialogState.assistantConfig.aiConfig ?? {
+      aiConfig: assistantConfig.aiConfig ?? {
         systemPrompt: "",
         modelType: "gemini-1.5",
         temperature: 1,
@@ -169,13 +188,15 @@ export const VirtualAssistantConfDialog = (props: {
         langGraphConf: DEFAULT_LANG_GRAPH_CONF,
       },
 
-      assistantType: dialogState.assistantConfig.assistantType ?? "va-custom",
-      targetClassification:
-        dialogState.assistantConfig.targetClassification ?? "all",
-      targetCategory: dialogState.assistantConfig.targetCategory ?? "Unknown",
+      assistantType: assistantConfig.assistantType ?? "va-custom",
+      targetClassification: assistantConfig.targetClassification ?? "all",
+      targetCategory: assistantConfig.targetCategory ?? "Unknown",
     }
   );
 
+  if (useVBStore((state) => state.isNoMinutes)()) return <></>;
+
+  const targetDispatch = assistantDispatch(assistantConfig);
   const isGeneralAssistant = state.assistantType == "va-general";
 
   // handle close dialog
@@ -184,7 +205,6 @@ export const VirtualAssistantConfDialog = (props: {
   };
 
   // delete confirm dialog
-  const { confirmDialog, renderConfirmDialog } = useConfirmDialog();
   const handleDeleteAssistantWithConfirm = async () => {
     const { accepted } = await confirmDialog({
       content: (
@@ -275,13 +295,12 @@ export const VirtualAssistantConfDialog = (props: {
   }
 
   // tab
-  const [selectedTab, setSelectedTab] = useState("1");
   const handleTabChange = (event: SyntheticEvent, newTab: string) => {
     setSelectedTab(newTab);
   };
 
   return (
-    <Dialog open={dialogState.dialogOpen} onClose={handleClose}>
+    <Dialog open={dialogOpen} onClose={handleClose}>
       <div className="grid grid-cols-1 gap-2 p-2">
         <div className="flex flex-col p-4 rounded border">
           {/** Header */}
@@ -303,13 +322,12 @@ export const VirtualAssistantConfDialog = (props: {
               <Button
                 className="min-w-0 min-h-0 ml-2"
                 onClick={() => {
-                  if (startTimestamp && dialogState.assistantConfig) {
+                  if (startTimestamp && assistantConfig) {
                     targetDispatch({
                       type: "initialize",
                       payload: {
                         startTimestamp: startTimestamp,
-                        assistantName:
-                          dialogState.assistantConfig.assistantName,
+                        assistantName: assistantConfig.assistantName,
                       },
                     });
                     dialogDispatch({ type: "close" });

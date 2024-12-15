@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Segment } from "../../../common/Segment.js";
+import { Segment } from "../../../common/discussion.js";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.jsx";
 

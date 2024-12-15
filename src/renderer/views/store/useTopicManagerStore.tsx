@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { create } from "zustand";
-import { TopicSeed } from "../../../common/Topic.js";
+import { TopicSeed } from "../../../common/content/topic.js";
 import {
   initTopicManagerState,
   TopicManagerAction,
@@ -22,7 +22,7 @@ import {
   TopicManagerState,
   TopicRequest,
 } from "../component/topic/useTopicManager.jsx";
-import { useAgendaStore } from "./useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 
@@ -47,9 +47,8 @@ export const useTopicStore = create<
   updateTopicSeeds: (enforceUpdateAll: boolean) => {
     // 現在の全discussionから、全topicSeedを再構築する
     const topicSeeds: TopicSeed[] = [];
-    const minutesStore = useMinutesStore(
-      useVBStore.getState().startTimestamp
-    ).getState();
+    const startTimestamp = useVBStore.getState().startTimestamp;
+    const minutesStore = useMinutesStore(startTimestamp).getState();
     minutesStore.discussion.forEach((segment) => {
       const currentStartTimestamp = Number(segment.timestamp);
       const currentEndTimestamp = segment.texts.reduce(
@@ -67,7 +66,7 @@ export const useTopicStore = create<
           text,
           requireUpdate: enforceUpdateAll,
           agendaIdList: [
-            ...useAgendaStore
+            ...useMinutesAgendaStore(startTimestamp)
               .getState()
               .getDiscussedAgendas({
                 startFromMStartMsec: currentStartTimestamp * 1000,

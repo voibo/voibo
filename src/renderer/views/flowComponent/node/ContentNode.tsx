@@ -19,7 +19,7 @@ import { Handle, Node, NodeProps, Position } from "@xyflow/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import useClickHandler from "../../component/common/useClickHandler.jsx";
-import { Content } from "../../../../common/Content.js";
+import { Content } from "../../../../common/content/content.js";
 import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { NodeBase } from "./NodeBase.jsx";

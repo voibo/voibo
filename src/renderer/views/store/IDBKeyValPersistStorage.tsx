@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { del, get, set } from "idb-keyval";
+import { StoreApi } from "zustand";
 import { StateStorage } from "zustand/middleware";
 
 // === IDBKeyVal ===
@@ -39,10 +40,12 @@ export const IDBKeyValKeys = {
   MINUTES_TITLE_STORE: "minutesTitle",
 };
 
-// === Hydrate ===
+// === Hydrate with persist & subscribeWithSelector ===
+
 export type HydrateState = {
-  _hasHydrated: boolean;
-  _setHasHydrated: (state: boolean) => void;
+  hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+  waitForHydration: () => Promise<void>;
 };
 
 // JSON storage options for createJSONStorage

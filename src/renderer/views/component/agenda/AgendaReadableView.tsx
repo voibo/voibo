@@ -26,7 +26,9 @@ import { Button } from "@mui/material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import useClickHandler from "../common/useClickHandler.jsx";
-import { Agenda, useAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
+import { Agenda } from "../../../../common/content/agenda.js";
+import { useVBStore } from "../../store/useVBStore.jsx";
 
 export const AgendaReadableView = (props: {
   agenda: Agenda;
@@ -35,7 +37,9 @@ export const AgendaReadableView = (props: {
 }) => {
   const { agenda, setEditMode, isNext } = props;
   const [mouseOver, setMouseOver] = useState(false);
-  const agendaStore = useAgendaStore((state) => state);
+  const agendaStore = useMinutesAgendaStore(
+    useVBStore((state) => state.startTimestamp)
+  )((state) => state);
   const handleClick = useClickHandler({
     onDoubleClick: () => setEditMode(true),
   });

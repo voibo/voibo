@@ -30,27 +30,29 @@ import {
   TargetCategoryDetail,
   TargetClassification,
   TargetClassificationDetail,
-} from "../../../../common/agentManagerDefinition.js";
+} from "../../../../common/content/assisatant.js";
 import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import {
   Agenda,
   AgendaStatus,
   AgendaStatusDetail,
-  useAgendaStore,
-} from "../../store/useAgendaStore.jsx";
+} from "../../../../common/content/agenda.js";
+import { useVBStore } from "../../store/useVBStore.jsx";
 
 export const AgendaEditView = (props: {
   agenda: Agenda;
   setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const { agenda: originalAgenda, setEditMode } = props;
-  //const agenda = useAgendaStore.getState().getAgenda(originalAgenda.id)!;
-
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
   const [currentAgenda, setCurrentAgenda] = useState(originalAgenda);
   const handleUpdateAgenda = () => {
-    useAgendaStore.getState().setAgenda({
-      ...currentAgenda,
-    });
+    useMinutesAgendaStore(startTimestamp)
+      .getState() // handler の中なので getState で利用する
+      .setAgenda({
+        ...currentAgenda,
+      });
     setEditMode(false);
   };
 
@@ -71,7 +73,9 @@ export const AgendaEditView = (props: {
       cancelButtonColor: "error",
     });
     if (!accepted) return; // キャンセル時は処理に進まない
-    useAgendaStore.getState().removeAgenda(currentAgenda.id);
+    useMinutesAgendaStore(startTimestamp)
+      .getState() // handler の中なので getState で利用する
+      .removeAgenda(currentAgenda.id);
   };
 
   // == FORM ==

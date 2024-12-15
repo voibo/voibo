@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import type { Text } from './Text.js';
+export interface Text {
+  timestamp?: number | string;
+  length?: number | string;
+  text?: string;
+}
 
 export interface Segment {
-  'timestamp'?: (number | string);
-  'length'?: (number | string);
-  'texts'?: Text[];
+  timestamp?: number | string;
+  length?: number | string;
+  texts?: Text[];
 }

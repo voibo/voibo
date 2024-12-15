@@ -20,19 +20,16 @@ import dayjs, { Dayjs } from "dayjs";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import { HTMLProps, useEffect, useState } from "react";
-import {
-  Agenda,
-  TimeRange,
-  useAgendaStore,
-} from "../../store/useAgendaStore.js";
-import { useVBStore } from "../../store/useVBStore.js";
+import { Agenda, TimeRange } from "../../../../common/content/agenda.js";
+import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
+import { useVBStore } from "../../store/useVBStore.jsx";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const DiscussedTimes = (props: { agenda: Agenda }) => {
   const { agenda } = props;
-  const startTimestamp = useVBStore((state) => state.startTimestamp) ?? 0;
-  const discussedTimes = useAgendaStore(
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const discussedTimes = useMinutesAgendaStore(startTimestamp)(
     (state) => state.getAgenda(agenda.id)?.discussedTimes
   );
   return (
@@ -133,10 +130,12 @@ const DiscussedTime = (
       } else {
         newDiscussedTimes.push(newTimeRange);
       }
-      useAgendaStore.getState().setAgenda({
-        ...agenda,
-        discussedTimes: newDiscussedTimes,
-      });
+      useMinutesAgendaStore(startTimestamp)
+        .getState()
+        .setAgenda({
+          ...agenda,
+          discussedTimes: newDiscussedTimes,
+        });
       setOriginalTime(newTimeRange);
       setUpdatable(false);
     }
@@ -148,10 +147,12 @@ const DiscussedTime = (
         ...agenda.discussedTimes.slice(0, discussedTimeIndex),
         ...agenda.discussedTimes.slice(discussedTimeIndex + 1),
       ];
-      useAgendaStore.getState().setAgenda({
-        ...agenda,
-        discussedTimes: updatedDiscussedTimes,
-      });
+      useMinutesAgendaStore(startTimestamp)
+        .getState()
+        .setAgenda({
+          ...agenda,
+          discussedTimes: updatedDiscussedTimes,
+        });
     }
   };
 

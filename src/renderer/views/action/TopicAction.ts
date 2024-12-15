@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Topic } from "../../../common/Topic.js";
+import { Topic } from "../../../common/content/topic.js";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
@@ -40,7 +40,7 @@ export const processTopicAction = async (action: TopicAction) => {
       break;
     case "removeTopic":
       minutesState.removeTopic(action.payload.topicID);
-      vbReactflowState.relocateTopics();
+      vbReactflowState.relocateTopics(); // This relocation is needed to make new edge with considering removed topic.
       break;
     case "deleteAllTopic":
       minutesState.deleteAllTopic();

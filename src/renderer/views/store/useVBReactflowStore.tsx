@@ -31,8 +31,7 @@ import {
 import { create } from "zustand";
 
 import { subscribeWithSelector } from "zustand/middleware";
-import { Message } from "../../../common/agentManagerDefinition.jsx";
-import { AgendaNode } from "../flowComponent/node/AgendaNode.jsx";
+import { Message } from "../../../common/content/assisatant.js";
 import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
@@ -50,9 +49,9 @@ import {
   TopicNode,
   TopicNodeParam,
 } from "../flowComponent/node/TopicNode.jsx";
-import { Topic } from "../../../common/Topic.js";
-import { Content } from "../../../common/Content.js";
-import { Agenda, useAgendaStore } from "./useAgendaStore.jsx";
+import { Topic } from "../../../common/content/topic.js";
+import { Content } from "../../../common/content/content.js";
+import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 import {
   AssistantState,
   useMinutesAssistantStore,
@@ -63,6 +62,7 @@ import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 import { processVBAction } from "../action/VBAction.js";
 import { processTopicAction } from "../action/TopicAction.js";
+import { Agenda } from "../../../common/content/agenda.js";
 
 // ==== ReactFlow  ====
 
@@ -836,7 +836,11 @@ export const useVBReactflowStore = create<
     },
 
     relocateTopics: () => {
-      set({ ...DefaultVBReactflowState }); // 一旦リセット??
+      set({
+        topicNodes: DefaultVBReactflowState.topicNodes,
+        topicBothEndsNodes: DefaultVBReactflowState.topicBothEndsNodes,
+        topicTreeEdges: DefaultVBReactflowState.topicTreeEdges,
+      });
 
       const topics = useMinutesStore(
         useVBStore.getState().startTimestamp
@@ -944,20 +948,10 @@ const updateNodePosition = (node: Node) => {
           },
         });
       break;
-    case "agenda":
-      const targetAgenda = useAgendaStore
-        .getState()
-        .getAgenda((node as AgendaNode).data.agendaId);
-      if (!targetAgenda) return;
-      useAgendaStore.getState().setAgenda({
-        ...targetAgenda,
-        position: node.position,
-      });
-      break;
     case "assistantMessage":
       const assistantState =
         useMinutesAssistantStore(startTimestamp).getState();
-      if (!assistantState._hasHydrated) return;
+      if (!assistantState.hasHydrated) return;
 
       console.log("onNodeDragStop: assistantMessage", node.data);
       const assistantDispatch = assistantState.assistantDispatch(

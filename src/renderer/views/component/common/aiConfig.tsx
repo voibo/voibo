@@ -30,7 +30,7 @@ import {
   FlowiseConf,
   LangGraphConf,
   ModelType,
-} from "../../../../common/agentManagerDefinition.js";
+} from "../../../../common/content/assisatant.js";
 
 export type AIConfig = AIConfigCore & {
   systemPrompt: string;

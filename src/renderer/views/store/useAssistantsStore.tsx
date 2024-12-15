@@ -31,12 +31,12 @@ import {
   Message,
   TargetCategory,
   TargetClassification,
-} from "../../../common/agentManagerDefinition.js";
+} from "../../../common/content/assisatant.js";
 import { detectVAMessageType } from "../component/assistant/message/detectVAMessageType.jsx";
 import { AIConfig } from "../component/common/aiConfig.jsx";
-import { isTopic, Topic, TopicSeed } from "../../../common/Topic.js";
-import { Content, isContent } from "../../../common/Content.js";
-import { useAgendaStore } from "./useAgendaStore.jsx";
+import { isTopic, Topic, TopicSeed } from "../../../common/content/topic.js";
+import { Content, isContent } from "../../../common/content/content.js";
+import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 enableMapSet();
@@ -215,7 +215,7 @@ const assistantReducer = (props: {
           action.payload.assistantName == vaConfig.assistantName
         ) {
           newState = {
-            ...initAssistantState(vaConfig, get()._hasHydrated),
+            ...initAssistantState(vaConfig, get().hasHydrated),
             messages: [],
             messagesWithInvoked: [],
             req: undefined,
@@ -226,7 +226,7 @@ const assistantReducer = (props: {
         break;
       case "changeMinutes":
         newState = {
-          ...initAssistantState(vaConfig, get()._hasHydrated),
+          ...initAssistantState(vaConfig, get().hasHydrated),
           messages: action.payload.messages ?? [],
           messagesWithInvoked: action.payload.messagesWithInvoked ?? [],
           req: undefined,
@@ -236,7 +236,7 @@ const assistantReducer = (props: {
         break;
       case "clearAll":
         // 完全に初期状態にする
-        newState = initAssistantState(vaConfig, get()._hasHydrated);
+        newState = initAssistantState(vaConfig, get().hasHydrated);
         break;
       // == 設定関係 ==
       case "setAttachment":
@@ -404,6 +404,7 @@ export function makeInvokeParam({
     }
   };
 
+  const startTimestamp = useVBStore.getState().startTimestamp;
   let prompt = basePrompt;
   let context = "";
   let agendaContext = "";
@@ -451,7 +452,7 @@ export function makeInvokeParam({
         .map((id) => [id, id])
     ).values()
   )
-    .map((id) => useAgendaStore.getState().getAgenda(id))
+    .map((id) => useMinutesAgendaStore(startTimestamp).getState().getAgenda(id))
     .filter((agenda) => agenda !== undefined);
 
   // make prompt for discussion or topic
@@ -525,6 +526,7 @@ export function makeTopicOrientedInvokeParam({
     }
   };
 
+  const startTimestamp = useVBStore.getState().startTimestamp;
   let prompt = basePrompt;
   let context = "";
   let agendaContext = "";
@@ -572,7 +574,7 @@ export function makeTopicOrientedInvokeParam({
         .map((id) => [id, id])
     ).values()
   )
-    .map((id) => useAgendaStore.getState().getAgenda(id))
+    .map((id) => useMinutesAgendaStore(startTimestamp).getState().getAgenda(id))
     .filter((agenda) => agenda !== undefined);
 
   // make prompt for discussion or topic
@@ -636,10 +638,10 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
     AssistantsStateStore & AssistantsDispatchStore & HydrateState
   >()(
     persist(
-      subscribeWithSelector((set, get) => ({
+      subscribeWithSelector((set, get, api) => ({
         // Hydrate
-        _hasHydrated: false,
-        _setHasHydrated: (state) => {
+        hasHydrated: false,
+        setHasHydrated: (state) => {
           const newAssistantMap = new Map<string, AssistantState>(
             Array.from(get().assistantsMap).map(([key, assistant]) => [
               key,
@@ -650,8 +652,25 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             ])
           );
           set({
-            _hasHydrated: state,
+            hasHydrated: state,
             assistantsMap: newAssistantMap,
+          });
+        },
+        waitForHydration: async () => {
+          const store = get();
+          if (store.hasHydrated) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state.hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve();
+                }
+              }
+            );
           });
         },
 
@@ -659,7 +678,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         assistantsMap: new Map<string, AssistantState>(),
 
         setAssistant: (assistant) => {
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             throw new Error("setAssistant: _hasHydrated is false");
           }
           set(
@@ -673,7 +692,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         removeAssistant: (assistantId) => {
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             throw new Error("removeAssistant: _hasHydrated is false");
           }
           set(
@@ -684,7 +703,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         getOrInitAssistant: (vaConfig): AssistantState => {
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             throw new Error("getOrInitAssistant: _hasHydrated is false");
           }
 
@@ -694,7 +713,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             window.electron.on(
               IPCReceiverKeys.ON_MIND_MAP_CREATED,
               (event: any, mindMap: InvokeResult) => {
-                if (!get()._hasHydrated) return;
+                if (!get().hasHydrated) return;
                 get().assistantDispatch(vaConfig)({
                   type: "appendFunctionalMessage",
                   payload: {
@@ -706,7 +725,11 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               }
             );
 
-            const { assistantsMap, setAssistant, _hasHydrated } = get();
+            const {
+              assistantsMap,
+              setAssistant,
+              hasHydrated: _hasHydrated,
+            } = get();
             // 既存のアシスタントを取得、または新たに初期化して設定
             let target = assistantsMap.get(vaConfig.assistantId);
             if (!target) {
@@ -729,7 +752,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         assistantDispatch: (vaConfig) => (action) => {
           if (minutesStartTimestamp) {
-            if (!get()._hasHydrated) {
+            if (!get().hasHydrated) {
               throw new Error("assistantDispatch: _hasHydrated is false");
             }
             try {
@@ -753,28 +776,29 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         enqueueTopicRelatedInvoke: (vaConfig) => {
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             console.warn("enqueueTopicRelatedInvoke: _hasHydrated is false");
             return;
           }
-
           const assistantConfig = vaConfig;
           // check if assistant is GeneralAssistant
           if (assistantConfig.assistantName === GENERAL_ASSISTANT_NAME) {
             return;
           }
+
+          const startTimestamp = useVBStore.getState().startTimestamp;
           const state = get().getOrInitAssistant(vaConfig);
           const dispatch = get().assistantDispatch(vaConfig);
-          const minutesState = useMinutesStore(
-            useVBStore.getState().startTimestamp
-          ).getState();
+          const minutesState = useMinutesStore(startTimestamp).getState();
           const { updateMode, attachOption, updatePrompt } = assistantConfig;
           if (
             state.loaded && // hydrate が終わっている
             updateMode != "manual" // 手動更新モードでない
           ) {
-            const getAgenda = useAgendaStore.getState().getAgenda;
-            const getAllAgendas = useAgendaStore.getState().getAllAgendas;
+            const getAgenda =
+              useMinutesAgendaStore(startTimestamp).getState().getAgenda;
+            const getAllAgendas =
+              useMinutesAgendaStore(startTimestamp).getState().getAllAgendas;
             // = Prepare =
             let currentAttachOption: InvokeAssistantAttachOption | undefined =
               attachOption;
@@ -1181,7 +1205,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出される
         // 時間のかかる「同期」関数：　敢えて set まで完全に同期させることで transaction を保証する
         processInvoke: (vaConfig) => {
-          if (!minutesStartTimestamp || !get()._hasHydrated) {
+          if (!minutesStartTimestamp || !get().hasHydrated) {
             console.warn("processInvoke: not loaded", vaConfig.label);
             return;
           }
@@ -1334,7 +1358,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             if (error) {
               console.error("an error happened during hydration", error);
             } else if (state) {
-              state._setHasHydrated(true);
+              state.setHasHydrated(true);
               console.log("useAssistantsStoreCore: rehydrated", state);
             }
           };
@@ -1360,7 +1384,7 @@ useVBStore.subscribe(
       const assistantsStore = useMinutesAssistantStore(startTimestamp);
       minutesStore.assistants.forEach((vaConfig) => {
         // minute変更
-        if (assistantsStore.getState()._hasHydrated) {
+        if (assistantsStore.getState().hasHydrated) {
           const assistantState = assistantsStore
             .getState()
             .getOrInitAssistant(vaConfig);
@@ -1385,7 +1409,7 @@ useVBStore.subscribe(
           return {
             startTimestamp: startTimestamp,
             assistantMap: assistantState.assistantsMap,
-            hydrated: assistantState._hasHydrated,
+            hydrated: assistantState.hasHydrated,
           };
         },
         (state) => {
@@ -1475,7 +1499,7 @@ export type AssistantTemplate = {
 export const processActionAssistantStoreOpenHome = () => {
   const startTimestamp = useVBStore.getState().startTimestamp;
   const assistantsStore = useMinutesAssistantStore(startTimestamp).getState();
-  if (assistantsStore._hasHydrated) {
+  if (assistantsStore.hasHydrated) {
     useMinutesStore(startTimestamp)
       .getState()
       .assistants.forEach((vaConfig) =>

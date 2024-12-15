@@ -17,22 +17,35 @@ import { produce } from "immer";
 import { create } from "zustand";
 import {
   createJSONStorage,
+  StateStorage,
   persist,
   subscribeWithSelector,
 } from "zustand/middleware";
+import { createStore, del, get, set } from "idb-keyval";
+import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import {
-  TargetCategory,
-  TargetClassification,
-} from "../../../common/agentManagerDefinition.js";
-import { Content } from "../../../common/Content.js";
-import {
-  ExpandJSONOptions,
-  HydrateState,
-  IDBKeyValKeys,
-  IDBKeyValPersistStorage,
-} from "./IDBKeyValPersistStorage.jsx";
+  Agenda,
+  AgendaStatus,
+  TimeRange,
+} from "../../../common/content/agenda.js";
 import { useTranscribeStore } from "./useTranscribeStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
+
+// === IDBKeyVal ===
+//  Custom storage object
+const agendaIDBStore = createStore("minutes_agenda", "agenda");
+const AgendaPersistStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await get(name, agendaIDBStore)) || null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    //console.log("AgendaPersistStorage.setItem:", name, value);
+    await set(name, value, agendaIDBStore);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await del(name, agendaIDBStore);
+  },
+};
 
 // == Agenda Manager ==
 type DiscussingAgenda = {
@@ -47,58 +60,6 @@ export type DiscussingAgendaStoreAction = {
   setDiscussingAgenda: (discussing: DiscussingAgenda | undefined) => void;
   getDiscussedAgendas: (timeRange: TimeRange) => Agenda[];
 };
-
-// == Agenda ==
-export type TimeRange = {
-  startFromMStartMsec: number;
-  endFromMStartMsec: number;
-};
-
-export type AgendaStatus =
-  | "waiting" // waiting for discussion
-  | "inProgress" // in progress
-  | "mayBeDone" // may be done that detected by the system
-  | "done"; // done that detected by the human
-export const AgendaStatusDetail: Array<{
-  label: string;
-  value: AgendaStatus;
-  detail: string;
-}> = [
-  {
-    value: "waiting",
-    label: "Waiting",
-    detail: "waiting for discussion",
-  },
-  {
-    value: "inProgress",
-    label: "In Progress",
-    detail: "in progress",
-  },
-  {
-    value: "mayBeDone",
-    label: "May Be Done",
-    detail: "may be done that detected by the system",
-  },
-  {
-    value: "done",
-    label: "Done",
-    detail: "done that detected by the human",
-  },
-];
-
-export interface Agenda extends Content {
-  type: "agenda";
-  // data
-  title: string;
-  detail: string;
-
-  classification: TargetClassification;
-  category: TargetCategory;
-  status: AgendaStatus;
-  // optional
-  estimateMinutes?: number;
-  discussedTimes: TimeRange[];
-}
 
 export type AgendaStoreAction = {
   setAgenda: (agenda: Agenda) => void;
@@ -122,224 +83,283 @@ export type AgendasIDB = {
 export type AgendaStore = AgendasIDB &
   AgendaStoreAction &
   HydrateState &
-  DiscussingAgendaStoreAction;
+  DiscussingAgendaStoreAction &
+  HydrateState;
 
-export const useAgendaStore = create<AgendaStore>()(
-  persist(
-    subscribeWithSelector((set, get) => ({
-      // == Agenda Manager ==
-      // action
-      getDiscussingAgenda: () => {
-        const agendaStore = get().agendas.get(
-          (useVBStore.getState().startTimestamp ?? 0).toString()
-        );
-        if (agendaStore) {
-          return agendaStore.discussing;
-        }
-      },
-      setDiscussingAgenda: (discussing) => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-        if (!minutesStartTimestamp) return;
-        set(
-          produce((state: AgendaStore) => {
-            const currentAgendas = state.agendas.get(
-              minutesStartTimestamp.toString()
-            );
-            if (!currentAgendas) return;
-            currentAgendas.discussing = discussing;
-          })
-        );
-      },
+const storeCache = new Map<number, ReturnType<typeof useAgendaStoreCore>>();
+export const useMinutesAgendaStore = (startTimestamp: number) => {
+  let newStore;
+  if (storeCache.has(startTimestamp)) {
+    newStore = storeCache.get(startTimestamp)!;
+  } else {
+    newStore = useAgendaStoreCore(startTimestamp);
+    storeCache.set(startTimestamp, newStore);
+  }
+  return newStore;
+};
 
-      startDiscussion: (agendaId) => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp ?? 0;
-        const latestDiscussing = get().getDiscussingAgenda();
-        if (latestDiscussing && latestDiscussing.agendaId !== agendaId) {
-          // 前の会話を終了させて、新規に話し合いを開始
-          const lastAgenda = get().getAgenda(latestDiscussing.agendaId);
-          if (lastAgenda) {
-            const timeRange: TimeRange = {
-              startFromMStartMsec: latestDiscussing.startUTC,
-              endFromMStartMsec: Date.now() - minutesStartTimestamp,
-            };
-            get().setAgenda({
-              ...lastAgenda,
-              status: "mayBeDone" as AgendaStatus,
-              discussedTimes: [...(lastAgenda.discussedTimes ?? []), timeRange],
-            });
+type AgendaAction = () => void;
+const useAgendaStoreCore = (minutesStartTimestamp: number) => {
+  //console.log("useMinutesContentStoreCore", minutesStartTimestamp);
+  // Hydration が完了するまでの操作を保存する Queue
+  const actionQueue: AgendaAction[] = [];
+
+  // Queue に操作を積むメソッド
+  const enqueueAction = (action: AgendaAction) => {
+    actionQueue.push(action);
+  };
+
+  // Hydration が完了したら Queue の操作を実行するメソッド
+  const flushQueue = () => {
+    while (actionQueue.length > 0) {
+      const action = actionQueue.shift();
+      if (action) {
+        action(); // 同期的に実行
+      }
+    }
+  };
+
+  return create<AgendaStore>()(
+    persist(
+      subscribeWithSelector((set, get, api) => ({
+        // action
+        getDiscussingAgenda: () => {
+          const agendaStore = get().agendas.get(
+            (useVBStore.getState().startTimestamp ?? 0).toString()
+          );
+          if (agendaStore) {
+            return agendaStore.discussing;
           }
-        }
-        // start new discussion
-        // update currentAgenda status
-        const currentAgenda = get().getAgenda(agendaId);
-        if (currentAgenda) {
-          get().setAgenda({
-            ...currentAgenda,
-            status: "inProgress" as AgendaStatus,
-          });
-        }
-        // update discussing
-        console.log("startDiscussion", agendaId);
-        get().setDiscussingAgenda({
-          agendaId: agendaId,
-          startUTC: Date.now() - minutesStartTimestamp,
-        });
+        },
+        setDiscussingAgenda: (discussing) => {
+          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
+          if (!minutesStartTimestamp) return;
+          set(
+            produce((state: AgendaStore) => {
+              const currentAgendas = state.agendas.get(
+                minutesStartTimestamp.toString()
+              );
+              if (!currentAgendas) return;
+              currentAgendas.discussing = discussing;
+            })
+          );
+        },
 
-        // enforce to change next segment
-        useTranscribeStore.getState().splitTranscribe();
-      },
-      endDiscussion: (agendaId) => {
-        const latestDiscussing = get().getDiscussingAgenda();
-        console.log("endDiscussion", agendaId, latestDiscussing);
-        if (latestDiscussing && latestDiscussing.agendaId == agendaId) {
+        startDiscussion: (agendaId) => {
           const minutesStartTimestamp =
             useVBStore.getState().startTimestamp ?? 0;
-          const lastAgenda = get().getAgenda(agendaId);
-          if (lastAgenda) {
-            const timeRange: TimeRange = {
-              startFromMStartMsec: latestDiscussing.startUTC,
-              endFromMStartMsec: Date.now() - minutesStartTimestamp,
-            };
-            console.log("endDiscussion", agendaId, timeRange);
-            get().setAgenda({
-              ...lastAgenda,
-              status: "mayBeDone" as AgendaStatus,
-              discussedTimes: [...(lastAgenda.discussedTimes ?? []), timeRange],
-            });
-            // update discussing
-            get().setDiscussingAgenda(undefined);
-
-            // enforce to change next segment
-            useTranscribeStore.getState().splitTranscribe();
-          }
-        }
-      },
-      getDiscussedAgendas: (timeRange: TimeRange): Agenda[] => {
-        const discussing = get().getDiscussingAgenda();
-        return [
-          // related agendas
-          ...get()
-            .getAllAgendas()
-            .flatMap((agenda) =>
-              agenda.discussedTimes.map((timeRange) => ({
-                timeRange: timeRange,
-                agendaId: agenda.id,
-              }))
-            )
-            .filter(
-              (elem) =>
-                elem.timeRange.endFromMStartMsec >=
-                  timeRange.startFromMStartMsec &&
-                elem.timeRange.startFromMStartMsec <=
-                  timeRange.endFromMStartMsec
-            )
-            .map((elem) => get().getAgenda(elem.agendaId)!),
-          // Is current discussing agenda included?
-          ...(discussing && discussing.startUTC <= timeRange.endFromMStartMsec
-            ? [get().getAgenda(discussing.agendaId)!]
-            : []),
-        ];
-      },
-
-      // == Agenda IDB ==
-      // data
-      agendas: new Map<string, MinutesAgenda>(),
-
-      // action
-      setAgenda: (agenda) => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-        if (!minutesStartTimestamp) return;
-        set(
-          produce((state) => {
-            const currentAgendas = state.agendas.get(
-              minutesStartTimestamp.toString()
-            );
-            if (!currentAgendas) {
-              const newAgendas: MinutesAgenda = {
-                minutesStartTimestamp: minutesStartTimestamp,
-                agendaMap: new Map<string, Agenda>(),
-                discussing: undefined,
+          const latestDiscussing = get().getDiscussingAgenda();
+          if (latestDiscussing && latestDiscussing.agendaId !== agendaId) {
+            // 前の会話を終了させて、新規に話し合いを開始
+            const lastAgenda = get().getAgenda(latestDiscussing.agendaId);
+            if (lastAgenda) {
+              const timeRange: TimeRange = {
+                startFromMStartMsec: latestDiscussing.startUTC,
+                endFromMStartMsec: Date.now() - minutesStartTimestamp,
               };
-              newAgendas.agendaMap.set(agenda.id, agenda);
-              state.agendas.set(minutesStartTimestamp.toString(), newAgendas);
-            } else {
-              state.agendas
-                .get(minutesStartTimestamp.toString())
-                .agendaMap.set(agenda.id, agenda);
+              get().setAgenda({
+                ...lastAgenda,
+                status: "mayBeDone" as AgendaStatus,
+                discussedTimes: [
+                  ...(lastAgenda.discussedTimes ?? []),
+                  timeRange,
+                ],
+              });
             }
-            //console.log("useAgendaStore: setAgenda", minutesStartTimestamp);
-          })
-        );
-      },
-      getAgenda: (agendaId) => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-        if (!minutesStartTimestamp) return undefined;
-        const currentAgendas = get().agendas.get(
-          minutesStartTimestamp.toString()
-        );
-        let target = currentAgendas?.agendaMap.get(agendaId);
-        /*
+          }
+          // start new discussion
+          // update currentAgenda status
+          const currentAgenda = get().getAgenda(agendaId);
+          if (currentAgenda) {
+            get().setAgenda({
+              ...currentAgenda,
+              status: "inProgress" as AgendaStatus,
+            });
+          }
+          // update discussing
+          console.log("startDiscussion", agendaId);
+          get().setDiscussingAgenda({
+            agendaId: agendaId,
+            startUTC: Date.now() - minutesStartTimestamp,
+          });
+
+          // enforce to change next segment
+          useTranscribeStore.getState().splitTranscribe();
+        },
+        endDiscussion: (agendaId) => {
+          const latestDiscussing = get().getDiscussingAgenda();
+          console.log("endDiscussion", agendaId, latestDiscussing);
+          if (latestDiscussing && latestDiscussing.agendaId == agendaId) {
+            const minutesStartTimestamp =
+              useVBStore.getState().startTimestamp ?? 0;
+            const lastAgenda = get().getAgenda(agendaId);
+            if (lastAgenda) {
+              const timeRange: TimeRange = {
+                startFromMStartMsec: latestDiscussing.startUTC,
+                endFromMStartMsec: Date.now() - minutesStartTimestamp,
+              };
+              console.log("endDiscussion", agendaId, timeRange);
+              get().setAgenda({
+                ...lastAgenda,
+                status: "mayBeDone" as AgendaStatus,
+                discussedTimes: [
+                  ...(lastAgenda.discussedTimes ?? []),
+                  timeRange,
+                ],
+              });
+              // update discussing
+              get().setDiscussingAgenda(undefined);
+
+              // enforce to change next segment
+              useTranscribeStore.getState().splitTranscribe();
+            }
+          }
+        },
+        getDiscussedAgendas: (timeRange: TimeRange): Agenda[] => {
+          const discussing = get().getDiscussingAgenda();
+          return [
+            // related agendas
+            ...get()
+              .getAllAgendas()
+              .flatMap((agenda) =>
+                agenda.discussedTimes.map((timeRange) => ({
+                  timeRange: timeRange,
+                  agendaId: agenda.id,
+                }))
+              )
+              .filter(
+                (elem) =>
+                  elem.timeRange.endFromMStartMsec >=
+                    timeRange.startFromMStartMsec &&
+                  elem.timeRange.startFromMStartMsec <=
+                    timeRange.endFromMStartMsec
+              )
+              .map((elem) => get().getAgenda(elem.agendaId)!),
+            // Is current discussing agenda included?
+            ...(discussing && discussing.startUTC <= timeRange.endFromMStartMsec
+              ? [get().getAgenda(discussing.agendaId)!]
+              : []),
+          ];
+        },
+
+        // == Agenda IDB ==
+        // data
+        agendas: new Map<string, MinutesAgenda>(),
+
+        // action
+        setAgenda: (agenda) => {
+          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
+          if (!minutesStartTimestamp) return;
+          set(
+            produce((state) => {
+              const currentAgendas = state.agendas.get(
+                minutesStartTimestamp.toString()
+              );
+              if (!currentAgendas) {
+                const newAgendas: MinutesAgenda = {
+                  minutesStartTimestamp: minutesStartTimestamp,
+                  agendaMap: new Map<string, Agenda>(),
+                  discussing: undefined,
+                };
+                newAgendas.agendaMap.set(agenda.id, agenda);
+                state.agendas.set(minutesStartTimestamp.toString(), newAgendas);
+              } else {
+                state.agendas
+                  .get(minutesStartTimestamp.toString())
+                  .agendaMap.set(agenda.id, agenda);
+              }
+              //console.log("useAgendaStore: setAgenda", minutesStartTimestamp);
+            })
+          );
+        },
+        getAgenda: (agendaId) => {
+          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
+          if (!minutesStartTimestamp) return undefined;
+          const currentAgendas = get().agendas.get(
+            minutesStartTimestamp.toString()
+          );
+          let target = currentAgendas?.agendaMap.get(agendaId);
+          /*
         console.log(
           "useAgendaStore: getOrInitAgenda: ",
           minutesStartTimestamp,
           target
         );
         */
-        return target;
-      },
-      getAllAgendas: () => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-        if (!minutesStartTimestamp) return [];
-        const currentAgendas = get().agendas.get(
-          minutesStartTimestamp.toString()
-        );
-        if (!currentAgendas) return [];
-        return Array.from(currentAgendas.agendaMap.values());
-      },
-      removeAgenda: (agendaId) => {
-        const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-        if (!minutesStartTimestamp) return;
-        set(
-          produce((state) => {
-            const currentAgendas = state.agendas.get(
-              minutesStartTimestamp.toString()
-            );
-            if (!currentAgendas) return;
-            currentAgendas.agendaMap.delete(agendaId);
-            //console.log("useAgendaStore: removeAgenda", minutesStartTimestamp);
-          })
-        );
-      },
+          return target;
+        },
+        getAllAgendas: () => {
+          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
+          if (!minutesStartTimestamp) return [];
+          const currentAgendas = get().agendas.get(
+            minutesStartTimestamp.toString()
+          );
+          if (!currentAgendas) return [];
+          return Array.from(currentAgendas.agendaMap.values());
+        },
+        removeAgenda: (agendaId) => {
+          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
+          if (!minutesStartTimestamp) return;
+          set(
+            produce((state) => {
+              const currentAgendas = state.agendas.get(
+                minutesStartTimestamp.toString()
+              );
+              if (!currentAgendas) return;
+              currentAgendas.agendaMap.delete(agendaId);
+              //console.log("useAgendaStore: removeAgenda", minutesStartTimestamp);
+            })
+          );
+        },
 
-      // Hydrate
-      _hasHydrated: false,
-      _setHasHydrated: (state) => {
-        set({
-          _hasHydrated: state,
-        });
-      },
-    })),
-    {
-      name: IDBKeyValKeys.AGENDAS_STORE,
-      storage: createJSONStorage(
-        () => IDBKeyValPersistStorage,
-        ExpandJSONOptions
-      ),
-      partialize: (state) => {
-        return {
-          agendas: state.agendas,
-        };
-      },
-      onRehydrateStorage: (state) => {
-        //console.log("hydration starts");
-        return (state, error) => {
-          if (error) {
-            console.error("an error happened during hydration", error);
-          } else if (state) {
-            state._setHasHydrated(true);
+        // Hydrate
+        hasHydrated: false,
+        setHasHydrated: (state) => {
+          set({
+            hasHydrated: state,
+          });
+          if (state) {
+            flushQueue(); // Queue に積まれた操作を実行
           }
-        };
-      },
-    }
-  )
-);
+        },
+        waitForHydration: async () => {
+          const store = get();
+          if (store.hasHydrated) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state.hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve();
+                }
+              }
+            );
+          });
+        },
+      })),
+      {
+        name: minutesStartTimestamp.toString(),
+        storage: createJSONStorage(
+          () => AgendaPersistStorage,
+          ExpandJSONOptions
+        ),
+        onRehydrateStorage: (state) => {
+          return (state, error) => {
+            if (error) {
+              console.error(
+                "An error happened during hydration",
+                minutesStartTimestamp,
+                error
+              );
+            } else if (state) {
+              state.setHasHydrated(true);
+            }
+          };
+        },
+      }
+    )
+  );
+};

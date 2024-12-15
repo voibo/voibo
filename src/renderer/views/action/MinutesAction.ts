@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { IPCSenderKeys } from "../../../common/constants.js";
-import { processActionAssistantStoreOpenHome } from "../store/useAssistantsStore.jsx";
+import { useMinutesAgendaStore } from "../store/useAgendaStore.jsx";
+import { useMinutesAssistantStore } from "../store/useAssistantsStore.jsx";
+import { useMinutesContentStore } from "../store/useContentStore.jsx";
+import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
 import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
@@ -31,39 +34,27 @@ export type MinutesAction =
   | ActionBase<"openHomeMenu">;
 
 export const processMinutesAction = async (action: MinutesAction) => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const minutesState = useMinutesStore(startTimestamp).getState();
+  let startTimestamp = NO_MINUTES_START_TIMESTAMP;
   switch (action.type) {
     case "createNewMinutes":
-      const startTimestamp = Date.now();
+      startTimestamp = Date.now();
+      // title
+      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
-      // component
-      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
+      // renderer
+      useVBStore.setState({ startTimestamp });
       useMinutesStore(startTimestamp).getState().createNewMinutes();
-      // reactflow
       useVBReactflowStore.getState().relocateTopics();
-      // render page
-      useVBStore.setState({
-        startTimestamp,
-        recording: false,
-        mainMenuOpen: false,
-      });
+      renderStage();
       break;
     case "openMinutes":
-      await useMinutesStore(action.payload.startTimestamp)
-        .getState()
-        .waitForHydration();
-      // reactflow
-      useVBReactflowStore.getState().relocateTopics();
-      // render page
-      useVBStore.setState({
-        startTimestamp: action.payload.startTimestamp,
-        mainMenuOpen: false,
-        recording: false,
-        interimSegment: null,
-      });
+      startTimestamp = action.payload.startTimestamp;
+      // renderer
+      switchStoresCurrentMinutes(startTimestamp);
 
+      useVBReactflowStore.getState().relocateTopics();
+      renderStage();
       break;
     case "openHomeMenu":
       openHomeMenu();
@@ -71,6 +62,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
     case "deleteMinutes":
       console.log("useVBStore: deleteMinutes: 0");
       // delete minutes
+      const minutesState = useMinutesStore(startTimestamp).getState();
       minutesState.deleteMinutes();
       useMinutesTitleStore
         .getState()
@@ -84,18 +76,38 @@ export const processMinutesAction = async (action: MinutesAction) => {
   }
 };
 
+const switchStoresCurrentMinutes = async (startTimestamp: number) => {
+  // renderer
+  useVBStore.setState({ startTimestamp });
+  await Promise.all([
+    useMinutesStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
+    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
+    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
+  ]);
+};
+
 const openHomeMenu = async () => {
-  await useMinutesStore(NO_MINUTES_START_TIMESTAMP)
-    .getState()
-    .waitForHydration();
+  await switchStoresCurrentMinutes(NO_MINUTES_START_TIMESTAMP);
+
+  // reactflow
+  useVBReactflowStore.getState().relocateTopics();
+  renderHome();
+};
+
+const renderStage = () => {
   useVBStore.setState({
-    startTimestamp: NO_MINUTES_START_TIMESTAMP,
+    mainMenuOpen: false,
+    recording: false,
+    interimSegment: null,
+  });
+};
+
+const renderHome = () => {
+  useVBStore.setState({
     recording: false,
     mainMenuOpen: true,
     interimSegment: null,
   });
-  processActionAssistantStoreOpenHome();
-
-  // reactflow
-  useVBReactflowStore.getState().relocateTopics();
 };

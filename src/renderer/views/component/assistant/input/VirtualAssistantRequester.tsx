@@ -32,7 +32,7 @@ import {
 } from "../../../store/useAssistantsStore.js";
 import { useVBStore } from "../../../store/useVBStore.js";
 import { useMinutesStore } from "../../../store/useMinutesStore.js";
-import { TypicalRequest } from "../../../../../common/agentManagerDefinition.js";
+import { TypicalRequest } from "../../../../../common/content/assisatant.js";
 
 // requestor
 

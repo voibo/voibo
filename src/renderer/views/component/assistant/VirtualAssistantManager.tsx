@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
+import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import {
   VirtualAssistantConfDialog,
   VirtualAssistantConfDialogMode,
@@ -107,11 +107,11 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
 
   const handleEditVAConf: MouseEventHandler<HTMLButtonElement> = (event) => {
     const assistantId = event.currentTarget.value;
-    const assistantConfig = minutesStore((state) => state.assistants).find(
-      (assistantConfig) => {
+    const assistantConfig = minutesStore
+      .getState() // in handler, use getState() to get the latest state
+      .assistants.find((assistantConfig) => {
         return assistantConfig.assistantId === assistantId;
-      }
-    );
+      });
     if (!assistantConfig) return;
     console.log("handleEditVAConf", assistantConfig);
     vaConfDialogDispatch({

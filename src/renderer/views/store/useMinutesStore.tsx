@@ -27,7 +27,7 @@ import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
 import {
   EnglishTopicPrompt,
   TopicSchema,
-} from "../../../common/agentManagerDefinition.js";
+} from "../../../common/content/assisatant.js";
 import { SystemDefaultTemplate } from "../component/assistant/AssistantTemplates.js";
 import { AIConfig } from "../component/common/aiConfig.jsx";
 import {
@@ -42,24 +42,22 @@ import {
   DefaultSplitter,
   DiscussionSplitterConf,
 } from "../component/topic/DiscussionSplitter.jsx";
-import { Topic } from "../../../common/Topic.js";
+import { Topic } from "../../../common/content/topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
 
 // === IDBKeyVal ===
 //  Custom storage object
-const minutesIDBStore = createStore("voibo", "minutes");
+const minutesIDBStore = createStore("minutes", "minutes");
 const MinutesPersistStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
-    //console.log("MinutesPersistStorage.getItem", name);
     return (await get(name, minutesIDBStore)) || null;
   },
   setItem: async (name: string, value: string): Promise<void> => {
     const current = await get(name, minutesIDBStore);
     if (current === value) {
-      console.warn("MinutesPersistStorage.setItem: same value skipped", name);
+      console.log("MinutesPersistStorage.setItem: same value skipped", name);
       return;
     }
-    console.log("MinutesPersistStorage.setItem:", name);
     await set(name, value, minutesIDBStore);
   },
   removeItem: async (name: string): Promise<void> => {
@@ -142,9 +140,7 @@ type DiscussionDispatch = {
 type MinutesDispatch = {
   deleteMinutes: () => void;
   createNewMinutes: () => void;
-  waitForHydration: () => Promise<
-    MinutesStore & MinutesDispatchStore & HydrateState
-  >;
+  waitForHydration: () => Promise<void>;
   isNoMinutes: () => boolean;
 };
 
@@ -185,14 +181,31 @@ const useMinutesStoreCore = (startTimestamp: number) => {
     persist(
       subscribeWithSelector((set, get, api) => ({
         // Hydration
-        _hasHydrated: false,
-        _setHasHydrated: (state) => {
+        hasHydrated: false,
+        setHasHydrated: (state) => {
           set({
-            _hasHydrated: state,
+            hasHydrated: state,
           });
           if (state) {
             flushQueue();
           }
+        },
+        waitForHydration: async () => {
+          const store = get();
+          if (store.hasHydrated) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const unsubscribe = api.subscribe(
+              (state) => state.hasHydrated,
+              (hasHydrated) => {
+                if (hasHydrated) {
+                  unsubscribe();
+                  resolve();
+                }
+              }
+            );
+          });
         },
 
         // State
@@ -204,7 +217,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set((state) => ({ assistants: [...state.assistants, assistant] }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -218,7 +231,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -234,7 +247,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -246,7 +259,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set({ discussionSplitter: splitterConf });
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -258,7 +271,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set({ topicAIConf: aiConfig });
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -272,7 +285,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               topics: state.topics.filter((topic) => topic.id !== topicID),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -282,7 +295,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set({ topics: [] });
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -292,7 +305,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set((state) => ({ topics: [...state.topics, ...topics] }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -306,7 +319,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -318,7 +331,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           const action = () => {
             set((state) => ({ discussion: [...state.discussion, ...minutes] }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -333,7 +346,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -350,7 +363,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -366,7 +379,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -382,7 +395,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -398,7 +411,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               ),
             }));
           };
-          if (!get()._hasHydrated) {
+          if (!get().hasHydrated) {
             enqueueAction(action);
           } else {
             action();
@@ -409,25 +422,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
         isNoMinutes: () => {
           return get().startTimestamp === NO_MINUTES_START_TIMESTAMP;
         },
-        waitForHydration: async () => {
-          const store = get();
-          if (store._hasHydrated) {
-            return Promise.resolve(store);
-          }
-          return new Promise<
-            MinutesStore & MinutesDispatchStore & HydrateState
-          >((resolve) => {
-            const unsubscribe = api.subscribe(
-              (state) => state._hasHydrated,
-              (hasHydrated) => {
-                if (hasHydrated) {
-                  unsubscribe();
-                  resolve(get());
-                }
-              }
-            );
-          });
-        },
+
         createNewMinutes: () => {
           // 即時反映
           clearQueue();
@@ -464,7 +459,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
                 error
               );
             } else if (state) {
-              state._setHasHydrated(true);
+              state.setHasHydrated(true);
               console.log("useMinutesStoreCore: rehydrated", state);
             }
           };

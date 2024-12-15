@@ -101,7 +101,7 @@ export const useVBSettingsStore = create<
     HydrateState
 >()(
   persist(
-    subscribeWithSelector((set, get) => ({
+    subscribeWithSelector((set, get, api) => ({
       // state
       ...AudioDeviceSettingsDefault,
       ...VADSettingsDefault,
@@ -119,10 +119,27 @@ export const useVBSettingsStore = create<
       },
 
       // Hydrate
-      _hasHydrated: false,
-      _setHasHydrated: (state) => {
+      hasHydrated: false,
+      setHasHydrated: (state) => {
         set({
-          _hasHydrated: state,
+          hasHydrated: state,
+        });
+      },
+      waitForHydration: async () => {
+        const store = get();
+        if (store.hasHydrated) {
+          return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+          const unsubscribe = api.subscribe(
+            (state) => state.hasHydrated,
+            (hasHydrated) => {
+              if (hasHydrated) {
+                unsubscribe();
+                resolve();
+              }
+            }
+          );
         });
       },
     })),
@@ -138,7 +155,7 @@ export const useVBSettingsStore = create<
           if (error) {
             console.error("an error happened during hydration", error);
           } else if (state) {
-            state._setHasHydrated(true);
+            state.setHasHydrated(true);
           }
         };
       },

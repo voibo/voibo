@@ -16,7 +16,7 @@ limitations under the License.
 import {
   Message,
   TypicalRequestType,
-} from "../../../../../common/agentManagerDefinition.js";
+} from "../../../../../common/content/assisatant.js";
 
 export function detectVAMessageType(message: Message): VAMessageResponse {
   let res: VAMessageResponse = { type: "Unknown", value: message };
