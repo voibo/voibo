@@ -47,12 +47,11 @@ import { DiscussionNode } from "../flowComponent/node/DisscussionNode.jsx";
 import { TopicHeaderNode } from "../flowComponent/node/TopicHeaderNode.jsx";
 import {
   isTopicNode,
-  removeTopic,
   TopicNode,
   TopicNodeParam,
 } from "../flowComponent/node/TopicNode.jsx";
-import { Topic } from "../topic/Topic.js";
-import { Content } from "./Content.js";
+import { Topic } from "../../../common/Topic.js";
+import { Content } from "../../../common/Content.js";
 import { Agenda, useAgendaStore } from "./useAgendaStore.jsx";
 import {
   AssistantState,
@@ -62,7 +61,8 @@ import { useMinutesContentStore } from "./useContentStore.jsx";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
-import { processVBAction } from "./VBActionProcessor.js";
+import { processVBAction } from "../action/VBAction.js";
+import { processTopicAction } from "../action/TopicAction.js";
 
 // ==== ReactFlow  ====
 
@@ -426,7 +426,7 @@ export const useVBReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          processVBAction({
+          processTopicAction({
             type: "updateTopic",
             payload: {
               topic: {
@@ -488,7 +488,7 @@ export const useVBReactflowStore = create<
         const topicNode = get().topicNodes.find((node) => node.id === id);
         if (topicNode) {
           const topic = (topicNode.data as TopicNodeParam).content;
-          processVBAction({
+          processTopicAction({
             type: "updateTopic",
             payload: {
               topic: {
@@ -602,7 +602,10 @@ export const useVBReactflowStore = create<
       nodes.forEach((node) => {
         switch (node.type) {
           case "topic":
-            removeTopic((node.data as TopicNodeParam).content.id);
+            processTopicAction({
+              type: "removeTopic",
+              payload: { topicID: (node.data as TopicNodeParam).content.id },
+            });
             break;
           case "assistantMessage":
             removeAssistantMessage(node.data as AssistantMessageNodeParam);

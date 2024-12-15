@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Handle, Position } from "@xyflow/react";
-import { TopicsHeader } from "../../topic/TopicsElement.jsx";
-
-import { Node, NodeProps } from "@xyflow/react";
 import { memo } from "react";
+import { Handle, Position, Node, NodeProps } from "@xyflow/react";
+import { TopicsHeader } from "../../component/topic/TopicsElement.jsx";
 
 export type TopicHeaderNodeParam = {};
 export type TopicHeaderNode = Node<TopicHeaderNodeParam, "topicHeader">;

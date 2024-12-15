@@ -19,7 +19,7 @@ import { Segment } from "../../../common/Segment.jsx";
 
 // ==== VB Core ====
 
-export const NO_MINUTES_START_TIMESTAMP = 0; // MinutesState
+export const NO_MINUTES_START_TIMESTAMP = 0;
 
 export type VBStateMode = "home" | "recordingStudio";
 
@@ -29,47 +29,41 @@ export type VBState = {
   startTimestamp: number;
 
   // gui
-  mode: VBStateMode;
+  //mode: VBStateMode;
   mainMenuOpen: boolean;
+  vbSettingsDialogOpen: boolean;
   recording: boolean;
   playWavMute: boolean;
 
   // config
   // == audio ==
   audioFolder: string;
-  audioSettingsDialogOpen: boolean;
   // == Topic ==
   interimSegment: Segment | null;
-  // == zustand subscript ==
-  //lastAction: VBAction | null;
 };
 
 type VBDispatch = {
-  //vbDispatch: (action: VBAction) => void;
   isNoMinutes: () => boolean;
 };
 
 export const useVBStore = create<VBState & VBDispatch>()(
   subscribeWithSelector((set, get) => ({
-    // # State
     startTimestamp: NO_MINUTES_START_TIMESTAMP,
 
     // gui
-    mode: "home",
+    //mode: "home",
     mainMenuOpen: true,
+    vbSettingsDialogOpen: false,
     recording: false,
     playWavMute: true,
 
     // config
     // == audio ==
     audioFolder: "/",
-    audioSettingsDialogOpen: false,
     // == Topic ==
     interimSegment: null,
-    // == zustand subscript ==
-    //lastAction: null,
 
-    //vbDispatch: (action) => VBActionProcessor(action),
+    // utils
     isNoMinutes: () => get().startTimestamp === NO_MINUTES_START_TIMESTAMP,
   }))
 );

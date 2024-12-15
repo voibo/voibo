@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { createStore, del, get, set } from "idb-keyval";
+import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { enableMapSet, produce } from "immer";
 import { create } from "zustand";
 import {
@@ -31,11 +32,10 @@ import {
   TargetCategory,
   TargetClassification,
 } from "../../../common/agentManagerDefinition.js";
-import { detectVAMessageType } from "../assistant/message/detectVAMessageType.jsx";
-import { AIConfig } from "../common/aiConfig.jsx";
-import { isTopic, Topic, TopicSeed } from "../topic/Topic.js";
-import { Content, isContent } from "./Content.js";
-import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
+import { detectVAMessageType } from "../component/assistant/message/detectVAMessageType.jsx";
+import { AIConfig } from "../component/common/aiConfig.jsx";
+import { isTopic, Topic, TopicSeed } from "../../../common/Topic.js";
+import { Content, isContent } from "../../../common/Content.js";
 import { useAgendaStore } from "./useAgendaStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
@@ -1462,34 +1462,26 @@ useVBStore.subscribe(
   }
 );
 
-// mode 変更時
-useVBStore.subscribe(
-  (state) => ({
-    startTimestamp: state.startTimestamp,
-    mode: state.mode,
-  }),
-  (state) => {
-    if (state.startTimestamp != null && state.mode === "home") {
-      const assistantsStore = useMinutesAssistantStore(state.startTimestamp);
-      useMinutesStore(state.startTimestamp)
-        .getState()
-        .assistants.forEach((vaConfig) => {
-          if (!assistantsStore.getState()._hasHydrated) return;
-          assistantsStore.getState().assistantDispatch(vaConfig)({
-            type: "clearAll",
-          });
-        });
-    }
-  },
-  {
-    equalityFn: (prev, next) => prev.mode === next.mode,
-  }
-);
-
 // == Assistant Template ==
 export type AssistantTemplate = {
   templateId: string;
   description: string;
   author: string;
   config: VirtualAssistantConf;
+};
+
+// Action
+
+export const processActionAssistantStoreOpenHome = () => {
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const assistantsStore = useMinutesAssistantStore(startTimestamp).getState();
+  if (assistantsStore._hasHydrated) {
+    useMinutesStore(startTimestamp)
+      .getState()
+      .assistants.forEach((vaConfig) =>
+        assistantsStore.assistantDispatch(vaConfig)({
+          type: "clearAll",
+        })
+      );
+  }
 };

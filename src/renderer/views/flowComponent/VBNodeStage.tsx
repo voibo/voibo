@@ -20,14 +20,13 @@ import {
   ReactFlow,
   ReactFlowProvider,
   SelectionMode,
-  useNodesInitialized,
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { AgendaPanel } from "../agenda/AgendaPanel.jsx";
-import { Content, getDefaultContent } from "../store/Content.js";
+import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
+import { Content, getDefaultContent } from "../../../common/Content.js";
 import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
   useVBReactflowStore,
@@ -43,8 +42,8 @@ import DiscussionNode from "./node/DisscussionNode.jsx";
 import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
 import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
-import { focusFirstTopic, TargetFocuser } from "./TargetFocuser.jsx";
-import { VBAction } from "../store/VBActionProcessor.js";
+import { TargetFocuser } from "./TargetFocuser.jsx";
+import { VBAction } from "../action/VBAction.js";
 
 const ZOOM_MIN = 0.001;
 
@@ -90,57 +89,8 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStop,
     onNodesDelete,
   } = useVBReactflowStore(useShallow(selector));
-  // handle nodes initialized and measure nodes.
-  // after add new nodes, it will be called.
-  const nodesInitialized = useNodesInitialized({
-    includeHiddenNodes: true,
-  });
-
-  const [guiState, setGUIState] = useState<VANodeStageGUIState>({
-    lastAction: null,
-  });
-  // subscribe lastAction to update GUI
-  /*
-  useVBStore.subscribe(
-    (state) => state.lastAction,
-    (lastAction) => {
-      setGUIState((state) => ({
-        ...state,
-        lastAction: lastAction,
-      }));
-    }
-  );
-  */
 
   const reactFlow = useReactFlow();
-  const flowState = useVBReactflowStore((state) => state);
-
-  // handle lastAction
-  useEffect(() => {
-    if (guiState.lastAction && nodesInitialized && flowState.topicNodes) {
-      switch (guiState.lastAction.type) {
-        // トピックツリーの初期化
-        case "deleteAllTopic": // minutes 再構築時
-        case "openHomeMenu": // ホームメニューが開かれた場合、トピックツリーを再描画
-          focusFirstTopic(reactFlow);
-          break;
-        case "createNewMinutes": //　minutes 作成時
-        case "openMinutes": // minutes open時
-          // このときには TargetFocuser の初期値によりFocusされる
-          break;
-        case "setTopic": // トピック変更時
-          // FIXME
-          // Topic の position 更新を永続化させるために useVBReactflowStore:updateNodePosition にて、
-          // useVBStore.getState().vbDispatch({type: "updateTopic"/// を使わざるを得ず、
-          // このタイミングでは setTopic が呼ばれない事になっている。
-          // VBStore の永続化方法を zustand の middleware に統合するまで、setTopicをトリガーにすることができない。
-          // focusLastTopic({ reactFlow, flowState, windowSize });
-          break;
-        default:
-          break;
-      }
-    }
-  }, [guiState.lastAction, nodesInitialized, flowState.topicNodes]);
 
   // DnD
   const reactFlowWrapper = useRef(null);

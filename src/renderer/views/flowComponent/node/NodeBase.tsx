@@ -19,10 +19,10 @@ import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
 import { useEffect, useState } from "react";
 import { GENERAL_ASSISTANT_NAME } from "../../../../common/agentManagerDefinition.js";
-import { AgendaSelectorDialogBody } from "../../agenda/AgendaSelector.jsx";
-import { AIAssistantAvatar } from "../../assistant/message/AIAssistantAvatar.jsx";
-import { useDetailViewDialog } from "../../common/useDetailViewDialog.jsx";
-import { GroupSelectorDialogBody } from "../../group/GroupSelector.jsx";
+import { AgendaSelectorDialogBody } from "../../component/agenda/AgendaSelector.jsx";
+import { AIAssistantAvatar } from "../../component/assistant/message/AIAssistantAvatar.jsx";
+import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
+import { GroupSelectorDialogBody } from "../../component/group/GroupSelector.jsx";
 import { Agenda, useAgendaStore } from "../../store/useAgendaStore.jsx";
 import {
   AssistantState,

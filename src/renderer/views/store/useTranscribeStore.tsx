@@ -17,18 +17,19 @@ import { MicVAD, utils } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
-import { Segment } from "../../../common/Segment.js";
+import { Segment } from "../../../common/Segment.jsx";
 import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import {
   appendMinutesList,
   DiscussionSegment,
-} from "../discussion/DiscussionSegment.jsx";
+} from "../component/discussion/DiscussionSegment.jsx";
 import { useVBMainStore } from "./useVBMainStore.jsx";
 import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
-import { processVBAction } from "./VBActionProcessor.js";
+import { processVBAction } from "../action/VBAction.js";
+import { processDiscussionAction } from "../action/DiscussionAction.js";
 
 export type TranscribeState = {
   // vad
@@ -197,7 +198,7 @@ function setMinutesLines(segments: Segment[]) {
     minutesStore.discussionSplitter.duration
   );
   console.log("setMinutesLines", newMinutes, segments);
-  processVBAction({
+  processDiscussionAction({
     type: "setMinutesLines",
     payload: {
       minutes: newMinutes.minutes,

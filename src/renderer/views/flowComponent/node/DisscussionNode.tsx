@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { Handle, Node, NodeProps, Position } from "@xyflow/react";
-import { useDiscussionHistory } from "../../discussion/DiscussionHistory.jsx";
+import { useDiscussionHistory } from "../../component/discussion/DiscussionHistory.jsx";
 
 export type DiscussionNodeParam = {};
 

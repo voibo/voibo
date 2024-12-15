@@ -30,7 +30,7 @@ import {
   VBReactflowState,
 } from "../store/useVBReactflowStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
-import { useWindowSize } from "../useWindowSize.jsx";
+import { useWindowSize } from "../component/main/useWindowSize.jsx";
 
 export const StageTransitionOption = { padding: 0.1, duration: 100 };
 

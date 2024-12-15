@@ -24,7 +24,7 @@ import {
   TargetCategory,
   TargetClassification,
 } from "../../../common/agentManagerDefinition.js";
-import { Content } from "./Content.js";
+import { Content } from "../../../common/Content.js";
 import {
   ExpandJSONOptions,
   HydrateState,

@@ -35,6 +35,7 @@ export type MinutesTitle = {
 
 export type MinutesTitleStoreAction = {
   setMinutesTitle: (minutesTitle: MinutesTitle) => void;
+  setDefaultMinutesTitle: (startTimestamp: number) => void;
   removeMinutesTitle: (startTimestamp: number) => void;
   getMinutesTitle: (startTimestamp: number) => string | undefined;
   getAllMinutesTitles: () => MinutesTitle[];
@@ -64,6 +65,16 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
             (state.minutesTitleMap as Map<string, string>).set(
               minutesTitle.startTimestamp.toString(),
               minutesTitle.title
+            );
+          })
+        );
+      },
+      setDefaultMinutesTitle: (startTimestamp) => {
+        set(
+          produce((state) => {
+            (state.minutesTitleMap as Map<string, string>).set(
+              startTimestamp.toString(),
+              makeDefaultTitle(startTimestamp)
             );
           })
         );
