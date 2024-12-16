@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { DiscussionSegment } from "../component/discussion/DiscussionSegment.js";
+import { DiscussionSegment } from "../../../common/discussion.js";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";

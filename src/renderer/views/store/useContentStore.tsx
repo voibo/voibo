@@ -178,6 +178,10 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
                 error
               );
             } else if (state) {
+              console.log(
+                "useMinutesContentStore: rehydrated",
+                minutesStartTimestamp
+              );
               state.setHasHydrated(true);
             }
           };

@@ -356,6 +356,11 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              console.log(
+                "useAgendaStoreCore: rehydrated",
+                minutesStartTimestamp,
+                state
+              );
             }
           };
         },

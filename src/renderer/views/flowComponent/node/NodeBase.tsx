@@ -25,7 +25,6 @@ import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.
 import { GroupSelectorDialogBody } from "../../component/group/GroupSelector.jsx";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import {
-  AssistantState,
   makeInvokeParam,
   useMinutesAssistantStore,
   VirtualAssistantConf,
@@ -44,8 +43,8 @@ export const NodeBase = (props: {
   children: React.ReactNode;
 }) => {
   const { nodeProps } = props;
-  const startTimestamp = useVBStore().startTimestamp;
-  const minutesStore = useMinutesStore(startTimestamp).getState();
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const isNoMinutes = useVBStore((state) => state.isNoMinutes)();
 
   // selectedSequence
   const cssStyle = nodeProps.selected
@@ -62,7 +61,7 @@ export const NodeBase = (props: {
           position: "absolute",
           top: "-1rem",
           left: "-1rem",
-          zIndex: 10, // 子要素よりも上に表示されるようにz-indexを設定
+          zIndex: 10,
         }}
       >
         <div className="rounded-full bg-green-500 text-white w-8 h-8 flex justify-center items-center">
@@ -77,8 +76,10 @@ export const NodeBase = (props: {
       nodeProps.id
   );
 
-  // assistant
-  const assistants = minutesStore.assistants.filter(
+  // assistants
+  const assistants = useMinutesStore(startTimestamp)(
+    (state) => state.assistants
+  ).filter(
     (assistant) =>
       assistant.assistantId !== GENERAL_ASSISTANT_NAME &&
       assistant.updateMode === "manual"
@@ -96,7 +97,7 @@ export const NodeBase = (props: {
     useDetailViewDialog();
 
   const handleGroup = (event: any) => {
-    if (!startTimestamp) return;
+    if (isNoMinutes) return;
     detailViewDialog({
       content: (
         <GroupSelectorDialogBody
@@ -113,7 +114,7 @@ export const NodeBase = (props: {
 
   // change agenda
   const handleAgenda = (event: any) => {
-    if (!startTimestamp) return;
+    if (isNoMinutes) return;
     detailViewDialog({
       content: (
         <AgendaSelectorDialogBody
@@ -163,22 +164,19 @@ export const NodeBase = (props: {
         {props.children}
 
         <div
-          className="w-full h-0" // h-0 で高さのプロパティを定義しないと absolute は効かない
+          className="w-full h-0" // Absolute does not work without defining the height property
           style={{
             position: "absolute",
             bottom: 0,
             left: 0,
-            zIndex: 10, // 子要素よりも上に表示されるようにz-indexを設定
+            zIndex: 10, // Adust z-index to be displayed above the child element
           }}
         >
           <div className="flex justify-between items-start">
             <BelongAgendaChips agendaList={agendaList} />
-            {startTimestamp && (
-              <BelongGroupChips
-                minutesStartTimestamp={startTimestamp}
-                groupIds={nodeProps.data.content.groupIds ?? []}
-              />
-            )}
+            <BelongGroupChips
+              groupIds={nodeProps.data.content.groupIds ?? []}
+            />
           </div>
         </div>
       </div>
@@ -190,53 +188,17 @@ export const NodeBase = (props: {
 
 const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
   const { assistantConfig } = props;
-  const minutesStartTimestamp = useVBStore().startTimestamp;
+  const isNoMinutes = useVBStore((state) => state.isNoMinutes)();
+  const minutesStartTimestamp = useVBStore((state) => state.startTimestamp);
+  const assistantStore = useMinutesAssistantStore(minutesStartTimestamp);
+  const isAssistantHydrated = assistantStore((state) => state.hasHydrated);
 
-  // 状態とフック呼び出しを外に出し、後続処理で条件付きで使用
-  const assistantStore = minutesStartTimestamp
-    ? useMinutesAssistantStore(minutesStartTimestamp)
-    : null;
-
-  const [state, setState] = useState<AssistantState | undefined>(undefined);
-
-  useEffect(() => {
-    // minutesStartTimestamp がない場合は終了
-    if (
-      !minutesStartTimestamp ||
-      !assistantStore ||
-      !assistantStore.getState().hasHydrated
-    )
-      return;
-
-    //console.log("AssistantButton: useEffect", state);
-    setState(assistantStore.getState().getOrInitAssistant(assistantConfig));
-
-    // onProcessの変化を監視して再レンダリングをトリガー
-    const unsubscribe = assistantStore.subscribe(
-      (state) =>
-        state.assistantsMap.get(assistantConfig.assistantId)?.onProcess,
-      (onProcess) => {
-        if (onProcess !== undefined) {
-          setState((prevState) => ({
-            ...prevState!,
-            onProcess: onProcess,
-          }));
-
-          if (!onProcess) {
-            // deselect all
-            useVBReactflowStore.getState().deselectAll();
-          }
-        }
-      }
-    );
-
-    return () => unsubscribe(); // クリーンアップ
-  }, [minutesStartTimestamp, assistantConfig, assistantStore]);
+  const onProcess = assistantStore(
+    (state) => state // assistantMap の変更を監視するため全体を取得(onProcess の変更を検知するため)
+  ).getOrInitAssistant(assistantConfig)?.onProcess;
 
   const handleAssistantButtonClick = () => {
-    if (!state || !assistantStore || !assistantStore.getState().hasHydrated)
-      return;
-
+    if (!isAssistantHydrated) return;
     assistantStore.getState().assistantDispatch(assistantConfig)({
       type: "invokeAssistant",
       payload: {
@@ -254,12 +216,12 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
     });
   };
 
-  return minutesStartTimestamp ? (
+  return !isNoMinutes && isAssistantHydrated ? (
     <Button
       value={assistantConfig.assistantId}
       className="min-w-0 min-h-0 p-1 text-white border-white bg-sky-900 disabled:text-white/25"
       onClick={handleAssistantButtonClick}
-      disabled={!state || state.onProcess}
+      disabled={onProcess}
     >
       <AIAssistantAvatar
         label={assistantConfig.label}
@@ -292,11 +254,13 @@ const BelongAgendaChips = (props: { agendaList: Agenda[] }) => {
   );
 };
 
-const BelongGroupChips = (props: {
-  minutesStartTimestamp: number;
-  groupIds: string[];
-}) => {
-  const { minutesStartTimestamp, groupIds } = props;
+const BelongGroupChips = (props: { groupIds: string[] }) => {
+  const { groupIds } = props;
+  const isNoMinutes = useVBStore((state) => state.isNoMinutes)();
+  const minutesStartTimestamp = useVBStore((state) => state.startTimestamp);
+  const isGroupHydrated = useMinutesGroupStore(minutesStartTimestamp)(
+    (state) => state.hasHydrated
+  );
 
   const getGroup = useMinutesGroupStore(minutesStartTimestamp)(
     (state) => state.getGroup
@@ -305,28 +269,7 @@ const BelongGroupChips = (props: {
     .map((groupId) => getGroup(groupId))
     .filter((group) => group !== undefined);
 
-  // Hydration の完了を監視
-  const isHydrated = useMinutesGroupStore(minutesStartTimestamp)(
-    (state) => state.hasHydrated
-  );
-  const [hydrated, setHydrated] = useState(isHydrated);
-  useEffect(() => {
-    if (!isHydrated) {
-      const unsubscribe = useMinutesGroupStore(minutesStartTimestamp).subscribe(
-        (state) => state.hasHydrated,
-        (newHydrated) => {
-          if (newHydrated) {
-            setHydrated(true);
-            unsubscribe();
-          }
-        }
-      );
-    } else {
-      setHydrated(true);
-    }
-  }, [isHydrated, minutesStartTimestamp]);
-
-  return hydrated ? (
+  return !isNoMinutes && isGroupHydrated ? (
     <div className="flex flex-col items-end justify-center mt-1">
       {groupList.map((group, index) => (
         <div

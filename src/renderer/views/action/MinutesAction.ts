@@ -20,7 +20,11 @@ import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
-import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
+import {
+  prepareAssistantNodeTo,
+  prepareContentsNodeTo,
+  useVBReactflowStore,
+} from "../store/useVBReactflowStore.jsx";
 import {
   NO_MINUTES_START_TIMESTAMP,
   useVBStore,
@@ -35,6 +39,7 @@ export type MinutesAction =
 
 export const processMinutesAction = async (action: MinutesAction) => {
   let startTimestamp = NO_MINUTES_START_TIMESTAMP;
+
   switch (action.type) {
     case "createNewMinutes":
       startTimestamp = Date.now();
@@ -42,18 +47,18 @@ export const processMinutesAction = async (action: MinutesAction) => {
       useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
+
       // renderer
       useVBStore.setState({ startTimestamp });
       useMinutesStore(startTimestamp).getState().createNewMinutes();
-      useVBReactflowStore.getState().relocateTopics();
+
+      await prepareStoresTo(startTimestamp);
       renderStage();
       break;
     case "openMinutes":
       startTimestamp = action.payload.startTimestamp;
-      // renderer
-      switchStoresCurrentMinutes(startTimestamp);
 
-      useVBReactflowStore.getState().relocateTopics();
+      await prepareStoresTo(startTimestamp);
       renderStage();
       break;
     case "openHomeMenu":
@@ -76,26 +81,6 @@ export const processMinutesAction = async (action: MinutesAction) => {
   }
 };
 
-const switchStoresCurrentMinutes = async (startTimestamp: number) => {
-  // renderer
-  useVBStore.setState({ startTimestamp });
-  await Promise.all([
-    useMinutesStore(startTimestamp).getState().waitForHydration(),
-    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
-    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
-    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
-    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
-  ]);
-};
-
-const openHomeMenu = async () => {
-  await switchStoresCurrentMinutes(NO_MINUTES_START_TIMESTAMP);
-
-  // reactflow
-  useVBReactflowStore.getState().relocateTopics();
-  renderHome();
-};
-
 const renderStage = () => {
   useVBStore.setState({
     mainMenuOpen: false,
@@ -110,4 +95,91 @@ const renderHome = () => {
     mainMenuOpen: true,
     interimSegment: null,
   });
+};
+
+const openHomeMenu = async () => {
+  await prepareStoresTo(NO_MINUTES_START_TIMESTAMP);
+  // reactflow
+  useVBReactflowStore.getState().relocateTopics();
+  renderHome();
+};
+
+/**
+ * Switch stores to the specified minutes. Must be called with await.
+ */
+const prepareStoresTo = async (startTimestamp: number) => {
+  // == Hydrate stores ==
+  useVBStore.setState({ startTimestamp });
+  await Promise.all([
+    useMinutesStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
+    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
+    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
+  ]);
+
+  // == Subscribe stores ==
+  prepareAssistantWithHydratedStores(startTimestamp);
+
+  // == Subscribe to reactflow ==
+  useVBReactflowStore.getState().relocateTopics();
+  prepareContentsNodeTo(startTimestamp);
+  prepareAssistantNodeTo(startTimestamp);
+};
+
+// Subscribe to Assistant stores
+let unsubscribeAssistantProcessInvoke: (() => void) | null = null;
+let unsubscribeTopicChange: (() => void) | null = null;
+const prepareAssistantWithHydratedStores = (startTimestamp: number) => {
+  const assistantsStore = useMinutesAssistantStore(startTimestamp);
+
+  // In case of invokeQueue is remained, start processing
+  if (unsubscribeAssistantProcessInvoke) {
+    unsubscribeAssistantProcessInvoke();
+  }
+  unsubscribeAssistantProcessInvoke = assistantsStore.subscribe(
+    (assistantState) => assistantState.assistantsMap,
+    (state) => {
+      Array.from(state.values())
+        .filter(
+          (assistant) =>
+            assistant.invokeQueue.length > 0 && !assistant.onProcess
+        )
+        .forEach(
+          (assistant) =>
+            assistantsStore.getState().processInvoke(assistant.vaConfig) // 同期関数でrequest => response まで処理)
+        );
+    },
+    {
+      equalityFn: (prev, next) =>
+        !Array.from(next.values()).some(
+          (nextAssistant) => nextAssistant.invokeQueue.length > 0
+        ),
+    }
+  );
+
+  // Enqueue invoke of Assistant triggered by Topic change
+  if (unsubscribeTopicChange) {
+    unsubscribeTopicChange();
+  }
+  unsubscribeTopicChange = useMinutesStore(startTimestamp).subscribe(
+    (state) => ({ topics: state.topics, assistants: state.assistants }),
+    (state) => {
+      useMinutesStore(startTimestamp)
+        .getState()
+        .assistants.forEach((vaConfig) => {
+          useMinutesAssistantStore(startTimestamp)
+            .getState()
+            .enqueueTopicRelatedInvoke(vaConfig);
+        });
+    },
+    {
+      equalityFn: (prev, next) =>
+        !(
+          prev !== next ||
+          prev.topics.length !== next.topics.length ||
+          prev.assistants.length !== next.assistants.length
+        ),
+    }
+  );
 };

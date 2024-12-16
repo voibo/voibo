@@ -20,10 +20,8 @@ import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { Segment } from "../../../common/discussion.js";
 import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
-import {
-  appendMinutesList,
-  DiscussionSegment,
-} from "../component/discussion/DiscussionSegment.jsx";
+import { appendMinutesList } from "../../../common/discussion.js";
+import { DiscussionSegment } from "../../../common/discussion.js";
 import { useVBMainStore } from "./useVBMainStore.jsx";
 import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";

@@ -240,7 +240,11 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
-              console.log("useMinutesGroupStoreCore: rehydrated", state);
+              console.log(
+                "useMinutesGroupStoreCore: rehydrated",
+                minutesStartTimestamp,
+                state
+              );
             }
           };
         },

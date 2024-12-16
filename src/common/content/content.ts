@@ -22,11 +22,12 @@ import { v4 as uuidv4 } from "uuid";
  */
 export type ContentType =
   | "topic"
+  | "message"
+  // reserved for future use
   | "agenda"
   | "text"
   | "json"
-  | "image"
-  | "message";
+  | "image";
 
 export interface Content {
   id: string;
@@ -68,11 +69,11 @@ export function isContent(obj: any): obj is Content {
   // Check if type is a valid ContentType
   const validContentTypes: ContentType[] = [
     "topic",
+    "message",
     "agenda",
     "text",
     "json",
     "image",
-    "message",
   ];
   if (!validContentTypes.includes(obj.type)) {
     return false;
