@@ -17,7 +17,6 @@ import { Folder, ViewAgenda } from "@mui/icons-material";
 import { Button, ButtonGroup } from "@mui/material";
 import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
-import { useEffect, useState } from "react";
 import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import { AgendaSelectorDialogBody } from "../../component/agenda/AgendaSelector.jsx";
 import { AIAssistantAvatar } from "../../component/assistant/message/AIAssistantAvatar.jsx";

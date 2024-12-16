@@ -45,6 +45,9 @@ export const processMinutesAction = async (action: MinutesAction) => {
       startTimestamp = Date.now();
       // title
       useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
+      startTimestamp = Date.now();
+      // title
+      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
 
@@ -79,6 +82,18 @@ export const processMinutesAction = async (action: MinutesAction) => {
     default:
       console.warn("processTopicAction: unexpected default", action);
   }
+};
+
+const switchStoresCurrentMinutes = async (startTimestamp: number) => {
+  // renderer
+  useVBStore.setState({ startTimestamp });
+  await Promise.all([
+    useMinutesStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
+    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
+    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
+    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
+  ]);
 };
 
 const renderStage = () => {
