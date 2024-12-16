@@ -68,21 +68,26 @@ const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
 export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
   let newStore;
   if (storeCache.has(minutesStartTimestamp)) {
-    // 既にキャッシュに存在する場合はそれを利用
     newStore = storeCache.get(minutesStartTimestamp)!;
   } else {
-    // ない場合は新たに作成してキャッシュに保存
     newStore = useAssistantsStoreCore(minutesStartTimestamp);
     storeCache.set(minutesStartTimestamp, newStore);
   }
   return newStore;
 };
 
+export type AssistantTemplate = {
+  templateId: string;
+  description: string;
+  author: string;
+  config: VirtualAssistantConf;
+};
+
 export type VirtualAssistantUpdateMode =
   | "manual"
   | "at_topic_updated"
   | "at_agenda_updated"
-  | "at_agenda_completed"; //| "at_recording_stopped";
+  | "at_agenda_completed";
 export type MessageViewMode = "history" | "latest_response";
 export type TargetMode = "manualSelected" | "systemFiltered" | "latest";
 
@@ -126,7 +131,7 @@ export type AssistantState = {
   // loaded
   loaded: boolean;
   // messages
-  messages?: Array<Message>; // LangChain で記録されているメッセージ。
+  messages?: Array<Message>;
   messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
   // request to assistant
   onProcess: boolean;
@@ -185,15 +190,6 @@ export type AssistantAction =
         assistantName: string;
       };
     }
-  | {
-      type: "changeMinutes";
-      payload: {
-        startTimestamp: number;
-        assistantName: string;
-        messages?: Array<Message>; // LangChain で記録されているメッセージ。
-        messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
-      };
-    }
   | { type: "removeMessage"; payload: { messageId: string } }
   | { type: "clearAll" }
   | { type: "setAttachment"; payload: { attachmentMode: AttachmentMode } }
@@ -223,16 +219,6 @@ const assistantReducer = (props: {
           };
         }
         console.log("assistantReducer: initialize", vaConfig.label, newState);
-        break;
-      case "changeMinutes":
-        newState = {
-          ...initAssistantState(vaConfig, get().hasHydrated),
-          messages: action.payload.messages ?? [],
-          messagesWithInvoked: action.payload.messagesWithInvoked ?? [],
-          req: undefined,
-          onProcess: false,
-        };
-        //console.log("assistantReducer: changeMinutes",vaConfig.label, newState);
         break;
       case "clearAll":
         // 完全に初期状態にする
@@ -677,9 +663,10 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         // State
         assistantsMap: new Map<string, AssistantState>(),
 
+        // Dispatch
         setAssistant: (assistant) => {
           if (!get().hasHydrated) {
-            throw new Error("setAssistant: _hasHydrated is false");
+            throw new Error("setAssistant: not hydrated");
           }
           set(
             produce((state: AssistantsStateStore) => {
@@ -693,7 +680,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         removeAssistant: (assistantId) => {
           if (!get().hasHydrated) {
-            throw new Error("removeAssistant: _hasHydrated is false");
+            throw new Error("removeAssistant: not hydrated");
           }
           set(
             produce((state: AssistantsStateStore) => {
@@ -704,11 +691,10 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         getOrInitAssistant: (vaConfig): AssistantState => {
           if (!get().hasHydrated) {
-            throw new Error("getOrInitAssistant: _hasHydrated is false");
+            throw new Error("getOrInitAssistant: not hydrated");
           }
 
           try {
-            // FIXME: 上が非同期になっているので、本来このような設定は適切ではないが、無駄を許容。
             // listener to make Mind Map
             window.electron.on(
               IPCReceiverKeys.ON_MIND_MAP_CREATED,
@@ -1356,156 +1342,22 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         onRehydrateStorage: (state) => {
           return (state, error) => {
             if (error) {
-              console.error("an error happened during hydration", error);
+              console.error(
+                "an error happened during hydration",
+                minutesStartTimestamp,
+                error
+              );
             } else if (state) {
               state.setHasHydrated(true);
-              console.log("useAssistantsStoreCore: rehydrated", state);
+              console.log(
+                "useAssistantsStoreCore: rehydrated",
+                minutesStartTimestamp,
+                state
+              );
             }
           };
         },
       }
     )
   );
-};
-
-// === subscribe ===
-
-// minutes 変更時
-let unsubscribeProcessInvoke: (() => void) | null = null;
-let unsubscribeTopic: (() => void) | null = null;
-useVBStore.subscribe(
-  (state) => ({
-    startTimestamp: state.startTimestamp,
-  }),
-  (state) => {
-    const startTimestamp = state.startTimestamp;
-    if (true) {
-      const minutesStore = useMinutesStore(startTimestamp).getState();
-      const assistantsStore = useMinutesAssistantStore(startTimestamp);
-      minutesStore.assistants.forEach((vaConfig) => {
-        // minute変更
-        if (assistantsStore.getState().hasHydrated) {
-          const assistantState = assistantsStore
-            .getState()
-            .getOrInitAssistant(vaConfig);
-          assistantsStore.getState().assistantDispatch(vaConfig)({
-            type: "changeMinutes",
-            payload: {
-              startTimestamp: startTimestamp,
-              assistantName: vaConfig.assistantName,
-              messages: assistantState.messages,
-              messagesWithInvoked: assistantState.messagesWithInvoked,
-            },
-          });
-        }
-      });
-
-      // queue invoke 処理
-      if (unsubscribeProcessInvoke) {
-        unsubscribeProcessInvoke();
-      }
-      unsubscribeProcessInvoke = assistantsStore.subscribe(
-        (assistantState) => {
-          return {
-            startTimestamp: startTimestamp,
-            assistantMap: assistantState.assistantsMap,
-            hydrated: assistantState.hasHydrated,
-          };
-        },
-        (state) => {
-          if (state.hydrated) {
-            Array.from(state.assistantMap.values())
-              .filter(
-                (assistant) =>
-                  assistant.invokeQueue.length > 0 && !assistant.onProcess
-              )
-              .forEach(
-                (assistant) => {
-                  assistantsStore.getState().processInvoke(assistant.vaConfig);
-                } // 同期関数でrequest => response まで処理
-              );
-          }
-        },
-        {
-          equalityFn: (prev, next) => {
-            return !(
-              next.hydrated &&
-              Array.from(next.assistantMap.values()).some(
-                (nextAssistant) => nextAssistant.invokeQueue.length > 0
-              )
-            );
-          },
-        }
-      );
-
-      // Topicの変化： Topic をトリガーにした Assistant の Invoke をキューに積む
-      if (unsubscribeTopic) {
-        unsubscribeTopic();
-      }
-      unsubscribeTopic = useMinutesStore(startTimestamp).subscribe(
-        (state) => state,
-        (state) => {
-          if (state.startTimestamp) {
-            const minutesStore = useMinutesStore(
-              state.startTimestamp
-            ).getState();
-            const assistantsStore = useMinutesAssistantStore(
-              state.startTimestamp
-            ).getState();
-            minutesStore.assistants.forEach((vaConfig) => {
-              assistantsStore.enqueueTopicRelatedInvoke(vaConfig);
-              /*
-        console.warn(
-          "useAssistantsStore: useVBStore.subscribe: topic",
-          vaConfig.label,
-          assistantsStore.getState().assistantsMap.get(vaConfig.assistantId)
-            ?.invokeQueue
-        );
-        */
-            });
-          }
-        },
-        {
-          equalityFn: (prev, next) => {
-            if (
-              prev.topics !== next.topics ||
-              prev.topics.length !== next.topics.length
-            ) {
-              return false;
-            }
-            return true;
-          },
-        }
-      );
-    }
-  },
-  {
-    equalityFn: (prev, next) => {
-      return prev.startTimestamp === next.startTimestamp;
-    },
-  }
-);
-
-// == Assistant Template ==
-export type AssistantTemplate = {
-  templateId: string;
-  description: string;
-  author: string;
-  config: VirtualAssistantConf;
-};
-
-// Action
-
-export const processActionAssistantStoreOpenHome = () => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const assistantsStore = useMinutesAssistantStore(startTimestamp).getState();
-  if (assistantsStore.hasHydrated) {
-    useMinutesStore(startTimestamp)
-      .getState()
-      .assistants.forEach((vaConfig) =>
-        assistantsStore.assistantDispatch(vaConfig)({
-          type: "clearAll",
-        })
-      );
-  }
 };

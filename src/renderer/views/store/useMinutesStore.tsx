@@ -32,12 +32,12 @@ import { SystemDefaultTemplate } from "../component/assistant/AssistantTemplates
 import { AIConfig } from "../component/common/aiConfig.jsx";
 import {
   changeTopicStartedPoint,
-  DiscussionSegment,
   mergeUpMinutesText,
   removeMinutesText,
   splitMinutesText,
   updateMinutesText,
-} from "../component/discussion/DiscussionSegment.jsx";
+} from "../../../common/discussion.js";
+import { DiscussionSegment } from "../../../common/discussion.js";
 import {
   DefaultSplitter,
   DiscussionSplitterConf,
@@ -159,7 +159,7 @@ export const useMinutesStore = (minutesStartTimestamp: number) => {
 };
 
 type QueuedAction = () => void;
-const useMinutesStoreCore = (startTimestamp: number) => {
+const useMinutesStoreCore = (minutesStartTimestamp: number) => {
   //console.log("useMinutesStoreCore", minutesStartTimestamp);
   let actionQueue: QueuedAction[] = [];
   const enqueueAction = (action: QueuedAction) => {
@@ -209,7 +209,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
         },
 
         // State
-        ...initMinutesState(startTimestamp),
+        ...initMinutesState(minutesStartTimestamp),
 
         // Dispatch
         // == AssistantConfDispatch ==
@@ -427,7 +427,7 @@ const useMinutesStoreCore = (startTimestamp: number) => {
           // 即時反映
           clearQueue();
           set({
-            ...initMinutesState(startTimestamp),
+            ...initMinutesState(minutesStartTimestamp),
             assistants: SystemDefaultTemplate.map((template) => ({
               ...template.config,
               assistantId: uuidv4(),
@@ -436,16 +436,22 @@ const useMinutesStoreCore = (startTimestamp: number) => {
         },
         deleteMinutes: () => {
           // 即時反映
-          console.warn("useMinutesStore: deleteMinutes: 0", startTimestamp);
+          console.warn(
+            "useMinutesStore: deleteMinutes: 0",
+            minutesStartTimestamp
+          );
           clearQueue();
           //useMinutesStoreCore(startTimestamp).persist.clearStorage();
           api.persist.clearStorage();
-          storeCache.delete(startTimestamp);
-          console.warn("useMinutesStore: deleteMinutes: 1", startTimestamp);
+          storeCache.delete(minutesStartTimestamp);
+          console.warn(
+            "useMinutesStore: deleteMinutes: 1",
+            minutesStartTimestamp
+          );
         },
       })),
       {
-        name: startTimestamp.toString(),
+        name: minutesStartTimestamp.toString(),
         storage: createJSONStorage(
           () => MinutesPersistStorage,
           ExpandJSONOptions
@@ -460,7 +466,11 @@ const useMinutesStoreCore = (startTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
-              console.log("useMinutesStoreCore: rehydrated", state);
+              console.log(
+                "useMinutesStoreCore: rehydrated",
+                state.startTimestamp,
+                state
+              );
             }
           };
         },

@@ -16,7 +16,7 @@ limitations under the License.
 import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Bookmark } from "@mui/icons-material";
 import { Avatar, Badge } from "@mui/material";
-import { DiscussionSegment } from "./DiscussionSegment.jsx";
+import { DiscussionSegment } from "../../../../common/discussion.js";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";

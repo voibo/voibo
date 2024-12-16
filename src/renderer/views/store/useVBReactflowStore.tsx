@@ -867,9 +867,107 @@ export const useVBReactflowStore = create<
   }))
 );
 
-// ==== VBStore Subscriber ====
+// ReactFlow standard subscribe
+useVBReactflowStore.subscribe((current, pre) => {
+  if (
+    current.topicNodes !== pre.topicNodes ||
+    current.assistantTreeNodes !== pre.assistantTreeNodes ||
+    current.contentNodes !== pre.contentNodes
+  ) {
+    useVBReactflowStore.setState({
+      nodes: [
+        ...constructTopicTreeNodes({
+          topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
+          topicNodes: useVBReactflowStore.getState().topicNodes,
+        }),
+        ...useVBReactflowStore.getState().assistantTreeNodes,
+        ...useVBReactflowStore.getState().contentNodes,
+      ],
+      edges: [
+        ...useVBReactflowStore.getState().topicTreeEdges,
+        ...useVBReactflowStore.getState().assistantTreeEdges,
+      ],
+    });
+  }
+});
 
-// # util
+// == Node Measured ==
+
+useVBReactflowStore.subscribe(
+  (state) => state.nodes,
+  (nodes, prevNodes) => {
+    const newlyMeasuredNodes = nodes.filter(
+      (node) =>
+        node.measured && // measured
+        !prevNodes.some(
+          (prevNode) => prevNode.id === node.id && prevNode.measured
+        ) // unmeasured at the previous state
+    );
+
+    if (newlyMeasuredNodes.length > 0) {
+      // can process with measured nodes
+      console.log(
+        "useVBReactflowStore.subscribe: Measured node:",
+        newlyMeasuredNodes
+      );
+      // topic nodes
+      useVBReactflowStore
+        .getState()
+        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
+    }
+  }
+);
+
+// assistant message Node 自動配置
+useVBReactflowStore.subscribe(
+  (state) => state.assistantTreeNodes,
+  (assistantTreeNodes, preAssistantTreeNodes) => {
+    // topic
+    assistantTreeNodes
+      .filter((node) => !!node.measured)
+      .filter(
+        (node) =>
+          !!preAssistantTreeNodes.find(
+            (preNode) =>
+              preNode.id === node.id && preNode.measured === undefined
+          )
+      )
+      // 位置が原点のものが未配置の可能性あり
+      .filter((node) => node.position.x === 0 && node.position.y == 0)
+      // 対象に
+      .forEach((node) => {
+        const message = (node as AssistantMessageNode).data.content;
+        if (message.connectedMessageIds.length > 0) {
+          const targetNode = useVBReactflowStore
+            .getState()
+            .nodes.find(
+              (node) =>
+                node.id ===
+                message.connectedMessageIds[
+                  message.connectedMessageIds.length - 1
+                ]
+            );
+          if (targetNode) {
+            // 対象Node　の右に配置して
+            useVBReactflowStore.getState().updateAssistantAt(targetNode);
+          }
+        }
+      });
+  },
+  {
+    equalityFn: (a, b) => {
+      return (
+        a.length === b.length &&
+        a.every(
+          (node, index) =>
+            node.id === b[index].id && node.measured === b[index].measured
+        )
+      );
+    },
+  }
+);
+
+// == Util ==
 
 // assistant 毎に配置すべきNodeを取得
 const updateAssistantLocatedNodeMap = () => {
@@ -918,19 +1016,6 @@ const updateAssistantLocatedNodeMap = () => {
   useVBReactflowStore.setState({
     _assistantLocatedNodeMap: assistantLocatedNodeMap,
   });
-};
-
-const updateTopicNode = (props: { targetTopic: Topic }) => {
-  const { targetTopic } = props;
-  const storedTopicNode = useVBReactflowStore
-    .getState()
-    .nodes.find(
-      (node) => isTopicNode(node) && node.data.content.id === targetTopic.id
-    ) as TopicNode | undefined;
-  if (storedTopicNode) {
-    storedTopicNode.data.content = targetTopic;
-    useVBReactflowStore.getState().upsertTopicNode(storedTopicNode);
-  }
 };
 
 const updateNodePosition = (node: Node) => {
@@ -1090,57 +1175,6 @@ const locateAssistantAt = (
   };
 };
 
-// === Subscribe ===
-useVBReactflowStore.subscribe((current, pre) => {
-  if (
-    current.topicNodes !== pre.topicNodes ||
-    current.assistantTreeNodes !== pre.assistantTreeNodes ||
-    current.contentNodes !== pre.contentNodes
-  ) {
-    // ノードの変更を検知して、トピックツリーを再構築
-    useVBReactflowStore.setState({
-      nodes: [
-        ...constructTopicTreeNodes({
-          topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
-          topicNodes: useVBReactflowStore.getState().topicNodes,
-        }),
-        ...useVBReactflowStore.getState().assistantTreeNodes,
-        ...useVBReactflowStore.getState().contentNodes,
-      ],
-      edges: [
-        ...useVBReactflowStore.getState().topicTreeEdges,
-        ...useVBReactflowStore.getState().assistantTreeEdges,
-      ],
-    });
-  }
-});
-
-// measured
-useVBReactflowStore.subscribe(
-  (state) => state.nodes,
-  (nodes, prevNodes) => {
-    const newlyMeasuredNodes = nodes.filter(
-      (node) =>
-        node.measured && // measured が存在する
-        !prevNodes.some(
-          (prevNode) => prevNode.id === node.id && prevNode.measured
-        ) // 前回の状態では未計測だった
-    );
-
-    if (newlyMeasuredNodes.length > 0) {
-      // measured が付与されたノードが見つかったら処理を行う
-      console.warn(
-        "useVBReactflowStore.subscribe: Measured node:",
-        newlyMeasuredNodes
-      );
-      // topic nodes
-      useVBReactflowStore
-        .getState()
-        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
-    }
-  }
-);
-
 const calcRelocatedTopicBothEndsNodes = (
   topicNodes: TopicNode[],
   topicBothEndsNodes: TopicBothEndsNode[]
@@ -1188,7 +1222,6 @@ const calcRelocatedTopicBothEndsNodes = (
   ];
 };
 
-// Assistant
 const updateAssistantNodes = ({
   startTimestamp,
   assistantsMap,
@@ -1226,190 +1259,120 @@ const updateAssistantNodes = ({
   }
 };
 
+// === prepareNode with Subscribe ===
+
 let unsubscribeAssistantStore: (() => void) | null = null;
-useVBStore.subscribe(
-  (state) => state.startTimestamp,
-  async (startTimestamp) => {
-    // content node
-    if (startTimestamp) {
-      // 1. 初期状態を手動で取得してノードをセット
-      console.log("useVBReactflowStore: updatedAssistant: init");
-      updateAssistantNodes({
-        startTimestamp,
-        assistantsMap:
-          useMinutesAssistantStore(startTimestamp).getState().assistantsMap,
-      });
+export const prepareAssistantNodeTo = (startTimestamp: number) => {
+  // 1. 初期状態を手動で取得してノードをセット
+  console.log("useVBReactflowStore: updatedAssistant: init");
+  updateAssistantNodes({
+    startTimestamp,
+    assistantsMap:
+      useMinutesAssistantStore(startTimestamp).getState().assistantsMap,
+  });
 
-      // 2. contentMap に変化があった場合に購読して更新
-      if (unsubscribeAssistantStore) {
-        unsubscribeAssistantStore();
-      }
-      unsubscribeAssistantStore = useMinutesAssistantStore(
-        startTimestamp
-      ).subscribe(
-        (state) => state.assistantsMap,
-        (assistantsMap, assistantPreMap) => {
-          // assistant node すべてを再構築
-          updateAssistantNodes({ startTimestamp, assistantsMap });
-          updateAssistantLocatedNodeMap();
-          //　レイアウト処理は subscribe で行う
-        },
-        {
-          equalityFn: (a, b) => {
-            return (
-              // 1. Map のサイズが同じかどうか
-              a.size === b.size &&
-              Array.from(a).every(([key, value]) => b.has(key)) &&
-              // 2. 各要素のmessageが同じかどうか。 Node生成後の変更は考慮しない
-              Array.from(a).every(([key, value]) => {
-                const target = b.get(key);
-                if (target) {
-                  return (
-                    value.messages &&
-                    target.messages &&
-                    value.messages.length === target.messages.length &&
-                    value.messages.every((message, index) => {
-                      const targetMessage = target.messages![index];
-                      return (
-                        message.id === targetMessage.id &&
-                        message.content === targetMessage.content &&
-                        message.connectedMessageIds.length ===
-                          targetMessage.connectedMessageIds.length &&
-                        message.connectedMessageIds.every(
-                          (id, index) =>
-                            id === targetMessage.connectedMessageIds[index]
-                        ) &&
-                        Array.isArray(message.groupIds) &&
-                        Array.isArray(targetMessage.groupIds) &&
-                        message.groupIds.length ===
-                          targetMessage.groupIds.length &&
-                        message.groupIds.every(
-                          (id, index) => id === targetMessage.groupIds[index]
-                        )
-                      );
-                    })
-                  );
-                }
-                return false;
-              })
-            );
-          },
-        }
-      );
-    }
+  // 2. contentMap に変化があった場合に購読して更新
+  if (unsubscribeAssistantStore) {
+    unsubscribeAssistantStore();
   }
-);
-
-// assistant message Node 自動配置
-useVBReactflowStore.subscribe(
-  (state) => state.assistantTreeNodes,
-  (assistantTreeNodes, preAssistantTreeNodes) => {
-    // topic
-    assistantTreeNodes
-      .filter((node) => !!node.measured)
-      .filter(
-        (node) =>
-          !!preAssistantTreeNodes.find(
-            (preNode) =>
-              preNode.id === node.id && preNode.measured === undefined
-          )
-      )
-      // 位置が原点のものが未配置の可能性あり
-      .filter((node) => node.position.x === 0 && node.position.y == 0)
-      // 対象に
-      .forEach((node) => {
-        const message = (node as AssistantMessageNode).data.content;
-        if (message.connectedMessageIds.length > 0) {
-          const targetNode = useVBReactflowStore
-            .getState()
-            .nodes.find(
-              (node) =>
-                node.id ===
-                message.connectedMessageIds[
-                  message.connectedMessageIds.length - 1
-                ]
-            );
-          if (targetNode) {
-            // 対象Node　の右に配置して
-            useVBReactflowStore.getState().updateAssistantAt(targetNode);
-          }
-        }
-      });
-  },
-  {
-    equalityFn: (a, b) => {
-      return (
-        a.length === b.length &&
-        a.every(
-          (node, index) =>
-            node.id === b[index].id && node.measured === b[index].measured
-        )
-      );
+  unsubscribeAssistantStore = useMinutesAssistantStore(
+    startTimestamp
+  ).subscribe(
+    (state) => state.assistantsMap,
+    (assistantsMap, assistantPreMap) => {
+      // assistant node すべてを再構築
+      updateAssistantNodes({ startTimestamp, assistantsMap });
+      updateAssistantLocatedNodeMap();
+      //レイアウト処理は subscribe で行う
     },
-  }
-);
-
-// Content
-// content の変更を検知して、content node を再構築
+    {
+      equalityFn: (a, b) => {
+        return (
+          // 1. Map のサイズが同じかどうか
+          a.size === b.size &&
+          Array.from(a).every(([key, value]) => b.has(key)) &&
+          // 2. 各要素のmessageが同じかどうか。 Node生成後の変更は考慮しない
+          Array.from(a).every(([key, value]) => {
+            const target = b.get(key);
+            if (target) {
+              return (
+                value.messages &&
+                target.messages &&
+                value.messages.length === target.messages.length &&
+                value.messages.every((message, index) => {
+                  const targetMessage = target.messages![index];
+                  return (
+                    message.id === targetMessage.id &&
+                    message.content === targetMessage.content &&
+                    message.connectedMessageIds.length ===
+                      targetMessage.connectedMessageIds.length &&
+                    message.connectedMessageIds.every(
+                      (id, index) =>
+                        id === targetMessage.connectedMessageIds[index]
+                    ) &&
+                    Array.isArray(message.groupIds) &&
+                    Array.isArray(targetMessage.groupIds) &&
+                    message.groupIds.length === targetMessage.groupIds.length &&
+                    message.groupIds.every(
+                      (id, index) => id === targetMessage.groupIds[index]
+                    )
+                  );
+                })
+              );
+            }
+            return false;
+          })
+        );
+      },
+    }
+  );
+};
 
 let unsubscribeContentStore: (() => void) | null = null;
-useVBStore.subscribe(
-  (state) => state.startTimestamp,
-  (startTimestamp) => {
-    // content node
-    if (startTimestamp && startTimestamp > 0) {
-      // 1. 初期状態を手動で取得してノードをセット
-      useVBReactflowStore.setState({
-        contentNodes: Array.from(
-          useMinutesContentStore(startTimestamp).getState().contentMap.values()
-        ).map((content) => makeContentNode({ content })),
-      });
+export const prepareContentsNodeTo = (startTimestamp: number) => {
+  useVBReactflowStore.setState({
+    contentNodes: Array.from(
+      useMinutesContentStore(startTimestamp).getState().contentMap.values()
+    ).map((content) => makeContentNode({ content })),
+  });
 
-      // 2. contentMap に変化があった場合に購読して更新
-      if (unsubscribeContentStore) {
-        // 既存の購読があれば一度解除する
-        unsubscribeContentStore();
-      }
-      unsubscribeContentStore = useMinutesContentStore(
-        startTimestamp
-      ).subscribe(
-        (state) => state.contentMap,
-        (state) => {
-          useVBReactflowStore.setState({
-            contentNodes: Array.from(state.values()).map((content) =>
-              makeContentNode({ content })
-            ),
-          });
-        },
-        {
-          equalityFn: (a, b) => {
-            return (
-              a.size === b.size &&
-              Array.from(a).every(
-                ([key, value]) =>
-                  b.has(key) &&
-                  value.id === b.get(key)?.id &&
-                  value.type === b.get(key)?.type &&
-                  value.width === b.get(key)?.width &&
-                  value.position &&
-                  b.get(key)?.position &&
-                  value.position.x &&
-                  b.get(key)?.position.x &&
-                  value.position.y &&
-                  b.get(key)?.position.y &&
-                  Array.isArray(value.groupIds) &&
-                  Array.isArray(b.get(key)?.groupIds) &&
-                  value.groupIds.length === b.get(key)?.groupIds.length &&
-                  value.groupIds.every(
-                    (groupId) =>
-                      b.get(key)?.groupIds.includes(groupId) &&
-                      value.groupIds.includes(groupId)
-                  )
+  if (unsubscribeContentStore) unsubscribeContentStore();
+  unsubscribeContentStore = useMinutesContentStore(startTimestamp).subscribe(
+    (state) => state.contentMap,
+    (state) => {
+      useVBReactflowStore.setState({
+        contentNodes: Array.from(state.values()).map((content) =>
+          makeContentNode({ content })
+        ),
+      });
+    },
+    {
+      equalityFn: (a, b) => {
+        return (
+          a.size === b.size &&
+          Array.from(a).every(
+            ([key, value]) =>
+              b.has(key) &&
+              value.id === b.get(key)?.id &&
+              value.type === b.get(key)?.type &&
+              value.width === b.get(key)?.width &&
+              value.position &&
+              b.get(key)?.position &&
+              value.position.x &&
+              b.get(key)?.position.x &&
+              value.position.y &&
+              b.get(key)?.position.y &&
+              Array.isArray(value.groupIds) &&
+              Array.isArray(b.get(key)?.groupIds) &&
+              value.groupIds.length === b.get(key)?.groupIds.length &&
+              value.groupIds.every(
+                (groupId) =>
+                  b.get(key)?.groupIds.includes(groupId) &&
+                  value.groupIds.includes(groupId)
               )
-            );
-          },
-        }
-      );
+          )
+        );
+      },
     }
-  }
-);
+  );
+};
