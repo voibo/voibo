@@ -104,9 +104,6 @@ export type LangChainAgentResponse = {
   fileIds?: string[];
 };
 
-// == Virtual Assistant ==
-export const GENERAL_ASSISTANT_NAME = "General Assistant";
-
 // == LangChain ==
 
 export const TopicSchema =

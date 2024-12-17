@@ -17,7 +17,6 @@ import { Folder, ViewAgenda } from "@mui/icons-material";
 import { Button, ButtonGroup } from "@mui/material";
 import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import { AgendaSelectorDialogBody } from "../../component/agenda/AgendaSelector.jsx";
 import { AIAssistantAvatar } from "../../component/assistant/message/AIAssistantAvatar.jsx";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
@@ -78,11 +77,7 @@ export const NodeBase = (props: {
   // assistants
   const assistants = useMinutesStore(startTimestamp)(
     (state) => state.assistants
-  ).filter(
-    (assistant) =>
-      assistant.assistantId !== GENERAL_ASSISTANT_NAME &&
-      assistant.updateMode === "manual"
-  );
+  ).filter((assistant) => assistant.updateMode === "manual");
 
   // agendaList
   const agendaList = (props.nodeProps.data.content.agendaIds ?? []) // 過渡期のためのデータ変換

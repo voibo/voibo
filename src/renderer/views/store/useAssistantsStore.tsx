@@ -25,7 +25,6 @@ import {
 } from "zustand/middleware";
 import { IPCInvokeKeys, IPCReceiverKeys } from "../../../common/constants.js";
 import {
-  GENERAL_ASSISTANT_NAME,
   getDefaultMessage,
   InvokeResult,
   Message,
@@ -615,7 +614,7 @@ export type AssistantsDispatchStore = {
     vaConfig: VirtualAssistantConf
   ) => (action: AssistantAction) => void;
   enqueueTopicRelatedInvoke: (vaConfig: VirtualAssistantConf) => void;
-  processInvoke: (vaConfig: VirtualAssistantConf) => void;
+  processInvokeSync: (vaConfig: VirtualAssistantConf) => void;
 };
 
 const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
@@ -763,15 +762,10 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         enqueueTopicRelatedInvoke: (vaConfig) => {
           if (!get().hasHydrated) {
-            console.warn("enqueueTopicRelatedInvoke: _hasHydrated is false");
+            console.warn("enqueueTopicRelatedInvoke: not hydrated");
             return;
           }
           const assistantConfig = vaConfig;
-          // check if assistant is GeneralAssistant
-          if (assistantConfig.assistantName === GENERAL_ASSISTANT_NAME) {
-            return;
-          }
-
           const startTimestamp = useVBStore.getState().startTimestamp;
           const state = get().getOrInitAssistant(vaConfig);
           const dispatch = get().assistantDispatch(vaConfig);
@@ -1190,7 +1184,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出される
         // 時間のかかる「同期」関数：　敢えて set まで完全に同期させることで transaction を保証する
-        processInvoke: (vaConfig) => {
+        processInvokeSync: (vaConfig) => {
           if (!minutesStartTimestamp || !get().hasHydrated) {
             console.warn("processInvoke: not loaded", vaConfig.label);
             return;

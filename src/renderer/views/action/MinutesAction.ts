@@ -45,9 +45,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
       startTimestamp = Date.now();
       // title
       useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
-      startTimestamp = Date.now();
-      // title
-      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
+
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
 
@@ -82,18 +80,6 @@ export const processMinutesAction = async (action: MinutesAction) => {
     default:
       console.warn("processTopicAction: unexpected default", action);
   }
-};
-
-const switchStoresCurrentMinutes = async (startTimestamp: number) => {
-  // renderer
-  useVBStore.setState({ startTimestamp });
-  await Promise.all([
-    useMinutesStore(startTimestamp).getState().waitForHydration(),
-    useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
-    useMinutesAssistantStore(startTimestamp).getState().waitForHydration(),
-    useMinutesContentStore(startTimestamp).getState().waitForHydration(),
-    useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
-  ]);
 };
 
 const renderStage = () => {
@@ -134,7 +120,7 @@ const prepareStoresTo = async (startTimestamp: number) => {
   ]);
 
   // == Subscribe stores ==
-  prepareAssistantWithHydratedStores(startTimestamp);
+  subscribeAssistantInvokeQueue(startTimestamp);
 
   // == Subscribe to reactflow ==
   useVBReactflowStore.getState().relocateTopics();
@@ -143,16 +129,11 @@ const prepareStoresTo = async (startTimestamp: number) => {
 };
 
 // Subscribe to Assistant stores
-let unsubscribeAssistantProcessInvoke: (() => void) | null = null;
-let unsubscribeTopicChange: (() => void) | null = null;
-const prepareAssistantWithHydratedStores = (startTimestamp: number) => {
+let unsubscribeAssistantInvokeQueue: (() => void) | null = null;
+const subscribeAssistantInvokeQueue = (startTimestamp: number) => {
   const assistantsStore = useMinutesAssistantStore(startTimestamp);
-
-  // In case of invokeQueue is remained, start processing
-  if (unsubscribeAssistantProcessInvoke) {
-    unsubscribeAssistantProcessInvoke();
-  }
-  unsubscribeAssistantProcessInvoke = assistantsStore.subscribe(
+  if (unsubscribeAssistantInvokeQueue) unsubscribeAssistantInvokeQueue();
+  unsubscribeAssistantInvokeQueue = assistantsStore.subscribe(
     (assistantState) => assistantState.assistantsMap,
     (state) => {
       Array.from(state.values())
@@ -162,38 +143,13 @@ const prepareAssistantWithHydratedStores = (startTimestamp: number) => {
         )
         .forEach(
           (assistant) =>
-            assistantsStore.getState().processInvoke(assistant.vaConfig) // 同期関数でrequest => response まで処理)
+            assistantsStore.getState().processInvokeSync(assistant.vaConfig) // sync function to process request => response
         );
     },
     {
       equalityFn: (prev, next) =>
         !Array.from(next.values()).some(
           (nextAssistant) => nextAssistant.invokeQueue.length > 0
-        ),
-    }
-  );
-
-  // Enqueue invoke of Assistant triggered by Topic change
-  if (unsubscribeTopicChange) {
-    unsubscribeTopicChange();
-  }
-  unsubscribeTopicChange = useMinutesStore(startTimestamp).subscribe(
-    (state) => ({ topics: state.topics, assistants: state.assistants }),
-    (state) => {
-      useMinutesStore(startTimestamp)
-        .getState()
-        .assistants.forEach((vaConfig) => {
-          useMinutesAssistantStore(startTimestamp)
-            .getState()
-            .enqueueTopicRelatedInvoke(vaConfig);
-        });
-    },
-    {
-      equalityFn: (prev, next) =>
-        !(
-          prev !== next ||
-          prev.topics.length !== next.topics.length ||
-          prev.assistants.length !== next.assistants.length
         ),
     }
   );
