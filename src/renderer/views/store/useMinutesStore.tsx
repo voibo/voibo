@@ -23,7 +23,7 @@ import {
 import { createStore, del, get, set } from "idb-keyval";
 import { v4 as uuidv4 } from "uuid";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
-import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
+import { NO_MINUTES_START_TIMESTAMP, useVBStore } from "./useVBStore.jsx";
 import {
   EnglishTopicPrompt,
   TopicSchema,
@@ -42,8 +42,14 @@ import {
   DefaultSplitter,
   DiscussionSplitterConf,
 } from "../component/topic/DiscussionSplitter.jsx";
-import { Topic } from "../../../common/content/topic.js";
+import {
+  LLMAnalyzedTopics,
+  Topic,
+  TopicRequest,
+  TopicSeed,
+} from "../../../common/content/topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
+import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -66,7 +72,10 @@ const MinutesPersistStorage: StateStorage = {
   },
 };
 
-export type MinutesStore = {
+// Topic Manager
+
+// Minutes Store
+type MinutesStore = {
   startTimestamp: number;
   discussionSplitter: DiscussionSplitterConf;
   discussion: DiscussionSegment[];
@@ -75,24 +84,44 @@ export type MinutesStore = {
   assistants: VirtualAssistantConf[];
 };
 
-export const DefaultMinutesStore: MinutesStore = {
-  startTimestamp: NO_MINUTES_START_TIMESTAMP,
-  discussionSplitter: DefaultSplitter,
-  discussion: [],
-  topicAIConf: {
-    modelType: "gpt-4",
-    systemPrompt: EnglishTopicPrompt,
-    structuredOutputSchema: TopicSchema,
-    temperature: 0,
-  },
-  topics: [],
-  assistants: [],
+type TopicManagerState = {
+  // res: state
+  topicProcessing: boolean;
+  topicError: Error | null;
+  topicRes: {
+    data: LLMAnalyzedTopics;
+  } | null;
+
+  // request prompt queue
+  topicPrompts: TopicRequest[];
+
+  // seed
+  topicSeeds: TopicSeed[];
+};
+
+const DefaultTopicManagerState: TopicManagerState = {
+  topicProcessing: false,
+  topicError: null,
+  topicRes: null,
+  topicPrompts: [],
+  topicSeeds: [],
 };
 
 export const initMinutesState = (startTimestamp: number): MinutesStore => {
   return {
-    ...DefaultMinutesStore,
     startTimestamp: startTimestamp,
+    discussionSplitter: DefaultSplitter,
+    discussion: [],
+    topicAIConf: {
+      modelType: "gpt-4",
+      systemPrompt: EnglishTopicPrompt,
+      structuredOutputSchema: TopicSchema,
+      temperature: 0,
+    },
+    topics: [],
+    assistants: [],
+
+    // topic manager
   };
 };
 
@@ -102,6 +131,21 @@ export type MinutesDispatchStore = AssistantConfDispatch &
   TopicDispatch &
   DiscussionDispatch &
   MinutesDispatch;
+
+type TopicManagerDispatch = {
+  updateTopicSeeds: (enforceUpdateAll: boolean) => void;
+  startTopicProcess: () => void;
+  resTopicError: (props: {
+    error: Error;
+    prompts: TopicRequest[];
+    topicSeed: TopicSeed[];
+  }) => void;
+  resTopicSuccess: (props: {
+    res: { data: LLMAnalyzedTopics };
+    prompts: TopicRequest[];
+    topicSeed: TopicSeed[];
+  }) => void;
+};
 
 type AssistantConfDispatch = {
   addVirtualAssistantConf: (assistant: VirtualAssistantConf) => void;
@@ -478,3 +522,116 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
     )
   );
 };
+
+export const useTopicStore = create<TopicManagerState & TopicManagerDispatch>()(
+  subscribeWithSelector((set, get, api) => ({
+    // data
+    topicProcessing: false,
+    topicError: null,
+    topicRes: null,
+    topicPrompts: [],
+    topicSeeds: [],
+
+    // action
+    startTopicProcess: () => {
+      set({ topicProcessing: true });
+    },
+
+    updateTopicSeeds: (enforceUpdateAll: boolean) => {
+      // 現在の全discussionから、全topicSeedを再構築する
+      const topicSeeds: TopicSeed[] = [];
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      const minutesStore = useMinutesStore(startTimestamp).getState();
+      minutesStore.discussion.forEach((segment) => {
+        const currentStartTimestamp = Number(segment.timestamp);
+        const currentEndTimestamp = segment.texts.reduce(
+          (pre, current) => pre + Number(current.length) / 1000,
+          currentStartTimestamp
+        );
+        const text = segment.texts.reduce(
+          (inPrev, inCurrent) => inPrev + inCurrent.text,
+          ""
+        );
+        if (segment.topicStartedPoint) {
+          topicSeeds.push({
+            startTimestamp: currentStartTimestamp,
+            endTimestamp: currentEndTimestamp,
+            text,
+            requireUpdate: enforceUpdateAll,
+            agendaIdList: [
+              ...useMinutesAgendaStore(startTimestamp)
+                .getState()
+                .getDiscussedAgendas({
+                  startFromMStartMsec: currentStartTimestamp * 1000,
+                  endFromMStartMsec: currentEndTimestamp * 1000,
+                })
+                .map((agenda) => agenda.id),
+            ],
+          });
+          //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
+        } else if (topicSeeds.length > 0) {
+          topicSeeds[topicSeeds.length - 1].endTimestamp = currentEndTimestamp;
+          topicSeeds[topicSeeds.length - 1].text += "\n" + text;
+        }
+      });
+
+      // 現在のtopicSeedsと比較して、変更があれば更新対象にする
+      let updatedTopicSeed: TopicSeed[] = [];
+      if (enforceUpdateAll) {
+        updatedTopicSeed = topicSeeds;
+      } else {
+        topicSeeds.forEach((seed) => {
+          const currentSeed = useTopicStore
+            .getState()
+            .topicSeeds.find(
+              (currentSeed) =>
+                currentSeed.startTimestamp == seed.startTimestamp &&
+                currentSeed.endTimestamp == seed.endTimestamp &&
+                currentSeed.text == seed.text
+            );
+          if (!currentSeed) {
+            updatedTopicSeed.push({ ...seed, requireUpdate: true });
+          } else {
+            updatedTopicSeed.push(seed);
+          }
+        });
+      }
+
+      // 更新対象の topicSeed を TopicRequest に変換
+      const targetTopicSeedRequests: TopicRequest[] = updatedTopicSeed
+        .filter((seed) => seed.requireUpdate)
+        .map((seed) => {
+          return {
+            text: seed.text,
+            seedData: seed,
+            isRequested: false,
+          };
+        });
+
+      set({
+        topicPrompts: targetTopicSeedRequests,
+        topicSeeds: updatedTopicSeed,
+      });
+    },
+
+    resTopicSuccess: ({ res, prompts, topicSeed }) => {
+      set({
+        topicProcessing: false,
+        topicError: null,
+        topicRes: res,
+        topicPrompts: prompts,
+        //topicSeeds: topicSeed,
+      });
+    },
+
+    resTopicError: ({ error, prompts, topicSeed }) => {
+      set({
+        topicProcessing: false,
+        topicError: error,
+        topicRes: null,
+        topicPrompts: prompts,
+        //topicSeeds: topicSeed,
+      });
+    },
+  }))
+);

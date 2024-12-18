@@ -15,7 +15,7 @@ limitations under the License.
 */
 import { DiscussionSegment } from "../../../common/discussion.js";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
-import { useTopicStore } from "../store/useTopicManagerStore.jsx";
+import { useTopicStore } from "../store/useMinutesStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
 

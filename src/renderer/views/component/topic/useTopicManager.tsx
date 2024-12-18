@@ -16,14 +16,14 @@ limitations under the License.
 import { useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { IPCInvokeKeys } from "../../../../common/constants.js";
+import { isLLMAnalyzedTopics } from "../../../../common/content/topic.js";
 import {
   EnglishTopicPrompt,
   TopicInvokeParam,
 } from "../../../../common/content/assisatant.js";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
-import { useTopicStore } from "../../store/useTopicManagerStore.jsx";
+import { useTopicStore } from "../../store/useMinutesStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { isLLMAnalyzedTopics } from "../../../../common/content/topic.js";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
 
@@ -39,17 +39,21 @@ export function useTopicManager(): void {
 
   // process stocked prompts
   useEffect(() => {
-    const targetIndex = topicState.prompts.findIndex((v) => !v.isRequested);
-    if (!topicState.processing && targetIndex > -1) {
+    const targetIndex = topicState.topicPrompts.findIndex(
+      (v) => !v.isRequested
+    );
+    if (!topicState.topicProcessing && targetIndex > -1) {
       const handleRequest = async () => {
-        topicState.startProcess();
+        topicState.startTopicProcess();
 
         // make a request
-        const currentTopic = topicState.prompts[targetIndex];
+        const currentTopic = topicState.topicPrompts[targetIndex];
         let lastResult = "";
-        if (topicState.res && topicState.res.data.topics.length > 0) {
+        if (topicState.topicRes && topicState.topicRes.data.topics.length > 0) {
           const lastTopic =
-            topicState.res.data.topics[topicState.res.data.topics.length - 1];
+            topicState.topicRes.data.topics[
+              topicState.topicRes.data.topics.length - 1
+            ];
           lastResult = `${lastTopic.title}\n\n ${
             Array.isArray(lastTopic.topic)
               ? lastTopic.topic.join("\n")
@@ -79,7 +83,7 @@ export function useTopicManager(): void {
         }
 
         const prompt = `"""Immediate Previous Content\n${lastResult}\n"""\n\n"""Content\n${currentTopic.text}\n"""\n`;
-        const updatePrompts = [...topicState.prompts];
+        const updatePrompts = [...topicState.topicPrompts];
         updatePrompts[targetIndex].isRequested = true;
         await window.electron
           .invoke(IPCInvokeKeys.GET_TOPIC, {
@@ -99,13 +103,13 @@ export function useTopicManager(): void {
                 topic.seedData = currentTopic.seedData;
                 topic.agendaIds = currentTopic.seedData.agendaIdList ?? [];
               });
-              const responsePrompt = topicState.prompts[targetIndex];
+              const responsePrompt = topicState.topicPrompts[targetIndex];
               topicState.topicSeeds.forEach((seed) => {
                 if (seed == responsePrompt.seedData) {
                   seed.requireUpdate = false;
                 }
               });
-              topicState.resSuccess({
+              topicState.resTopicSuccess({
                 res: {
                   data: resJSON,
                 },
@@ -114,13 +118,13 @@ export function useTopicManager(): void {
               });
             } else {
               console.error("resError: Invalid JSON data", resJSON);
-              const responsePrompt = topicState.prompts[targetIndex];
+              const responsePrompt = topicState.topicPrompts[targetIndex];
               topicState.topicSeeds.forEach((seed) => {
                 if (seed == responsePrompt.seedData) {
                   seed.requireUpdate = false;
                 }
               });
-              topicState.resError({
+              topicState.resTopicError({
                 error: new Error("Invalid JSON data"),
                 prompts: updatePrompts,
                 topicSeed: topicState.topicSeeds,
@@ -129,13 +133,13 @@ export function useTopicManager(): void {
           })
           .catch((e) => {
             console.error("resError :general error", e);
-            const responsePrompt = topicState.prompts[targetIndex];
+            const responsePrompt = topicState.topicPrompts[targetIndex];
             topicState.topicSeeds.forEach((seed) => {
               if (seed == responsePrompt.seedData) {
                 seed.requireUpdate = false;
               }
             });
-            topicState.resError({
+            topicState.resTopicError({
               error: e,
               prompts: updatePrompts,
               topicSeed: topicState.topicSeeds,
@@ -145,17 +149,21 @@ export function useTopicManager(): void {
 
       handleRequest();
     }
-  }, [topicState.processing, topicState.prompts, topicState.res]);
+  }, [
+    topicState.topicProcessing,
+    topicState.topicPrompts,
+    topicState.topicRes,
+  ]);
 
   useEffect(() => {
-    if (topicState.res) {
-      console.log("useTopicManager: setTopic", topicState.res.data.topics);
+    if (topicState.topicRes) {
+      console.log("useTopicManager: setTopic", topicState.topicRes.data.topics);
       processTopicAction({
         type: "setTopic",
         payload: {
-          topics: topicState.res.data.topics,
+          topics: topicState.topicRes.data.topics,
         },
       });
     }
-  }, [topicState.res]);
+  }, [topicState.topicRes]);
 }

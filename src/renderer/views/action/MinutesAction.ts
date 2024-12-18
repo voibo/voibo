@@ -20,7 +20,7 @@ import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
-import { useTopicStore } from "../store/useTopicManagerStore.jsx";
+import { useTopicStore } from "../store/useMinutesStore.jsx";
 import {
   prepareAssistantNodeTo,
   prepareContentsNodeTo,
@@ -163,7 +163,7 @@ let unsubscribeTopicInvokeQueue: (() => void) | null = null;
 const subscribeTopicInvokeQueue = () => {
   if (unsubscribeTopicInvokeQueue) unsubscribeTopicInvokeQueue();
   unsubscribeTopicInvokeQueue = useTopicStore.subscribe(
-    (state) => state.res,
+    (state) => state.topicRes,
     (res) => {
       if (res) {
         console.log("useTopicManager: setTopic", res.data.topics);
