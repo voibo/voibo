@@ -31,7 +31,6 @@ import { Topic } from "../../../../common/content/topic.js";
 import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
 import { useDiscussionHistory } from "../discussion/DiscussionHistory.jsx";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
-import { useTopicStore } from "../../store/useMinutesStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
@@ -150,7 +149,10 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const updateTopicSeeds = useMinutesStore(startTimestamp)(
+    (state) => state.updateTopicSeeds
+  );
   const [openDialog, setOpenDialog] = useState(false);
 
   const handleClick = () => {

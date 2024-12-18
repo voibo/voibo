@@ -22,7 +22,6 @@ import {
   TopicInvokeParam,
 } from "../../../../common/content/assisatant.js";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
-import { useTopicStore } from "../../store/useMinutesStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
@@ -32,7 +31,7 @@ export function useTopicManager(): void {
   const topicAIConf = useMinutesStore(startTimestamp)(
     (state) => state.topicAIConf
   );
-  const topicState = useTopicStore((state) => state);
+  const topicState = useMinutesStore(startTimestamp)((state) => state);
   const getAgenda = useMinutesAgendaStore(startTimestamp)(
     (state) => state.getAgenda
   );

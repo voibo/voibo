@@ -72,10 +72,8 @@ const MinutesPersistStorage: StateStorage = {
   },
 };
 
-// Topic Manager
-
-// Minutes Store
-type MinutesStore = {
+// === State ===
+type MinutesState = {
   startTimestamp: number;
   discussionSplitter: DiscussionSplitterConf;
   discussion: DiscussionSegment[];
@@ -99,16 +97,11 @@ type TopicManagerState = {
   topicSeeds: TopicSeed[];
 };
 
-const DefaultTopicManagerState: TopicManagerState = {
-  topicProcessing: false,
-  topicError: null,
-  topicRes: null,
-  topicPrompts: [],
-  topicSeeds: [],
-};
+export type MinutesStore = MinutesState & TopicManagerState;
 
-export const initMinutesState = (startTimestamp: number): MinutesStore => {
+const initMinutesState = (startTimestamp: number): MinutesStore => {
   return {
+    // MinutesState
     startTimestamp: startTimestamp,
     discussionSplitter: DefaultSplitter,
     discussion: [],
@@ -121,11 +114,17 @@ export const initMinutesState = (startTimestamp: number): MinutesStore => {
     topics: [],
     assistants: [],
 
-    // topic manager
+    // TopicManagerState
+    topicProcessing: false,
+    topicError: null,
+    topicRes: null,
+    topicPrompts: [],
+    topicSeeds: [],
   };
 };
 
-export type MinutesDispatchStore = AssistantConfDispatch &
+export type MinutesDispatchStore = TopicManagerDispatch &
+  AssistantConfDispatch &
   DiscussionSplitterConfDispatch &
   TopicAIConfDispatch &
   TopicDispatch &
@@ -374,6 +373,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         setMinutesLines: (minutes) => {
           const action = () => {
             set((state) => ({ discussion: [...state.discussion, ...minutes] }));
+            get().updateTopicSeeds(false);
           };
           if (!get().hasHydrated) {
             enqueueAction(action);
@@ -493,6 +493,109 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             minutesStartTimestamp
           );
         },
+
+        // == TopicManagerDispatch ==
+
+        // action
+        startTopicProcess: () => {
+          set({ topicProcessing: true });
+        },
+
+        updateTopicSeeds: (enforceUpdateAll: boolean) => {
+          // 現在の全discussionから、全topicSeedを再構築する
+          const topicSeeds: TopicSeed[] = [];
+          const startTimestamp = useVBStore.getState().startTimestamp;
+          const minutesStore = useMinutesStore(startTimestamp).getState();
+          minutesStore.discussion.forEach((segment) => {
+            const currentStartTimestamp = Number(segment.timestamp);
+            const currentEndTimestamp = segment.texts.reduce(
+              (pre, current) => pre + Number(current.length) / 1000,
+              currentStartTimestamp
+            );
+            const text = segment.texts.reduce(
+              (inPrev, inCurrent) => inPrev + inCurrent.text,
+              ""
+            );
+            if (segment.topicStartedPoint) {
+              topicSeeds.push({
+                startTimestamp: currentStartTimestamp,
+                endTimestamp: currentEndTimestamp,
+                text,
+                requireUpdate: enforceUpdateAll,
+                agendaIdList: [
+                  ...useMinutesAgendaStore(startTimestamp)
+                    .getState()
+                    .getDiscussedAgendas({
+                      startFromMStartMsec: currentStartTimestamp * 1000,
+                      endFromMStartMsec: currentEndTimestamp * 1000,
+                    })
+                    .map((agenda) => agenda.id),
+                ],
+              });
+              //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
+            } else if (topicSeeds.length > 0) {
+              topicSeeds[topicSeeds.length - 1].endTimestamp =
+                currentEndTimestamp;
+              topicSeeds[topicSeeds.length - 1].text += "\n" + text;
+            }
+          });
+
+          // 現在のtopicSeedsと比較して、変更があれば更新対象にする
+          let updatedTopicSeed: TopicSeed[] = [];
+          if (enforceUpdateAll) {
+            updatedTopicSeed = topicSeeds;
+          } else {
+            topicSeeds.forEach((seed) => {
+              const currentSeed = get().topicSeeds.find(
+                (currentSeed) =>
+                  currentSeed.startTimestamp == seed.startTimestamp &&
+                  currentSeed.endTimestamp == seed.endTimestamp &&
+                  currentSeed.text == seed.text
+              );
+              if (!currentSeed) {
+                updatedTopicSeed.push({ ...seed, requireUpdate: true });
+              } else {
+                updatedTopicSeed.push(seed);
+              }
+            });
+          }
+
+          // 更新対象の topicSeed を TopicRequest に変換
+          const targetTopicSeedRequests: TopicRequest[] = updatedTopicSeed
+            .filter((seed) => seed.requireUpdate)
+            .map((seed) => {
+              return {
+                text: seed.text,
+                seedData: seed,
+                isRequested: false,
+              };
+            });
+
+          set({
+            topicPrompts: targetTopicSeedRequests,
+            topicSeeds: updatedTopicSeed,
+          });
+        },
+
+        resTopicSuccess: ({ res, prompts, topicSeed }) => {
+          set({
+            topicProcessing: false,
+            topicError: null,
+            topicRes: res,
+            topicPrompts: prompts,
+            //topicSeeds: topicSeed,
+          });
+        },
+
+        resTopicError: ({ error, prompts, topicSeed }) => {
+          set({
+            topicProcessing: false,
+            topicError: error,
+            topicRes: null,
+            topicPrompts: prompts,
+            //topicSeeds: topicSeed,
+          });
+        },
       })),
       {
         name: minutesStartTimestamp.toString(),
@@ -523,6 +626,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
   );
 };
 
+/*
 export const useTopicStore = create<TopicManagerState & TopicManagerDispatch>()(
   subscribeWithSelector((set, get, api) => ({
     // data
@@ -635,3 +739,4 @@ export const useTopicStore = create<TopicManagerState & TopicManagerDispatch>()(
     },
   }))
 );
+*/
