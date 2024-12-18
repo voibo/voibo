@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { Dispatch, useEffect } from "react";
+import { useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { IPCInvokeKeys } from "../../../../common/constants.js";
 import {
@@ -23,128 +23,16 @@ import {
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import { useTopicStore } from "../../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { isTopic, Topic, TopicSeed } from "../../../../common/content/topic.js";
+import { isLLMAnalyzedTopics } from "../../../../common/content/topic.js";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
 
-export type LLMAnalyzedTopics = {
-  topics: Topic[];
-};
-
-export function isLLMAnalyzedTopics(obj: any): obj is LLMAnalyzedTopics {
-  return obj && Array.isArray(obj.topics) && obj.topics.every(isTopic);
-}
-
-export type TopicRequest = {
-  text: string;
-  seedData: TopicSeed;
-  isRequested: boolean;
-};
-
-export type TopicManagerState = {
-  //  res: state
-  processing: boolean;
-  error: Error | null;
-  res: {
-    data: LLMAnalyzedTopics;
-  } | null;
-
-  // request
-  prompts: TopicRequest[];
-
-  // seed
-  topicSeeds: TopicSeed[];
-};
-
-export const initTopicManagerState: TopicManagerState = {
-  processing: false,
-  error: null,
-  res: null,
-  prompts: [],
-  topicSeeds: [],
-};
-
-export type TopicManagerAction =
-  | {
-      type: "startProcess";
-    }
-  | {
-      type: "resError";
-      payload: {
-        error: Error;
-        prompts: TopicRequest[];
-        topicSeed: TopicSeed[];
-      };
-    }
-  | {
-      type: "resSuccess";
-      payload: {
-        res: {
-          data: LLMAnalyzedTopics;
-        };
-        prompts: TopicRequest[];
-        topicSeed: TopicSeed[];
-      };
-    }
-  | {
-      type: "replaceTopicSeed";
-      payload: {
-        prompts: TopicRequest[];
-        topicSeed: TopicSeed[];
-      };
-    };
-
-export const topicManagerReducer = (
-  state: TopicManagerState,
-  action: TopicManagerAction
-): TopicManagerState => {
-  switch (action.type) {
-    case "startProcess":
-      return {
-        ...state,
-        processing: true,
-      };
-    case "resError":
-      return {
-        ...state,
-        processing: false,
-        error: action.payload.error,
-        res: null,
-        prompts: action.payload.prompts,
-      };
-    case "resSuccess":
-      //console.log("useOpenAIChat: resSuccess", action);
-      return {
-        ...state,
-        processing: false,
-        error: null,
-        res: action.payload.res,
-        prompts: action.payload.prompts,
-      };
-    case "replaceTopicSeed":
-      //console.log("useOpenAIChat: replaceTopicSeed", action);
-      return {
-        ...state,
-        topicSeeds: action.payload.topicSeed,
-        prompts: action.payload.prompts,
-      };
-    default:
-      console.log("useOpenAIChat: default", action);
-      return state;
-  }
-};
-
-export function useTopicManager(): {
-  state: TopicManagerState;
-  dispatcher: Dispatch<TopicManagerAction>;
-} {
-  // openAIChat
+export function useTopicManager(): void {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
   const topicAIConf = useMinutesStore(startTimestamp)(
     (state) => state.topicAIConf
   );
   const topicState = useTopicStore((state) => state);
-  const topicDispatcher = useTopicStore((state) => state.topicDispatch);
   const getAgenda = useMinutesAgendaStore(startTimestamp)(
     (state) => state.getAgenda
   );
@@ -154,10 +42,8 @@ export function useTopicManager(): {
     const targetIndex = topicState.prompts.findIndex((v) => !v.isRequested);
     if (!topicState.processing && targetIndex > -1) {
       const handleRequest = async () => {
-        //console.log("useOpenAIChat: handleRequest startProcess");
-        topicDispatcher({
-          type: "startProcess",
-        });
+        topicState.startProcess();
+
         // make a request
         const currentTopic = topicState.prompts[targetIndex];
         let lastResult = "";
@@ -219,20 +105,12 @@ export function useTopicManager(): {
                   seed.requireUpdate = false;
                 }
               });
-              console.log(
-                "useOpenAIChat: resSuccess",
-                resJSON,
-                topicState.topicSeeds
-              );
-              topicDispatcher({
-                type: "resSuccess",
-                payload: {
-                  res: {
-                    data: resJSON,
-                  },
-                  prompts: updatePrompts,
-                  topicSeed: topicState.topicSeeds,
+              topicState.resSuccess({
+                res: {
+                  data: resJSON,
                 },
+                prompts: updatePrompts,
+                topicSeed: topicState.topicSeeds,
               });
             } else {
               console.error("resError: Invalid JSON data", resJSON);
@@ -242,13 +120,10 @@ export function useTopicManager(): {
                   seed.requireUpdate = false;
                 }
               });
-              topicDispatcher({
-                type: "resError",
-                payload: {
-                  error: new Error("Invalid JSON data"),
-                  prompts: updatePrompts,
-                  topicSeed: topicState.topicSeeds,
-                },
+              topicState.resError({
+                error: new Error("Invalid JSON data"),
+                prompts: updatePrompts,
+                topicSeed: topicState.topicSeeds,
               });
             }
           })
@@ -260,13 +135,10 @@ export function useTopicManager(): {
                 seed.requireUpdate = false;
               }
             });
-            topicDispatcher({
-              type: "resError",
-              payload: {
-                error: e,
-                prompts: updatePrompts,
-                topicSeed: topicState.topicSeeds,
-              },
+            topicState.resError({
+              error: e,
+              prompts: updatePrompts,
+              topicSeed: topicState.topicSeeds,
             });
           });
       };
@@ -286,6 +158,4 @@ export function useTopicManager(): {
       });
     }
   }, [topicState.res]);
-
-  return { state: topicState, dispatcher: topicDispatcher };
 }

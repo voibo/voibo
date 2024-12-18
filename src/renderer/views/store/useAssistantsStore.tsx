@@ -63,18 +63,6 @@ const AssistantPersistStorage: StateStorage = {
 
 // === State / Dispatch ===
 
-const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
-export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
-  let newStore;
-  if (storeCache.has(minutesStartTimestamp)) {
-    newStore = storeCache.get(minutesStartTimestamp)!;
-  } else {
-    newStore = useAssistantsStoreCore(minutesStartTimestamp);
-    storeCache.set(minutesStartTimestamp, newStore);
-  }
-  return newStore;
-};
-
 export type AssistantTemplate = {
   templateId: string;
   description: string;
@@ -127,8 +115,6 @@ export type AssistantState = {
   vaConfig: VirtualAssistantConf;
   // attachment
   attachment: AttachmentMode;
-  // loaded
-  loaded: boolean;
   // messages
   messages?: Array<Message>;
   messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
@@ -140,13 +126,11 @@ export type AssistantState = {
 };
 
 export const initAssistantState = (
-  vaConfig: VirtualAssistantConf,
-  loaded: boolean
+  vaConfig: VirtualAssistantConf
 ): AssistantState => {
   return {
     attachment: "none",
     onProcess: false,
-    loaded,
     vaConfig: vaConfig,
     invokeQueue: [],
     messages: [],
@@ -197,9 +181,8 @@ export type AssistantAction =
 const assistantReducer = (props: {
   minutesStartTimestamp: number;
   vaConfig: VirtualAssistantConf;
-  get: () => AssistantsStateStore & AssistantsDispatchStore & HydrateState;
 }): ((state: AssistantState, action: AssistantAction) => AssistantState) => {
-  const { minutesStartTimestamp, vaConfig, get } = props;
+  const { minutesStartTimestamp, vaConfig } = props;
   const reducer = (state: AssistantState, action: AssistantAction) => {
     let newState: AssistantState = state;
     switch (action.type) {
@@ -210,7 +193,7 @@ const assistantReducer = (props: {
           action.payload.assistantName == vaConfig.assistantName
         ) {
           newState = {
-            ...initAssistantState(vaConfig, get().hasHydrated),
+            ...initAssistantState(vaConfig),
             messages: [],
             messagesWithInvoked: [],
             req: undefined,
@@ -221,7 +204,7 @@ const assistantReducer = (props: {
         break;
       case "clearAll":
         // 完全に初期状態にする
-        newState = initAssistantState(vaConfig, get().hasHydrated);
+        newState = initAssistantState(vaConfig);
         break;
       // == 設定関係 ==
       case "setAttachment":
@@ -602,6 +585,19 @@ export function makeTopicOrientedInvokeParam({
 }
 
 // ==== Zustand ====
+
+const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
+export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
+  let newStore;
+  if (storeCache.has(minutesStartTimestamp)) {
+    newStore = storeCache.get(minutesStartTimestamp)!;
+  } else {
+    newStore = useAssistantsStoreCore(minutesStartTimestamp);
+    storeCache.set(minutesStartTimestamp, newStore);
+  }
+  return newStore;
+};
+
 export type AssistantsStateStore = {
   assistantsMap: Map<string, AssistantState>;
 };
@@ -619,6 +615,7 @@ export type AssistantsDispatchStore = {
 
 const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
   console.log("useAssistantsStoreCore", minutesStartTimestamp);
+  let unsubscribeMindMapCreated: () => void;
   return create<
     AssistantsStateStore & AssistantsDispatchStore & HydrateState
   >()(
@@ -627,18 +624,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         // Hydrate
         hasHydrated: false,
         setHasHydrated: (state) => {
-          const newAssistantMap = new Map<string, AssistantState>(
-            Array.from(get().assistantsMap).map(([key, assistant]) => [
-              key,
-              {
-                ...assistant,
-                loaded: state,
-              },
-            ])
-          );
           set({
             hasHydrated: state,
-            assistantsMap: newAssistantMap,
           });
         },
         waitForHydration: async () => {
@@ -695,7 +682,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
           try {
             // listener to make Mind Map
-            window.electron.on(
+            if (unsubscribeMindMapCreated) unsubscribeMindMapCreated();
+            unsubscribeMindMapCreated = window.electron.on(
               IPCReceiverKeys.ON_MIND_MAP_CREATED,
               (event: any, mindMap: InvokeResult) => {
                 if (!get().hasHydrated) return;
@@ -710,15 +698,11 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               }
             );
 
-            const {
-              assistantsMap,
-              setAssistant,
-              hasHydrated: _hasHydrated,
-            } = get();
+            const { assistantsMap } = get();
             // 既存のアシスタントを取得、または新たに初期化して設定
             let target = assistantsMap.get(vaConfig.assistantId);
             if (!target) {
-              target = initAssistantState(vaConfig, _hasHydrated);
+              target = initAssistantState(vaConfig);
               set(
                 produce((state: AssistantsStateStore) => {
                   state.assistantsMap.set(
@@ -736,16 +720,16 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         assistantDispatch: (vaConfig) => (action) => {
-          if (minutesStartTimestamp) {
+          if (!useVBStore.getState().isNoMinutes()) {
             if (!get().hasHydrated) {
-              throw new Error("assistantDispatch: _hasHydrated is false");
+              console.warn("assistantDispatch: not hydrated");
+              return;
             }
             try {
               // == Update state ==
               const targetReducer = assistantReducer({
                 minutesStartTimestamp,
                 vaConfig: vaConfig,
-                get: get,
               });
               const state = get().getOrInitAssistant(vaConfig);
               const newState = targetReducer(state, action);
@@ -772,7 +756,6 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           const minutesState = useMinutesStore(startTimestamp).getState();
           const { updateMode, attachOption, updatePrompt } = assistantConfig;
           if (
-            state.loaded && // hydrate が終わっている
             updateMode != "manual" // 手動更新モードでない
           ) {
             const getAgenda =
@@ -804,13 +787,6 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                 .map((param) => param.connectedMessageIds!)
                 .flat(),
             ]; // id重複をあえて許容
-
-            /*
-            console.log(
-              "enqueueTopicRelatedInvoke: resolvedTopicIDs",
-              resolvedTopicIDs
-            );
-            */
 
             if (updateMode === "at_topic_updated") {
               // = 1. 対象トピックの抽出 =
@@ -875,7 +851,16 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               });
 
               if (reqQueue.length > 0) {
-                //console.log("enqueueTopicRelatedInvoke: at updated", reqQueue);
+                /*
+              console.log(
+                "enqueueTopicRelatedInvoke: at updated",
+                vaConfig.label,
+                resolvedTopicIDs,
+                ccFilteredTopics,
+                filteredTopics,
+                reqQueue
+              );
+                */
                 dispatch({
                   type: "invokeAssistant",
                   payload: {
@@ -1185,15 +1170,15 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出される
         // 時間のかかる「同期」関数：　敢えて set まで完全に同期させることで transaction を保証する
         processInvokeSync: (vaConfig) => {
-          if (!minutesStartTimestamp || !get().hasHydrated) {
+          if (useVBStore.getState().isNoMinutes()) {
+            console.warn("no minutes", vaConfig.label);
+            return;
+          }
+          if (!get().hasHydrated) {
             console.warn("processInvoke: not loaded", vaConfig.label);
             return;
           }
           const state = get().getOrInitAssistant(vaConfig);
-          if (!state.loaded) {
-            console.warn("processInvoke: not loaded", vaConfig.label, state);
-            return;
-          }
           if (state.invokeQueue.length == 0) {
             console.warn(
               "processInvoke: invokeQueue is empty",

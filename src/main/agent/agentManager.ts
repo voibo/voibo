@@ -46,8 +46,8 @@ import {
 
 import { isBaseMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
-import { LLMAnalyzedTopics } from "../../renderer/views/component/topic/useTopicManager.js";
 import { AgentLangGraph } from "./agentLangGraph.js";
+import { LLMAnalyzedTopics } from "../../common/content/topic.js";
 
 export class AgentManager {
   // environment

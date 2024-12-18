@@ -105,3 +105,17 @@ export function isTopic(obj: any): obj is Topic {
   // All checks passed, it's a Topic
   return true;
 }
+
+export type LLMAnalyzedTopics = {
+  topics: Topic[];
+};
+
+export function isLLMAnalyzedTopics(obj: any): obj is LLMAnalyzedTopics {
+  return obj && Array.isArray(obj.topics) && obj.topics.every(isTopic);
+}
+
+export type TopicRequest = {
+  text: string;
+  seedData: TopicSeed;
+  isRequested: boolean;
+};
