@@ -25,6 +25,7 @@ import { useVBMainStoreEffect } from "../../store/useVBMainStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useTopicManager } from "../topic/useTopicManager.jsx";
 import { processVBAction } from "../../action/VBAction.js";
+import { state } from "mermaid/dist/rendering-util/rendering-elements/shapes/state.js";
 
 export const drawerWidth = 240;
 

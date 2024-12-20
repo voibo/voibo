@@ -15,20 +15,19 @@ limitations under the License.
 */
 import { memo } from "react";
 import { Node, NodeProps, Handle, Position } from "@xyflow/react";
-import { Message } from "../../../../common/content/assisatant.js";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { VAMessage } from "../../component/assistant/message/VAMessage.jsx";
-import {
-  useMinutesAssistantStore,
-  VirtualAssistantConf,
-} from "../../store/useAssistantsStore.jsx";
+import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { NodeBase } from "./NodeBase.jsx";
+import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
+import { useMinutesStore } from "../../store/useMinutesStore.jsx";
+import {
+  getAssistantMessageByNodeID,
+  getVirtualAssistantConfByNodeID,
+} from "../../store/useVBReactflowStore.jsx";
 
-export type AssistantMessageNodeParam = {
-  assistantConfig: VirtualAssistantConf;
-  content: Message;
-  startTimestamp: number;
+export type AssistantMessageNodeParam = ContentNodeBaseParam & {
+  assistantId: string;
 };
 
 export type AssistantMessageNode = Node<
@@ -42,34 +41,41 @@ export const AssistantMessageNode = (
   const data = props.data;
   const { detailViewDialog, renderDetailViewDialog, handleClose } =
     useDetailViewDialog();
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const assistantConfig = getVirtualAssistantConfByNodeID(data.id); // この場合 snapshot になるので変更を見ていないのでは？
+  const message = getAssistantMessageByNodeID(data.id); // この場合 snapshot になるので変更を見ていないのでは？
+
   return (
-    <>
-      <Handle
-        id={`left-${props.id}`}
-        type="target"
-        position={Position.Left}
-        onConnect={(params) => console.log("handle onConnect", params)}
-        isConnectable={true}
-        className="invisible"
-      />
-      <NodeBase nodeProps={props}>
-        <VAMessage
-          assistantConfig={data.assistantConfig}
-          message={data.content}
-          startTimestamp={data.startTimestamp}
-          detailViewDialog={detailViewDialog}
-          avatarLocation="V"
+    assistantConfig &&
+    message && (
+      <>
+        <Handle
+          id={`left-${props.id}`}
+          type="target"
+          position={Position.Left}
+          onConnect={(params) => console.log("handle onConnect", params)}
+          isConnectable={true}
+          className="invisible"
         />
-      </NodeBase>
-      {renderDetailViewDialog()}
-      <Handle
-        id={`right-${props.id}`}
-        type="source"
-        position={Position.Right}
-        className="invisible"
-        isConnectable={false}
-      />
-    </>
+        <NodeBase nodeProps={props}>
+          <VAMessage
+            startTimestamp={startTimestamp}
+            assistantConfig={assistantConfig}
+            message={message}
+            detailViewDialog={detailViewDialog}
+            avatarLocation="V"
+          />
+        </NodeBase>
+        {renderDetailViewDialog()}
+        <Handle
+          id={`right-${props.id}`}
+          type="source"
+          position={Position.Right}
+          className="invisible"
+          isConnectable={false}
+        />
+      </>
+    )
   );
 };
 //export default AssistantMessageNode;
@@ -77,29 +83,27 @@ export const AssistantMessageNode = (
 export default memo(AssistantMessageNode, (prevProps, nextProps) => {
   // 同一のコンテンツが選択されている場合= true は再描画しない
   const shouldNotUpdate =
-    prevProps.data.startTimestamp === nextProps.data.startTimestamp &&
-    prevProps.data.assistantConfig === nextProps.data.assistantConfig &&
-    prevProps.data.content === nextProps.data.content &&
-    prevProps.selected === nextProps.selected &&
-    prevProps.data.content.position === nextProps.data.content.position &&
-    prevProps.data.content.groupIds === nextProps.data.content.groupIds;
+    prevProps.data.id === nextProps.data.id &&
+    prevProps.data.assistantId === nextProps.data.assistantId &&
+    prevProps.selected === nextProps.selected;
   return shouldNotUpdate;
 });
 
 // Util
 
 export function removeAssistantMessage(data: AssistantMessageNodeParam) {
-  const messageId = data.content.id;
-
-  if (messageId) {
-    console.log("removeAssistantMessage", messageId, data.assistantConfig);
-    const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-    if (minutesStartTimestamp) {
-      const assistantStore = useMinutesAssistantStore(
-        minutesStartTimestamp
-      ).getState();
+  const messageId = data.id;
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const assistantConfig = useMinutesStore(startTimestamp)(
+    (state) => state.assistants
+  ).find((assistant) => assistant.assistantId === data.assistantId);
+  if (assistantConfig) {
+    console.log("removeAssistantMessage", messageId, assistantConfig);
+    if (startTimestamp) {
+      const assistantStore =
+        useMinutesAssistantStore(startTimestamp).getState();
       if (!assistantStore || !assistantStore.hasHydrated) return;
-      assistantStore.assistantDispatch(data.assistantConfig)({
+      assistantStore.assistantDispatch(assistantConfig)({
         type: "removeMessage",
         payload: { messageId },
       });

@@ -39,7 +39,6 @@ import {
 } from "../flowComponent/node/AssistantMessageNode.jsx";
 import {
   ContentNode,
-  ContentNodeParam,
   removeContent,
 } from "../flowComponent/node/ContentNode.jsx";
 import { DiscussionNode } from "../flowComponent/node/DisscussionNode.jsx";
@@ -51,16 +50,15 @@ import {
 } from "../flowComponent/node/TopicNode.jsx";
 import { Topic } from "../../../common/content/topic.js";
 import { Content } from "../../../common/content/content.js";
-import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 import {
   AssistantState,
   useMinutesAssistantStore,
+  VirtualAssistantConf,
 } from "./useAssistantsStore.jsx";
 import { useMinutesContentStore } from "./useContentStore.jsx";
 import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
-import { processVBAction } from "../action/VBAction.js";
 import { processTopicAction } from "../action/TopicAction.js";
 import { Agenda } from "../../../common/content/agenda.js";
 
@@ -120,7 +118,10 @@ const makeTopicNode = (props: { topic: Topic }): TopicNode => {
     position: topic.position,
     width: getLayoutParam().topic.width,
     data: {
-      content: topic,
+      id: topic.id,
+      type: "topic",
+      agendaIds: topic.agendaIds,
+      groupIds: topic.groupIds,
     },
   };
 };
@@ -201,7 +202,7 @@ const makeTopicEdges = (props: { nodes: Node[] }): Edge[] => {
 };
 
 // # Assistant
-const makeAssistantTreeNodes = (props: {
+const makeAssistantNodes = (props: {
   startTimestamp: number;
   assistantState: AssistantState;
   message: Message;
@@ -213,9 +214,11 @@ const makeAssistantTreeNodes = (props: {
     position: message.position,
     width: getLayoutParam().assistant.width,
     data: {
-      assistantConfig: assistantState.vaConfig,
-      content: message,
-      startTimestamp,
+      id: message.id,
+      type: "assistantMessage",
+      agendaIds: message.agendaIds,
+      groupIds: message.groupIds,
+      assistantId: assistantState.vaConfig.assistantId,
     },
   };
 };
@@ -254,7 +257,10 @@ const makeContentNode = (props: { content: Content }): ContentNode => {
     position: content.position,
     width: content.width,
     data: {
-      content,
+      id: content.id,
+      type: "content",
+      agendaIds: content.agendaIds,
+      groupIds: content.groupIds,
     },
   };
 };
@@ -286,15 +292,15 @@ export type VBReactflowState = {
   // topics
   topicBothEndsNodes: Array<TopicBothEndsNode>;
   topicNodes: TopicNode[];
-  topicTreeEdges: Edge[];
+  topicEdges: Edge[];
 
   // assistant
-  assistantTreeNodes: AssistantMessageNode[];
-  assistantTreeEdges: Edge[];
+  assistantNodes: AssistantMessageNode[];
+  assistantEdges: Edge[];
 
   // content
   contentNodes: ContentNode[];
-  contentTreeEdges: Edge[];
+  contentEdges: Edge[];
 };
 type Bounds = {
   measured: {
@@ -328,7 +334,7 @@ export type VBReactflowDispatchStore = {
   layoutTopics: (measuredNodes: TopicNode[]) => void;
 
   // selection
-  getSequencedSelection: () => Array<Content | Topic | Message>;
+  getSequencedSelection: () => Array<Topic | Message | Content>;
   deselectAll: () => void;
   updateSequencedSelectionsGroup: (groups: Group[]) => void;
   updateSequencedSelectionsAgenda: (agendas: Agenda[]) => void;
@@ -357,12 +363,75 @@ export const DefaultVBReactflowState: VBReactflowState = {
   // core
   topicNodes: [],
   topicBothEndsNodes: [makeTopicHeaderNode(), makeDiscussionNode()],
-  topicTreeEdges: [],
-  assistantTreeNodes: [],
-  assistantTreeEdges: [],
+  topicEdges: [],
+  assistantNodes: [],
+  assistantEdges: [],
 
   contentNodes: [],
-  contentTreeEdges: [],
+  contentEdges: [],
+};
+
+export const getContentByNodeID = (nodeId: string): Content | undefined => {
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const contentNode = useVBReactflowStore
+    .getState()
+    .contentNodes.find((node) => node.id === nodeId);
+  if (contentNode) {
+    return useMinutesContentStore(startTimestamp)
+      .getState()
+      .getContent(contentNode.id);
+  }
+};
+
+export const getTopicByNodeID = (nodeId: string): Topic | undefined => {
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const topicNode = useVBReactflowStore
+    .getState()
+    .topicNodes.find((node) => node.id === nodeId);
+  if (topicNode) {
+    return useMinutesStore(startTimestamp)
+      .getState()
+      .topics.find((topic) => topic.id === topicNode.id);
+  }
+};
+
+export const getVirtualAssistantConfByNodeID = (
+  nodeId: string
+): VirtualAssistantConf | undefined => {
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const assistantNode = useVBReactflowStore
+    .getState()
+    .assistantNodes.find((node) => node.id === nodeId);
+  if (assistantNode) {
+    return useMinutesStore(startTimestamp)
+      .getState()
+      .assistants.find(
+        (assistant) => assistant.assistantId === assistantNode.data.assistantId
+      );
+  }
+};
+
+export const getAssistantMessageByNodeID = (
+  nodeId: string
+): Message | undefined => {
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const assistantNode = useVBReactflowStore
+    .getState()
+    .assistantNodes.find((node) => node.id === nodeId);
+  if (assistantNode) {
+    const assistantConfig = useMinutesStore(startTimestamp)
+      .getState()
+      .assistants.find(
+        (assistant) => assistant.assistantId === assistantNode.data.assistantId
+      );
+    return assistantConfig
+      ? (
+          useMinutesAssistantStore(startTimestamp)
+            .getState()
+            .getOrInitAssistant(assistantConfig).messages ?? []
+        ).find((message) => message.id === assistantNode.id)
+      : undefined;
+  }
 };
 
 // VBReactflowDispatchStoreストア
@@ -373,28 +442,22 @@ export const useVBReactflowStore = create<
     ...DefaultVBReactflowState,
 
     getSequencedSelection: () => {
-      const result: Array<Content | Topic | Message> = [];
+      const result: Array<Topic | Message | Content> = [];
       get().selectedSequences.forEach((id) => {
         // content
-        const contentNode = get().contentNodes.find((node) => node.id === id);
-        if (contentNode) {
-          result.push((contentNode.data as ContentNodeParam).content);
+        const content = getContentByNodeID(id);
+        if (content) {
+          result.push(content);
         }
-
         // topic
-        const topicNode = get().topicNodes.find((node) => node.id === id);
-        if (topicNode) {
-          result.push((topicNode.data as TopicNodeParam).content);
+        const topic = getTopicByNodeID(id);
+        if (topic) {
+          result.push(topic);
         }
-
         // assistant
-        const assistantNode = get().assistantTreeNodes.find(
-          (node) => node.id === id
-        );
-        if (assistantNode) {
-          result.push(
-            (assistantNode.data as AssistantMessageNodeParam).content
-          );
+        const assistant = getAssistantMessageByNodeID(id);
+        if (assistant) {
+          result.push(assistant);
         }
       });
       return result;
@@ -411,9 +474,8 @@ export const useVBReactflowStore = create<
       get().selectedSequences.forEach((id) => {
         console.log("updateSequencedSelectionsGroup", id, groups);
         // content
-        const contentNode = get().contentNodes.find((node) => node.id === id);
-        if (contentNode) {
-          const content = (contentNode.data as ContentNodeParam).content;
+        const content = getContentByNodeID(id);
+        if (content) {
           useMinutesContentStore(startTimestamp)
             .getState()
             .setContent({
@@ -423,9 +485,8 @@ export const useVBReactflowStore = create<
         }
 
         // topic
-        const topicNode = get().topicNodes.find((node) => node.id === id);
-        if (topicNode) {
-          const topic = (topicNode.data as TopicNodeParam).content;
+        const topic = getTopicByNodeID(id);
+        if (topic) {
           processTopicAction({
             type: "updateTopic",
             payload: {
@@ -438,15 +499,9 @@ export const useVBReactflowStore = create<
         }
 
         // assistant
-        const assistantNode = get().assistantTreeNodes.find(
-          (node) => node.id === id
-        );
-        if (assistantNode) {
-          const assistant = (assistantNode.data as AssistantMessageNodeParam)
-            .content;
-          const assistantConfig = (
-            assistantNode.data as AssistantMessageNodeParam
-          ).assistantConfig;
+        const assistant = getAssistantMessageByNodeID(id);
+        const assistantConfig = getVirtualAssistantConfByNodeID(id);
+        if (assistant && assistantConfig) {
           useMinutesAssistantStore(startTimestamp)
             .getState()
             .assistantDispatch(assistantConfig)({
@@ -473,9 +528,8 @@ export const useVBReactflowStore = create<
 
       get().selectedSequences.forEach((id) => {
         // content
-        const contentNode = get().contentNodes.find((node) => node.id === id);
-        if (contentNode) {
-          const content = (contentNode.data as ContentNodeParam).content;
+        const content = getContentByNodeID(id);
+        if (content) {
           useMinutesContentStore(startTimestamp)
             .getState()
             .setContent({
@@ -485,9 +539,8 @@ export const useVBReactflowStore = create<
         }
 
         // topic
-        const topicNode = get().topicNodes.find((node) => node.id === id);
-        if (topicNode) {
-          const topic = (topicNode.data as TopicNodeParam).content;
+        const topic = getTopicByNodeID(id);
+        if (topic) {
           processTopicAction({
             type: "updateTopic",
             payload: {
@@ -500,15 +553,9 @@ export const useVBReactflowStore = create<
         }
 
         // assistant
-        const assistantNode = get().assistantTreeNodes.find(
-          (node) => node.id === id
-        );
-        if (assistantNode) {
-          const assistant = (assistantNode.data as AssistantMessageNodeParam)
-            .content;
-          const assistantConfig = (
-            assistantNode.data as AssistantMessageNodeParam
-          ).assistantConfig;
+        const assistantConfig = getVirtualAssistantConfByNodeID(id);
+        const message = getAssistantMessageByNodeID(id);
+        if (assistantConfig && message) {
           useMinutesAssistantStore(startTimestamp)
             .getState()
             .assistantDispatch(assistantConfig)({
@@ -516,7 +563,7 @@ export const useVBReactflowStore = create<
             payload: {
               messages: [
                 {
-                  ...assistant,
+                  ...message,
                   agendaIds: agendas.map((agenda) => agenda.id),
                 },
               ],
@@ -529,7 +576,7 @@ export const useVBReactflowStore = create<
     getContentImplementedNodes: () => {
       return [
         ...get().topicNodes,
-        ...get().assistantTreeNodes,
+        ...get().assistantNodes,
         ...get().contentNodes,
       ];
     },
@@ -541,9 +588,9 @@ export const useVBReactflowStore = create<
           get().topicBothEndsNodes
         ) as Array<TopicBothEndsNode>,
         topicNodes: applyNodeChanges(changes, get().topicNodes) as TopicNode[],
-        assistantTreeNodes: applyNodeChanges(
+        assistantNodes: applyNodeChanges(
           changes,
-          get().assistantTreeNodes
+          get().assistantNodes
         ) as AssistantMessageNode[],
         //agendaNodes: applyNodeChanges(changes, get().agendaNodes),
         contentNodes: applyNodeChanges(
@@ -579,16 +626,16 @@ export const useVBReactflowStore = create<
     },
     onEdgesChange: (changes) => {
       set({
-        topicTreeEdges: applyEdgeChanges(changes, get().topicTreeEdges),
-        assistantTreeEdges: applyEdgeChanges(changes, get().assistantTreeEdges),
-        contentTreeEdges: applyEdgeChanges(changes, get().contentTreeEdges),
+        topicEdges: applyEdgeChanges(changes, get().topicEdges),
+        assistantEdges: applyEdgeChanges(changes, get().assistantEdges),
+        contentEdges: applyEdgeChanges(changes, get().contentEdges),
       });
     },
     onConnect: (connection) => {
       set({
-        topicTreeEdges: addEdge(connection, get().topicTreeEdges),
-        assistantTreeEdges: addEdge(connection, get().assistantTreeEdges),
-        contentTreeEdges: addEdge(connection, get().contentTreeEdges),
+        topicEdges: addEdge(connection, get().topicEdges),
+        assistantEdges: addEdge(connection, get().assistantEdges),
+        contentEdges: addEdge(connection, get().contentEdges),
       });
     },
     onNodeDragStart: (event, node) => {
@@ -604,7 +651,7 @@ export const useVBReactflowStore = create<
           case "topic":
             processTopicAction({
               type: "removeTopic",
-              payload: { topicID: (node.data as TopicNodeParam).content.id },
+              payload: { topicID: (node.data as TopicNodeParam).id },
             });
             break;
           case "assistantMessage":
@@ -638,13 +685,13 @@ export const useVBReactflowStore = create<
       locate.updatedAssistantNodes.forEach((node) => updateNodePosition(node));
 
       // position 更新
-      const assistantTreeNodes = get().assistantTreeNodes.map((node) => {
+      const assistantTreeNodes = get().assistantNodes.map((node) => {
         const located = locate.updatedAssistantNodes.find(
           (assistantNode) => assistantNode.id === node.id
         ) as AssistantMessageNode | undefined;
         return located ? located : node;
       });
-      set({ assistantTreeNodes });
+      set({ assistantNodes: assistantTreeNodes });
     },
 
     layout: (layoutParam) => {
@@ -657,7 +704,7 @@ export const useVBReactflowStore = create<
 
       const topicBothEndsNodes = get().topicBothEndsNodes;
       const topicNodes = get().topicNodes;
-      const assistantTreeNodes = get().assistantTreeNodes;
+      const assistantTreeNodes = get().assistantNodes;
       const contentNodes = get().contentNodes;
 
       const constructTopicTree = constructTopicTreeNodes({
@@ -725,7 +772,7 @@ export const useVBReactflowStore = create<
 
       // 表示変更
       set({
-        assistantTreeNodes: updatedAssistantNodes,
+        assistantNodes: updatedAssistantNodes,
         contentNodes: contentNodes,
       });
     },
@@ -778,7 +825,7 @@ export const useVBReactflowStore = create<
             topicNodes,
             topicBothEndsNodes
           ),
-          topicTreeEdges: makeTopicEdges({
+          topicEdges: makeTopicEdges({
             nodes: constructTopicTreeNodes({
               topicNodes,
               topicBothEndsNodes,
@@ -839,7 +886,7 @@ export const useVBReactflowStore = create<
       set({
         topicNodes: DefaultVBReactflowState.topicNodes,
         topicBothEndsNodes: DefaultVBReactflowState.topicBothEndsNodes,
-        topicTreeEdges: DefaultVBReactflowState.topicTreeEdges,
+        topicEdges: DefaultVBReactflowState.topicEdges,
       });
 
       const topics = useMinutesStore(
@@ -856,7 +903,7 @@ export const useVBReactflowStore = create<
           topicNodes,
           topicBothEndsNodes
         ),
-        topicTreeEdges: makeTopicEdges({
+        topicEdges: makeTopicEdges({
           nodes: constructTopicTreeNodes({
             topicNodes,
             topicBothEndsNodes,
@@ -871,7 +918,7 @@ export const useVBReactflowStore = create<
 useVBReactflowStore.subscribe((current, pre) => {
   if (
     current.topicNodes !== pre.topicNodes ||
-    current.assistantTreeNodes !== pre.assistantTreeNodes ||
+    current.assistantNodes !== pre.assistantNodes ||
     current.contentNodes !== pre.contentNodes
   ) {
     useVBReactflowStore.setState({
@@ -880,12 +927,12 @@ useVBReactflowStore.subscribe((current, pre) => {
           topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
           topicNodes: useVBReactflowStore.getState().topicNodes,
         }),
-        ...useVBReactflowStore.getState().assistantTreeNodes,
+        ...useVBReactflowStore.getState().assistantNodes,
         ...useVBReactflowStore.getState().contentNodes,
       ],
       edges: [
-        ...useVBReactflowStore.getState().topicTreeEdges,
-        ...useVBReactflowStore.getState().assistantTreeEdges,
+        ...useVBReactflowStore.getState().topicEdges,
+        ...useVBReactflowStore.getState().assistantEdges,
       ],
     });
   }
@@ -920,7 +967,7 @@ useVBReactflowStore.subscribe(
 
 // assistant message Node 自動配置
 useVBReactflowStore.subscribe(
-  (state) => state.assistantTreeNodes,
+  (state) => state.assistantNodes,
   (assistantTreeNodes, preAssistantTreeNodes) => {
     // topic
     assistantTreeNodes
@@ -936,8 +983,8 @@ useVBReactflowStore.subscribe(
       .filter((node) => node.position.x === 0 && node.position.y == 0)
       // 対象に
       .forEach((node) => {
-        const message = (node as AssistantMessageNode).data.content;
-        if (message.connectedMessageIds.length > 0) {
+        const message = getAssistantMessageByNodeID(node.data.id);
+        if (message && message.connectedMessageIds.length > 0) {
           const targetNode = useVBReactflowStore
             .getState()
             .nodes.find(
@@ -972,19 +1019,19 @@ useVBReactflowStore.subscribe(
 // assistant 毎に配置すべきNodeを取得
 const updateAssistantLocatedNodeMap = () => {
   const assistantTreeNodes = useVBReactflowStore.getState()
-    .assistantTreeNodes as AssistantMessageNode[];
+    .assistantNodes as AssistantMessageNode[];
   const _assistantLastNodeMap: Map<string, Node> = new Map();
   assistantTreeNodes.forEach((assistantNode) => {
     // Assistantは紐づく最後のNodeに配置する
     // Assistant が connectedMessageIds を持っていないことは、運用上ありえないはず
-    if (assistantNode.data.content.connectedMessageIds.length > 0) {
+    const assistantMessage = getAssistantMessageByNodeID(assistantNode.id);
+    if (assistantMessage && assistantMessage.connectedMessageIds.length > 0) {
       _assistantLastNodeMap.set(
         assistantNode.id,
         useVBReactflowStore
           .getState()
           .nodes.filter(
-            (node) =>
-              node.id === assistantNode.data.content.connectedMessageIds.at(-1)
+            (node) => node.id === assistantMessage.connectedMessageIds.at(-1)
           )[0]
       );
     }
@@ -1021,50 +1068,48 @@ const updateAssistantLocatedNodeMap = () => {
 const updateNodePosition = (node: Node) => {
   const startTimestamp = useVBStore.getState().startTimestamp;
   if (useVBStore.getState().isNoMinutes()) return;
+  const position = {
+    x: node.position.x,
+    y: node.position.y,
+  };
   switch (node.type) {
     case "topic":
+      const topic = getTopicByNodeID(node.id);
+      if (!topic) return;
       useMinutesStore(startTimestamp)
         .getState()
         .updateTopic({
-          ...(node as TopicNode).data.content,
-          position: {
-            x: node.position.x,
-            y: node.position.y,
-          },
+          ...topic,
+          position,
         });
       break;
     case "assistantMessage":
-      const assistantState =
-        useMinutesAssistantStore(startTimestamp).getState();
-      if (!assistantState.hasHydrated) return;
-
-      console.log("onNodeDragStop: assistantMessage", node.data);
-      const assistantDispatch = assistantState.assistantDispatch(
-        (node as AssistantMessageNode).data.assistantConfig
-      );
-      assistantDispatch({
+      const vaConfig = getVirtualAssistantConfByNodeID(node.id);
+      const assistantMessage = getAssistantMessageByNodeID(node.id);
+      if (!assistantMessage || !vaConfig) return;
+      useMinutesAssistantStore(startTimestamp)
+        .getState()
+        .assistantDispatch(vaConfig)({
         type: "updateMessage",
         payload: {
           messages: [
             {
-              ...(node as AssistantMessageNode).data.content,
-              position: {
-                x: node.position.x,
-                y: node.position.y,
-              },
+              ...assistantMessage,
+              position,
             },
           ],
         },
       });
       break;
     case "content":
-      const useContent = useMinutesContentStore(startTimestamp);
-      const content = useContent.getState().getContent(node.id);
+      const content = getContentByNodeID(node.id);
       if (!content) return;
-      useContent.getState().setContent({
-        ...content,
-        position: node.position,
-      });
+      useMinutesContentStore(startTimestamp)
+        .getState()
+        .setContent({
+          ...content,
+          position,
+        });
       break;
   }
 };
@@ -1226,36 +1271,40 @@ const updateAssistantNodes = ({
   startTimestamp,
   assistantsMap,
 }: {
-  startTimestamp: number | undefined;
+  startTimestamp: number;
   assistantsMap: Map<string, AssistantState>;
 }) => {
-  if (startTimestamp && startTimestamp > 0) {
-    const assistantTreeNodes = Array.from(assistantsMap.values()).flatMap(
+  if (!useVBStore.getState().isNoMinutes()) {
+    // create assistant nodes
+    const assistantNodes = Array.from(assistantsMap.values()).flatMap(
       (assistantState) =>
         (assistantState.messages ?? []).map((message) =>
-          makeAssistantTreeNodes({
+          makeAssistantNodes({
             assistantState,
             message,
             startTimestamp,
           })
         )
     );
-
-    const assistantTreeEdges = assistantTreeNodes.flatMap(
-      (assistantMessageNode) =>
-        assistantMessageNode.data.content.connectedMessageIds.map((messageId) =>
-          makeAssistantMessageEdge({
-            source: messageId,
-            target: assistantMessageNode.id,
-          })
-        )
-    );
-
-    // 更新
     useVBReactflowStore.setState({
-      assistantTreeNodes,
-      assistantTreeEdges,
+      assistantNodes: assistantNodes,
     });
+
+    const assistantEdges = assistantNodes.flatMap((assistantMessageNode) => {
+      const message = getAssistantMessageByNodeID(assistantMessageNode.id);
+      return message
+        ? message.connectedMessageIds.map((messageId) =>
+            makeAssistantMessageEdge({
+              source: messageId,
+              target: assistantMessageNode.id,
+            })
+          )
+        : [];
+    });
+    useVBReactflowStore.setState({
+      assistantEdges: assistantEdges,
+    });
+    console.log("updateAssistantNodes", assistantNodes, assistantEdges);
   }
 };
 
@@ -1281,6 +1330,7 @@ export const prepareAssistantNodeTo = (startTimestamp: number) => {
     (state) => state.assistantsMap,
     (assistantsMap, assistantPreMap) => {
       // assistant node すべてを再構築
+      console.log("useVBReactflowStore: updatedAssistant: subscribe");
       updateAssistantNodes({ startTimestamp, assistantsMap });
       updateAssistantLocatedNodeMap();
       //レイアウト処理は subscribe で行う

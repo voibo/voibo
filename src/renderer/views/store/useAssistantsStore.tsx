@@ -53,7 +53,7 @@ const AssistantPersistStorage: StateStorage = {
       //console.warn("AssistantPersistStorage.setItem: same value skipped", name);
       return;
     }
-    console.log("AssistantPersistStorage.setItem:", name);
+    //console.log("AssistantPersistStorage.setItem:", name);
     await set(name, value, assistantIDBStore);
   },
   removeItem: async (name: string): Promise<void> => {
@@ -736,6 +736,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               get().setAssistant(newState);
               // == post process ==
               if (action.type === "initialize") {
+                console.log("assistantDispatch: initialize", vaConfig.label);
                 get().enqueueTopicRelatedInvoke(vaConfig); // 並行処理
               }
             } catch (e) {
@@ -1167,7 +1168,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           }
         },
 
-        // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出される
+        // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出3される
         // 時間のかかる「同期」関数：　敢えて set まで完全に同期させることで transaction を保証する
         processInvokeSync: (vaConfig) => {
           if (useVBStore.getState().isNoMinutes()) {
@@ -1328,6 +1329,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("assistant");
               console.log(
                 "useAssistantsStoreCore: rehydrated",
                 minutesStartTimestamp,

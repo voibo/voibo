@@ -36,6 +36,13 @@ import { TopicNode } from "./TopicNode.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { Agenda } from "../../../../common/content/agenda.js";
 
+export type ContentNodeBaseParam = {
+  id: string;
+  type: "content" | "topic" | "assistantMessage";
+  agendaIds: string[];
+  groupIds: string[];
+};
+
 export const NodeBase = (props: {
   nodeProps: NodeProps<TopicNode | AssistantMessageNode | ContentNode>;
   children: React.ReactNode;
@@ -80,7 +87,7 @@ export const NodeBase = (props: {
   ).filter((assistant) => assistant.updateMode === "manual");
 
   // agendaList
-  const agendaList = (props.nodeProps.data.content.agendaIds ?? []) // 過渡期のためのデータ変換
+  const agendaList = (props.nodeProps.data.agendaIds ?? []) // 過渡期のためのデータ変換
     .map((agendaId) =>
       useMinutesAgendaStore(startTimestamp).getState().getAgenda(agendaId)
     )
@@ -96,7 +103,7 @@ export const NodeBase = (props: {
       content: (
         <GroupSelectorDialogBody
           minutesStartTimestamp={startTimestamp}
-          initialGroupIds={nodeProps.data.content.groupIds ?? []}
+          initialGroupIds={nodeProps.data.groupIds ?? []}
           handleClose={handleClose}
         />
       ),
@@ -112,7 +119,7 @@ export const NodeBase = (props: {
     detailViewDialog({
       content: (
         <AgendaSelectorDialogBody
-          initialAgendaIds={nodeProps.data.content.agendaIds ?? []}
+          initialAgendaIds={nodeProps.data.agendaIds ?? []}
           handleClose={handleClose}
         />
       ),
@@ -168,9 +175,7 @@ export const NodeBase = (props: {
         >
           <div className="flex justify-between items-start">
             <BelongAgendaChips agendaList={agendaList} />
-            <BelongGroupChips
-              groupIds={nodeProps.data.content.groupIds ?? []}
-            />
+            <BelongGroupChips groupIds={nodeProps.data.groupIds ?? []} />
           </div>
         </div>
       </div>

@@ -50,6 +50,7 @@ import {
 } from "../../../common/content/topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
 import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
+import { processTopicAction } from "../action/TopicAction.js";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -498,10 +499,12 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
 
         // action
         startTopicProcess: () => {
-          set({ topicProcessing: true });
+          if (!useVBStore.getState().allReady) return;
+          set({ topicProcessing: true, topicError: null, topicRes: null });
         },
 
         updateTopicSeeds: (enforceUpdateAll: boolean) => {
+          if (!useVBStore.getState().allReady) return;
           // 現在の全discussionから、全topicSeedを再構築する
           const topicSeeds: TopicSeed[] = [];
           const startTimestamp = useVBStore.getState().startTimestamp;
@@ -578,22 +581,33 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         resTopicSuccess: ({ res, prompts, topicSeed }) => {
+          if (!useVBStore.getState().allReady) return;
           set({
             topicProcessing: false,
             topicError: null,
             topicRes: res,
             topicPrompts: prompts,
-            //topicSeeds: topicSeed,
+            topicSeeds: topicSeed,
+          });
+
+          // FIXME: exceptional handling
+          // all actions should be called from store, but this is exceptional handling.
+          processTopicAction({
+            type: "setTopic",
+            payload: {
+              topics: res.data.topics,
+            },
           });
         },
 
         resTopicError: ({ error, prompts, topicSeed }) => {
+          if (!useVBStore.getState().allReady) return;
           set({
             topicProcessing: false,
             topicError: error,
             topicRes: null,
             topicPrompts: prompts,
-            //topicSeeds: topicSeed,
+            topicSeeds: topicSeed,
           });
         },
       })),
@@ -603,6 +617,14 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
           () => MinutesPersistStorage,
           ExpandJSONOptions
         ),
+        partialize: (state) => ({
+          startTimestamp: state.startTimestamp,
+          discussionSplitter: state.discussionSplitter,
+          discussion: state.discussion,
+          topicAIConf: state.topicAIConf,
+          topics: state.topics,
+          assistants: state.assistants,
+        }),
         onRehydrateStorage: (state) => {
           return (state, error) => {
             if (error) {
@@ -613,6 +635,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("minutes");
               console.log(
                 "useMinutesStoreCore: rehydrated",
                 state.startTimestamp,
@@ -625,118 +648,3 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
     )
   );
 };
-
-/*
-export const useTopicStore = create<TopicManagerState & TopicManagerDispatch>()(
-  subscribeWithSelector((set, get, api) => ({
-    // data
-    topicProcessing: false,
-    topicError: null,
-    topicRes: null,
-    topicPrompts: [],
-    topicSeeds: [],
-
-    // action
-    startTopicProcess: () => {
-      set({ topicProcessing: true });
-    },
-
-    updateTopicSeeds: (enforceUpdateAll: boolean) => {
-      // 現在の全discussionから、全topicSeedを再構築する
-      const topicSeeds: TopicSeed[] = [];
-      const startTimestamp = useVBStore.getState().startTimestamp;
-      const minutesStore = useMinutesStore(startTimestamp).getState();
-      minutesStore.discussion.forEach((segment) => {
-        const currentStartTimestamp = Number(segment.timestamp);
-        const currentEndTimestamp = segment.texts.reduce(
-          (pre, current) => pre + Number(current.length) / 1000,
-          currentStartTimestamp
-        );
-        const text = segment.texts.reduce(
-          (inPrev, inCurrent) => inPrev + inCurrent.text,
-          ""
-        );
-        if (segment.topicStartedPoint) {
-          topicSeeds.push({
-            startTimestamp: currentStartTimestamp,
-            endTimestamp: currentEndTimestamp,
-            text,
-            requireUpdate: enforceUpdateAll,
-            agendaIdList: [
-              ...useMinutesAgendaStore(startTimestamp)
-                .getState()
-                .getDiscussedAgendas({
-                  startFromMStartMsec: currentStartTimestamp * 1000,
-                  endFromMStartMsec: currentEndTimestamp * 1000,
-                })
-                .map((agenda) => agenda.id),
-            ],
-          });
-          //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
-        } else if (topicSeeds.length > 0) {
-          topicSeeds[topicSeeds.length - 1].endTimestamp = currentEndTimestamp;
-          topicSeeds[topicSeeds.length - 1].text += "\n" + text;
-        }
-      });
-
-      // 現在のtopicSeedsと比較して、変更があれば更新対象にする
-      let updatedTopicSeed: TopicSeed[] = [];
-      if (enforceUpdateAll) {
-        updatedTopicSeed = topicSeeds;
-      } else {
-        topicSeeds.forEach((seed) => {
-          const currentSeed = useTopicStore
-            .getState()
-            .topicSeeds.find(
-              (currentSeed) =>
-                currentSeed.startTimestamp == seed.startTimestamp &&
-                currentSeed.endTimestamp == seed.endTimestamp &&
-                currentSeed.text == seed.text
-            );
-          if (!currentSeed) {
-            updatedTopicSeed.push({ ...seed, requireUpdate: true });
-          } else {
-            updatedTopicSeed.push(seed);
-          }
-        });
-      }
-
-      // 更新対象の topicSeed を TopicRequest に変換
-      const targetTopicSeedRequests: TopicRequest[] = updatedTopicSeed
-        .filter((seed) => seed.requireUpdate)
-        .map((seed) => {
-          return {
-            text: seed.text,
-            seedData: seed,
-            isRequested: false,
-          };
-        });
-
-      set({
-        topicPrompts: targetTopicSeedRequests,
-        topicSeeds: updatedTopicSeed,
-      });
-    },
-
-    resTopicSuccess: ({ res, prompts, topicSeed }) => {
-      set({
-        topicProcessing: false,
-        topicError: null,
-        topicRes: res,
-        topicPrompts: prompts,
-        //topicSeeds: topicSeed,
-      });
-    },
-
-    resTopicError: ({ error, prompts, topicSeed }) => {
-      set({
-        topicProcessing: false,
-        topicError: error,
-        topicRes: null,
-        topicPrompts: prompts,
-        //topicSeeds: topicSeed,
-      });
-    },
-  }))
-);
-*/

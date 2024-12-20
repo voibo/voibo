@@ -44,6 +44,9 @@ import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
+import { useMinutesContentStore } from "../../store/useContentStore.jsx";
+import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
+import { ExpandJSONOptions } from "../../store/IDBKeyValPersistStorage.jsx";
 
 export const HeaderComponent = () => {
   const vbState = useVBStore((state) => state);
@@ -196,8 +199,9 @@ const OthersMenuButton = () => {
       .getMinutesTitle(targetMinutes);
     const minutesStore = useMinutesStore(targetMinutes).getState();
     const assistantStore = useMinutesAssistantStore(targetMinutes).getState();
+    const contentStore = useMinutesContentStore(targetMinutes).getState();
 
-    if (minutesTitle && minutesStore && assistantStore) {
+    if (minutesTitle && minutesStore && assistantStore && contentStore) {
       const zip = new JSZip();
       const results: JSZip[] = [];
 
@@ -238,6 +242,22 @@ const OthersMenuButton = () => {
         )
       );
 
+      // contents
+      results.push(
+        zip.file("contents.json", JSON.stringify(contentStore.getAllContent()))
+      );
+      results.push(
+        zip.file(
+          "contents.md",
+          contentStore
+            .getAllContent()
+            .map((content) => {
+              return `${content.content}`;
+            })
+            .join("\n\n\n")
+        )
+      );
+
       // assistants
       assistantStore.assistantsMap.forEach((assistant) => {
         (assistant.messages ?? []).forEach((message) => {
@@ -257,6 +277,32 @@ const OthersMenuButton = () => {
       });
 
       console.log("DL: minutes", minutesStore);
+
+      // debug
+      if (true) {
+        results.push(
+          zip.file(
+            "debug/minutesStore.json",
+            JSON.stringify(minutesStore, ExpandJSONOptions.replacer)
+          )
+        );
+        results.push(
+          zip.file(
+            "debug/assistantStore.json",
+            JSON.stringify(assistantStore, ExpandJSONOptions.replacer)
+          )
+        );
+        results.push(
+          zip.file(
+            "debug/VBReactflowStore.json",
+            JSON.stringify(
+              useVBReactflowStore.getState(),
+              ExpandJSONOptions.replacer
+            )
+          )
+        );
+      }
+
       // construct contents
       Promise.all(results).then(() => {
         zip.generateAsync({ type: "blob" }).then((content) => {

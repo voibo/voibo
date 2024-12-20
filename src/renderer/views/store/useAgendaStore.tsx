@@ -356,6 +356,7 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("agenda");
               console.log(
                 "useAgendaStoreCore: rehydrated",
                 minutesStartTimestamp,

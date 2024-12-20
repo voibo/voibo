@@ -26,6 +26,7 @@ import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
 import { Content } from "../../../common/content/content.js";
+import { useVBStore } from "./useVBStore.jsx";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -183,6 +184,7 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
                 minutesStartTimestamp
               );
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("content");
             }
           };
         },

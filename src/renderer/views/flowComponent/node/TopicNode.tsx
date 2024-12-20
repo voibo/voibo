@@ -18,12 +18,9 @@ import { memo } from "react";
 import { Handle, Position, Node, NodeProps } from "@xyflow/react";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { TopicsElement } from "../../component/topic/TopicsElement.jsx";
-import { NodeBase } from "./NodeBase.jsx";
-import { Topic } from "../../../../common/content/topic.js";
+import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
 
-export type TopicNodeParam = {
-  content: Topic;
-};
+export type TopicNodeParam = ContentNodeBaseParam;
 
 export type TopicNode = Node<TopicNodeParam, "topic">;
 
@@ -51,7 +48,7 @@ export const TopicNodeComponent = (props: NodeProps<TopicNode>) => {
       />
       <NodeBase nodeProps={props}>
         <TopicsElement
-          messageId={data.content.id}
+          messageId={data.id}
           detailViewDialog={AIMinutesDialog}
           handleClose={handleAIMinutesDialogClose}
         />
@@ -78,7 +75,7 @@ export const TopicNodeComponent = (props: NodeProps<TopicNode>) => {
 export default memo(TopicNodeComponent, (prevProps, nextProps) => {
   // 同一のコンテンツが選択されている場合= true は再描画しない
   const shouldNotUpdate =
-    prevProps.data.content.title === nextProps.data.content.title &&
+    prevProps.data.id === nextProps.data.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.dragging === nextProps.dragging;
   return shouldNotUpdate;

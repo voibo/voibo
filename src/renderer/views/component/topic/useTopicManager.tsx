@@ -24,7 +24,6 @@ import {
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
-import { processTopicAction } from "../../action/TopicAction.js";
 
 export function useTopicManager(): void {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
@@ -153,16 +152,4 @@ export function useTopicManager(): void {
     topicState.topicPrompts,
     topicState.topicRes,
   ]);
-
-  useEffect(() => {
-    if (topicState.topicRes) {
-      console.log("useTopicManager: setTopic", topicState.topicRes.data.topics);
-      processTopicAction({
-        type: "setTopic",
-        payload: {
-          topics: topicState.topicRes.data.topics,
-        },
-      });
-    }
-  }, [topicState.topicRes]);
 }

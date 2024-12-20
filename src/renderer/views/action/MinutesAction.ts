@@ -112,6 +112,12 @@ const openHomeMenu = async () => {
 const prepareStoresTo = async (startTimestamp: number) => {
   // == Hydrate stores ==
   useVBStore.setState({ startTimestamp });
+
+  console.log(
+    "prepareStoresTo: 0",
+    startTimestamp,
+    useVBStore.getState().allReady
+  );
   await Promise.all([
     useMinutesStore(startTimestamp).getState().waitForHydration(),
     useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
@@ -119,10 +125,14 @@ const prepareStoresTo = async (startTimestamp: number) => {
     useMinutesContentStore(startTimestamp).getState().waitForHydration(),
     useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
   ]);
+  console.log(
+    "prepareStoresTo: 1",
+    startTimestamp,
+    useVBStore.getState().allReady
+  );
 
   // == Subscribe stores ==
   subscribeAssistantInvokeQueue(startTimestamp);
-  //subscribeTopicInvokeQueue();
 
   // == Subscribe to reactflow ==
   useVBReactflowStore.getState().relocateTopics();
@@ -153,29 +163,6 @@ const subscribeAssistantInvokeQueue = (startTimestamp: number) => {
         !Array.from(next.values()).some(
           (nextAssistant) => nextAssistant.invokeQueue.length > 0
         ),
-    }
-  );
-};
-
-// Subscribe to topic stores
-let unsubscribeTopicInvokeQueue: (() => void) | null = null;
-const subscribeTopicInvokeQueue = (startTimestamp: number) => {
-  if (unsubscribeTopicInvokeQueue) unsubscribeTopicInvokeQueue();
-  unsubscribeTopicInvokeQueue = useMinutesStore(startTimestamp).subscribe(
-    (state) => state.topicRes,
-    (res) => {
-      if (res) {
-        console.log("useTopicManager: setTopic", res.data.topics);
-        processTopicAction({
-          type: "setTopic",
-          payload: {
-            topics: res.data.topics,
-          },
-        });
-      }
-    },
-    {
-      equalityFn: (prev, next) => !next,
     }
   );
 };
