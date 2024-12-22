@@ -198,20 +198,17 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
 
   const handleAssistantButtonClick = () => {
     if (!isAssistantHydrated) return;
-    assistantStore.getState().assistantDispatch(assistantConfig)({
-      type: "invokeAssistant",
-      payload: {
-        queue: [
-          makeInvokeParam({
-            basePrompt: assistantConfig.aiConfig.systemPrompt,
-            messages: useVBReactflowStore.getState().getSequencedSelection(),
-            attachOption: assistantConfig.attachOption ?? {
-              attachment: "topic",
-              target: "manualSelected",
-            },
-          }),
-        ],
-      },
+    assistantStore.getState().invokeAssistant(assistantConfig, {
+      queue: [
+        makeInvokeParam({
+          basePrompt: assistantConfig.aiConfig.systemPrompt,
+          messages: useVBReactflowStore.getState().getSequencedSelection(),
+          attachOption: assistantConfig.attachOption ?? {
+            attachment: "topic",
+            target: "manualSelected",
+          },
+        }),
+      ],
     });
   };
 

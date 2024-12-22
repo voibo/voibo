@@ -97,16 +97,14 @@ export function removeAssistantMessage(data: AssistantMessageNodeParam) {
   const assistantConfig = useMinutesStore(startTimestamp)(
     (state) => state.assistants
   ).find((assistant) => assistant.assistantId === data.assistantId);
-  if (assistantConfig) {
+  if (
+    useVBStore.getState().allReady &&
+    !useVBStore.getState().isNoMinutes() &&
+    assistantConfig
+  ) {
     console.log("removeAssistantMessage", messageId, assistantConfig);
-    if (startTimestamp) {
-      const assistantStore =
-        useMinutesAssistantStore(startTimestamp).getState();
-      if (!assistantStore || !assistantStore.hasHydrated) return;
-      assistantStore.assistantDispatch(assistantConfig)({
-        type: "removeMessage",
-        payload: { messageId },
-      });
-    }
+    useMinutesAssistantStore(startTimestamp)
+      .getState()
+      .removeMessage(assistantConfig, { messageId });
   }
 }

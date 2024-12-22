@@ -504,17 +504,14 @@ export const useVBReactflowStore = create<
         if (assistant && assistantConfig) {
           useMinutesAssistantStore(startTimestamp)
             .getState()
-            .assistantDispatch(assistantConfig)({
-            type: "updateMessage",
-            payload: {
+            .updateMessage(assistantConfig, {
               messages: [
                 {
                   ...assistant,
                   groupIds: groups.map((group) => group.id),
                 },
               ],
-            },
-          });
+            });
         }
       });
 
@@ -558,17 +555,14 @@ export const useVBReactflowStore = create<
         if (assistantConfig && message) {
           useMinutesAssistantStore(startTimestamp)
             .getState()
-            .assistantDispatch(assistantConfig)({
-            type: "updateMessage",
-            payload: {
+            .updateMessage(assistantConfig, {
               messages: [
                 {
                   ...message,
                   agendaIds: agendas.map((agenda) => agenda.id),
                 },
               ],
-            },
-          });
+            });
         }
       });
     },
@@ -968,13 +962,13 @@ useVBReactflowStore.subscribe(
 // assistant message Node 自動配置
 useVBReactflowStore.subscribe(
   (state) => state.assistantNodes,
-  (assistantTreeNodes, preAssistantTreeNodes) => {
+  (assistantNodes, preAssistantNodes) => {
     // topic
-    assistantTreeNodes
+    assistantNodes
       .filter((node) => !!node.measured)
       .filter(
         (node) =>
-          !!preAssistantTreeNodes.find(
+          !!preAssistantNodes.find(
             (preNode) =>
               preNode.id === node.id && preNode.measured === undefined
           )
@@ -1087,19 +1081,21 @@ const updateNodePosition = (node: Node) => {
       const vaConfig = getVirtualAssistantConfByNodeID(node.id);
       const assistantMessage = getAssistantMessageByNodeID(node.id);
       if (!assistantMessage || !vaConfig) return;
+      console.log(
+        "updateNodePosition: assistantMessage",
+        vaConfig.label,
+        assistantMessage
+      );
       useMinutesAssistantStore(startTimestamp)
         .getState()
-        .assistantDispatch(vaConfig)({
-        type: "updateMessage",
-        payload: {
+        .updateMessage(vaConfig, {
           messages: [
             {
               ...assistantMessage,
               position,
             },
           ],
-        },
-      });
+        });
       break;
     case "content":
       const content = getContentByNodeID(node.id);

@@ -30,7 +30,6 @@ import {
   useVBStore,
 } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
-import { processTopicAction } from "./TopicAction.js";
 
 export type MinutesAction =
   | ActionBase<"createNewMinutes">
@@ -112,12 +111,6 @@ const openHomeMenu = async () => {
 const prepareStoresTo = async (startTimestamp: number) => {
   // == Hydrate stores ==
   useVBStore.setState({ startTimestamp });
-
-  console.log(
-    "prepareStoresTo: 0",
-    startTimestamp,
-    useVBStore.getState().allReady
-  );
   await Promise.all([
     useMinutesStore(startTimestamp).getState().waitForHydration(),
     useMinutesAgendaStore(startTimestamp).getState().waitForHydration(),
@@ -125,11 +118,6 @@ const prepareStoresTo = async (startTimestamp: number) => {
     useMinutesContentStore(startTimestamp).getState().waitForHydration(),
     useMinutesGroupStore(startTimestamp).getState().waitForHydration(),
   ]);
-  console.log(
-    "prepareStoresTo: 1",
-    startTimestamp,
-    useVBStore.getState().allReady
-  );
 
   // == Subscribe stores ==
   subscribeAssistantInvokeQueue(startTimestamp);
@@ -155,7 +143,7 @@ const subscribeAssistantInvokeQueue = (startTimestamp: number) => {
         )
         .forEach(
           (assistant) =>
-            assistantsStore.getState().processInvokeSync(assistant.vaConfig) // sync function to process request => response
+            assistantsStore.getState().processInvoke(assistant.vaConfig) // async function to process request => response
         );
     },
     {
@@ -166,7 +154,6 @@ const subscribeAssistantInvokeQueue = (startTimestamp: number) => {
     }
   );
 };
-
 /*
 export function useTopicManager(): void {
   const startTimestamp = useVBStore((state) => state.startTimestamp);

@@ -130,9 +130,11 @@ const VirtualAssistantConfDialogCore = (props: {
   const mode = dialogMode;
 
   const startTimestamp = useVBStore((state) => state.startTimestamp);
-  const assistantDispatch = useMinutesAssistantStore(startTimestamp)(
-    (state) => state.assistantDispatch
+
+  const assistantInitialize = useMinutesAssistantStore(startTimestamp)(
+    (state) => state.initialize
   );
+
   const { confirmDialog, renderConfirmDialog } = useConfirmDialog();
   const [selectedTab, setSelectedTab] = useState("1");
 
@@ -196,8 +198,7 @@ const VirtualAssistantConfDialogCore = (props: {
 
   if (useVBStore((state) => state.isNoMinutes)()) return <></>;
 
-  const targetDispatch = assistantDispatch(assistantConfig);
-  const isGeneralAssistant = state.assistantType == "va-general";
+  // const isGeneralAssistant = state.assistantType == "va-general";
 
   // handle close dialog
   const handleClose = () => {
@@ -221,14 +222,12 @@ const VirtualAssistantConfDialogCore = (props: {
     if (!accepted) return; // キャンセル時は処理に進まな
 
     dialogDispatch({ type: "close" });
-    if (!isGeneralAssistant) {
-      processAssistantConfAction({
-        type: "removeVirtualAssistantConf",
-        payload: {
-          assistantId: state.assistantId,
-        },
-      });
-    }
+    processAssistantConfAction({
+      type: "removeVirtualAssistantConf",
+      payload: {
+        assistantId: state.assistantId,
+      },
+    });
   };
 
   // handle update
@@ -280,15 +279,13 @@ const VirtualAssistantConfDialogCore = (props: {
           >
             Update
           </Button>
-          {!isGeneralAssistant && (
-            <Button
-              color="error"
-              variant="outlined"
-              onClick={handleDeleteAssistantWithConfirm}
-            >
-              <Delete />
-            </Button>
-          )}
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={handleDeleteAssistantWithConfirm}
+          >
+            <Delete />
+          </Button>
         </div>
       );
       break;
@@ -323,12 +320,9 @@ const VirtualAssistantConfDialogCore = (props: {
                 className="min-w-0 min-h-0 ml-2"
                 onClick={() => {
                   if (startTimestamp && assistantConfig) {
-                    targetDispatch({
-                      type: "initialize",
-                      payload: {
-                        startTimestamp: startTimestamp,
-                        assistantName: assistantConfig.assistantName,
-                      },
+                    assistantInitialize(assistantConfig, {
+                      startTimestamp: startTimestamp,
+                      assistantName: assistantConfig.assistantName,
                     });
                     dialogDispatch({ type: "close" });
                   }
@@ -422,13 +416,10 @@ const VirtualAssistantConfDialogCore = (props: {
                     />
                   </FormControl>
                 </div>
-
-                {!isGeneralAssistant && (
-                  <UserSelectableAssistantPart
-                    state={state}
-                    dispatch={dispatch}
-                  />
-                )}
+                <UserSelectableAssistantPart
+                  state={state}
+                  dispatch={dispatch}
+                />
               </div>
             </TabPanel>
             <TabPanel value="2">
