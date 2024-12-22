@@ -25,7 +25,6 @@ import {
 } from "zustand/middleware";
 import { IPCInvokeKeys, IPCReceiverKeys } from "../../../common/constants.js";
 import {
-  GENERAL_ASSISTANT_NAME,
   getDefaultMessage,
   InvokeResult,
   Message,
@@ -54,7 +53,7 @@ const AssistantPersistStorage: StateStorage = {
       //console.warn("AssistantPersistStorage.setItem: same value skipped", name);
       return;
     }
-    console.log("AssistantPersistStorage.setItem:", name);
+    //console.log("AssistantPersistStorage.setItem:", name);
     await set(name, value, assistantIDBStore);
   },
   removeItem: async (name: string): Promise<void> => {
@@ -63,18 +62,6 @@ const AssistantPersistStorage: StateStorage = {
 };
 
 // === State / Dispatch ===
-
-const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
-export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
-  let newStore;
-  if (storeCache.has(minutesStartTimestamp)) {
-    newStore = storeCache.get(minutesStartTimestamp)!;
-  } else {
-    newStore = useAssistantsStoreCore(minutesStartTimestamp);
-    storeCache.set(minutesStartTimestamp, newStore);
-  }
-  return newStore;
-};
 
 export type AssistantTemplate = {
   templateId: string;
@@ -128,8 +115,6 @@ export type AssistantState = {
   vaConfig: VirtualAssistantConf;
   // attachment
   attachment: AttachmentMode;
-  // loaded
-  loaded: boolean;
   // messages
   messages?: Array<Message>;
   messagesWithInvoked?: Array<Message>; // invoke message も含めたヒストリー形式での表示用のメッセージ
@@ -137,226 +122,22 @@ export type AssistantState = {
   onProcess: boolean;
   invokeQueue: Message[];
   resolvingQueue?: Message;
-  req?: AssistantAction;
+  //req?: AssistantAction;
 };
 
 export const initAssistantState = (
-  vaConfig: VirtualAssistantConf,
-  loaded: boolean
+  vaConfig: VirtualAssistantConf
 ): AssistantState => {
   return {
     attachment: "none",
     onProcess: false,
-    loaded,
     vaConfig: vaConfig,
     invokeQueue: [],
     messages: [],
     messagesWithInvoked: [],
-    req: undefined,
+    //req: undefined,
     resolvingQueue: undefined,
   };
-};
-
-export type AssistantAction =
-  | {
-      type: "invokeAssistant";
-      payload: {
-        queue: Array<Message>;
-      };
-    }
-  | {
-      type: "processRejected";
-    }
-  | {
-      type: "appendFunctionalMessage";
-      payload: {
-        message: Message;
-        startTimestamp: number;
-        assistantName: string;
-      };
-    }
-  | {
-      type: "appendMessage";
-      payload: {
-        message: Message;
-        startTimestamp: number;
-        assistantName: string;
-      };
-    }
-  | {
-      type: "initialize";
-      payload: {
-        startTimestamp: number;
-        assistantName: string;
-      };
-    }
-  | { type: "removeMessage"; payload: { messageId: string } }
-  | { type: "clearAll" }
-  | { type: "setAttachment"; payload: { attachmentMode: AttachmentMode } }
-  | { type: "updateMessage"; payload: { messages: Array<Message> } };
-
-const assistantReducer = (props: {
-  minutesStartTimestamp: number;
-  vaConfig: VirtualAssistantConf;
-  get: () => AssistantsStateStore & AssistantsDispatchStore & HydrateState;
-}): ((state: AssistantState, action: AssistantAction) => AssistantState) => {
-  const { minutesStartTimestamp, vaConfig, get } = props;
-  const reducer = (state: AssistantState, action: AssistantAction) => {
-    let newState: AssistantState = state;
-    switch (action.type) {
-      case "initialize":
-        // 定義済みの専用Treadを削除して新しいThreadを作成する。　⇒　正常時は changeMinutes　が最後に呼ばれて終了する
-        if (
-          action.payload.startTimestamp == minutesStartTimestamp &&
-          action.payload.assistantName == vaConfig.assistantName
-        ) {
-          newState = {
-            ...initAssistantState(vaConfig, get().hasHydrated),
-            messages: [],
-            messagesWithInvoked: [],
-            req: undefined,
-            onProcess: false,
-          };
-        }
-        console.log("assistantReducer: initialize", vaConfig.label, newState);
-        break;
-      case "clearAll":
-        // 完全に初期状態にする
-        newState = initAssistantState(vaConfig, get().hasHydrated);
-        break;
-      // == 設定関係 ==
-      case "setAttachment":
-        // invoke するときのメッセージに添付する内容を変更する
-        newState = {
-          ...state,
-          attachment: action.payload.attachmentMode,
-        };
-        break;
-      // == Assistant Invoke 関係 ==
-      // invoke リクエストを enqueue する。 dequeue は subscribeした中で processInvoke で行う
-      case "invokeAssistant":
-        const invokeQueue = [...state.invokeQueue, ...action.payload.queue];
-        const messagesWithInvoked = [
-          ...(state.messagesWithInvoked ?? []),
-          ...action.payload.queue,
-        ];
-        newState = {
-          ...state,
-          invokeQueue,
-          messagesWithInvoked,
-          req: action,
-        };
-        console.warn(
-          "assistantReducer: invokeAssistant",
-          vaConfig.label,
-          newState
-        );
-        break;
-      case "appendMessage": // invokeProcess に変更されたので、appendMessage の処理は不要になったはず
-      case "appendFunctionalMessage":
-        // Assistant からの返答を受け取る
-        if (
-          action.payload.startTimestamp == minutesStartTimestamp &&
-          action.payload.assistantName == vaConfig.assistantName
-        ) {
-          const cloneState: AssistantState = JSON.parse(JSON.stringify(state));
-          const messages = [...(state.messages ?? []), action.payload.message];
-          newState = {
-            ...cloneState,
-            messages, // メッセージのインスタンスは残さないと後々判定できない
-            messagesWithInvoked: [
-              ...(state.messagesWithInvoked ?? []),
-              action.payload.message,
-            ],
-            req: undefined,
-            attachment: "none" as AttachmentMode,
-          };
-          if (action.type == "appendMessage") {
-            // functionalMessage の場合は、継続中のリクエストを残す
-            newState.onProcess = false;
-            newState.resolvingQueue = undefined;
-          }
-        }
-        break;
-      case "updateMessage":
-        // メッセージの更新
-        let newMessages = [...(state.messages ?? [])];
-        let newMessagesWithInvoked = [...(state.messagesWithInvoked ?? [])];
-        action.payload.messages.forEach((message) => {
-          const updateIndex =
-            newMessages.findIndex((value) => value.id === message.id) ?? -1;
-          if (updateIndex >= 0) {
-            newMessages = [
-              ...newMessages.slice(0, updateIndex),
-              message,
-              ...newMessages.slice(updateIndex + 1),
-            ];
-          }
-          const updateIndexWithInvoked = newMessagesWithInvoked.findIndex(
-            (value) => value.id === message.id
-          );
-          if (updateIndexWithInvoked >= 0) {
-            newMessagesWithInvoked = [
-              ...newMessagesWithInvoked.slice(0, updateIndexWithInvoked),
-              message,
-              ...newMessagesWithInvoked.slice(updateIndexWithInvoked + 1),
-            ];
-          }
-        });
-        newState = {
-          ...state,
-          messages: newMessages,
-          messagesWithInvoked: newMessagesWithInvoked,
-        };
-        break;
-      case "removeMessage":
-        const targetIndex =
-          (state.messages ?? []).findIndex(
-            (value) => value.id === action.payload.messageId
-          ) ?? -1;
-        if (targetIndex >= 0) {
-          newState = {
-            ...state,
-            messages: [
-              ...(state.messages ?? []).slice(0, targetIndex),
-              ...(state.messages ?? []).slice(targetIndex + 1),
-            ],
-          };
-
-          const targetIndexWithInvoked = (
-            state.messagesWithInvoked ?? []
-          ).findIndex((value) => value.id === action.payload.messageId);
-          if (targetIndexWithInvoked >= 0) {
-            newState = {
-              ...newState,
-              messagesWithInvoked: [
-                ...(state.messagesWithInvoked ?? []).slice(
-                  0,
-                  targetIndexWithInvoked
-                ),
-                ...(state.messagesWithInvoked ?? []).slice(
-                  targetIndexWithInvoked + 1
-                ),
-              ],
-            };
-          }
-        }
-        break;
-      case "processRejected":
-        // プロセスの失敗
-        newState = {
-          ...state,
-          req: undefined,
-          attachment: "none",
-          onProcess: false,
-          resolvingQueue: undefined,
-        };
-        break;
-    }
-    return newState;
-  };
-  return (state: AssistantState, action: AssistantAction): AssistantState =>
-    reducer(state, action);
 };
 
 // === Util ===
@@ -603,6 +384,19 @@ export function makeTopicOrientedInvokeParam({
 }
 
 // ==== Zustand ====
+
+const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
+export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
+  let newStore;
+  if (storeCache.has(minutesStartTimestamp)) {
+    newStore = storeCache.get(minutesStartTimestamp)!;
+  } else {
+    newStore = useAssistantsStoreCore(minutesStartTimestamp);
+    storeCache.set(minutesStartTimestamp, newStore);
+  }
+  return newStore;
+};
+
 export type AssistantsStateStore = {
   assistantsMap: Map<string, AssistantState>;
 };
@@ -611,15 +405,48 @@ export type AssistantsDispatchStore = {
   getOrInitAssistant: (vaConfig: VirtualAssistantConf) => AssistantState;
   setAssistant: (assistant: AssistantState) => void;
   removeAssistant: (assistantId: string) => void;
-  assistantDispatch: (
-    vaConfig: VirtualAssistantConf
-  ) => (action: AssistantAction) => void;
   enqueueTopicRelatedInvoke: (vaConfig: VirtualAssistantConf) => void;
   processInvoke: (vaConfig: VirtualAssistantConf) => void;
+
+  // dispatch
+  invokeAssistant: (
+    vaConfig: VirtualAssistantConf,
+    payload: { queue: Array<Message> }
+  ) => void;
+  processRejected: (vaConfig: VirtualAssistantConf) => void;
+  appendFunctionalMessage: (
+    vaConfig: VirtualAssistantConf,
+    payload: {
+      message: Message;
+      startTimestamp: number;
+      assistantName: string;
+    }
+  ) => void;
+  initialize: (
+    vaConfig: VirtualAssistantConf,
+    payload: {
+      startTimestamp: number;
+      assistantName: string;
+    }
+  ) => void;
+  removeMessage: (
+    vaConfig: VirtualAssistantConf,
+    payload: { messageId: string }
+  ) => void;
+  clearAll: (vaConfig: VirtualAssistantConf) => void;
+  setAttachment: (
+    vaConfig: VirtualAssistantConf,
+    payload: { attachmentMode: AttachmentMode }
+  ) => void;
+  updateMessage: (
+    vaConfig: VirtualAssistantConf,
+    payload: { messages: Array<Message> }
+  ) => void;
 };
 
 const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
   console.log("useAssistantsStoreCore", minutesStartTimestamp);
+  let unsubscribeMindMapCreated: () => void;
   return create<
     AssistantsStateStore & AssistantsDispatchStore & HydrateState
   >()(
@@ -628,18 +455,8 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         // Hydrate
         hasHydrated: false,
         setHasHydrated: (state) => {
-          const newAssistantMap = new Map<string, AssistantState>(
-            Array.from(get().assistantsMap).map(([key, assistant]) => [
-              key,
-              {
-                ...assistant,
-                loaded: state,
-              },
-            ])
-          );
           set({
             hasHydrated: state,
-            assistantsMap: newAssistantMap,
           });
         },
         waitForHydration: async () => {
@@ -665,9 +482,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
         // Dispatch
         setAssistant: (assistant) => {
-          if (!get().hasHydrated) {
-            throw new Error("setAssistant: not hydrated");
-          }
+          if (!useVBStore.getState().allReady) return;
           set(
             produce((state: AssistantsStateStore) => {
               state.assistantsMap.set(
@@ -679,9 +494,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         removeAssistant: (assistantId) => {
-          if (!get().hasHydrated) {
-            throw new Error("removeAssistant: not hydrated");
-          }
+          if (!useVBStore.getState().allReady) return;
           set(
             produce((state: AssistantsStateStore) => {
               state.assistantsMap.delete(assistantId);
@@ -690,36 +503,27 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         },
 
         getOrInitAssistant: (vaConfig): AssistantState => {
-          if (!get().hasHydrated) {
-            throw new Error("getOrInitAssistant: not hydrated");
-          }
+          if (!useVBStore.getState().allReady)
+            throw new Error("getOrInitAssistant: stores not hydrated");
 
           try {
             // listener to make Mind Map
-            window.electron.on(
+            if (unsubscribeMindMapCreated) unsubscribeMindMapCreated();
+            unsubscribeMindMapCreated = window.electron.on(
               IPCReceiverKeys.ON_MIND_MAP_CREATED,
-              (event: any, mindMap: InvokeResult) => {
-                if (!get().hasHydrated) return;
-                get().assistantDispatch(vaConfig)({
-                  type: "appendFunctionalMessage",
-                  payload: {
-                    startTimestamp: mindMap.startTimestamp,
-                    assistantName: mindMap.assistantName,
-                    message: mindMap.message,
-                  },
-                });
-              }
+              (event: any, mindMap: InvokeResult) =>
+                get().appendFunctionalMessage(vaConfig, {
+                  startTimestamp: mindMap.startTimestamp,
+                  assistantName: mindMap.assistantName,
+                  message: mindMap.message,
+                })
             );
 
-            const {
-              assistantsMap,
-              setAssistant,
-              hasHydrated: _hasHydrated,
-            } = get();
+            const { assistantsMap } = get();
             // 既存のアシスタントを取得、または新たに初期化して設定
             let target = assistantsMap.get(vaConfig.assistantId);
             if (!target) {
-              target = initAssistantState(vaConfig, _hasHydrated);
+              target = initAssistantState(vaConfig);
               set(
                 produce((state: AssistantsStateStore) => {
                   state.assistantsMap.set(
@@ -736,49 +540,14 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           }
         },
 
-        assistantDispatch: (vaConfig) => (action) => {
-          if (minutesStartTimestamp) {
-            if (!get().hasHydrated) {
-              throw new Error("assistantDispatch: _hasHydrated is false");
-            }
-            try {
-              // == Update state ==
-              const targetReducer = assistantReducer({
-                minutesStartTimestamp,
-                vaConfig: vaConfig,
-                get: get,
-              });
-              const state = get().getOrInitAssistant(vaConfig);
-              const newState = targetReducer(state, action);
-              get().setAssistant(newState);
-              // == post process ==
-              if (action.type === "initialize") {
-                get().enqueueTopicRelatedInvoke(vaConfig); // 並行処理
-              }
-            } catch (e) {
-              console.error("assistantDispatch: error", e);
-            }
-          }
-        },
-
         enqueueTopicRelatedInvoke: (vaConfig) => {
-          if (!get().hasHydrated) {
-            console.warn("enqueueTopicRelatedInvoke: _hasHydrated is false");
-            return;
-          }
+          if (!useVBStore.getState().allReady) return;
           const assistantConfig = vaConfig;
-          // check if assistant is GeneralAssistant
-          if (assistantConfig.assistantName === GENERAL_ASSISTANT_NAME) {
-            return;
-          }
-
           const startTimestamp = useVBStore.getState().startTimestamp;
           const state = get().getOrInitAssistant(vaConfig);
-          const dispatch = get().assistantDispatch(vaConfig);
           const minutesState = useMinutesStore(startTimestamp).getState();
           const { updateMode, attachOption, updatePrompt } = assistantConfig;
           if (
-            state.loaded && // hydrate が終わっている
             updateMode != "manual" // 手動更新モードでない
           ) {
             const getAgenda =
@@ -804,19 +573,12 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                 .map((message) => message.connectedMessageIds)
                 .filter((messageIds) => messageIds !== undefined)
                 .flat(),
-              // invokeQueue にある invokeParam の topic も解消済みとみなす
+              // invokeQueue にある invokeParam の topic も解消済みとみなす。 必ず 1つずつinvokeされている前提
               ...state.invokeQueue
                 .filter((param) => param.connectedMessageIds)
                 .map((param) => param.connectedMessageIds!)
                 .flat(),
             ]; // id重複をあえて許容
-
-            /*
-            console.log(
-              "enqueueTopicRelatedInvoke: resolvedTopicIDs",
-              resolvedTopicIDs
-            );
-            */
 
             if (updateMode === "at_topic_updated") {
               // = 1. 対象トピックの抽出 =
@@ -881,13 +643,17 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               });
 
               if (reqQueue.length > 0) {
-                //console.log("enqueueTopicRelatedInvoke: at updated", reqQueue);
-                dispatch({
-                  type: "invokeAssistant",
-                  payload: {
-                    queue: reqQueue,
-                  },
-                });
+                console.log(
+                  "enqueueTopicRelatedInvoke: at updated",
+                  vaConfig.label,
+                  resolvedTopicIDs,
+                  ccFilteredTopics,
+                  filteredTopics,
+                  reqQueue,
+                  get().getOrInitAssistant(vaConfig).invokeQueue
+                );
+
+                get().invokeAssistant(vaConfig, { queue: reqQueue });
               }
             } else if (updateMode === "at_agenda_updated") {
               // = 1. 対象の抽出 =
@@ -981,12 +747,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               reqQueue
             );
             */
-                  dispatch({
-                    type: "invokeAssistant",
-                    payload: {
-                      queue: reqQueue,
-                    },
-                  });
+                  get().invokeAssistant(vaConfig, { queue: reqQueue });
                 }
               }
             } else if (updateMode === "at_agenda_completed") {
@@ -1177,27 +938,27 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                   reqQueue
                 );
                 */
-                dispatch({
-                  type: "invokeAssistant",
-                  payload: {
-                    queue: reqQueue,
-                  },
-                });
+                get().invokeAssistant(vaConfig, { queue: reqQueue });
               }
             }
           }
         },
 
         // invokeQueue に積まれたQueueを処理する。 subscribe で呼び出される
-        // 時間のかかる「同期」関数：　敢えて set まで完全に同期させることで transaction を保証する
-        processInvoke: (vaConfig) => {
-          if (!minutesStartTimestamp || !get().hasHydrated) {
-            console.warn("processInvoke: not loaded", vaConfig.label);
+        processInvoke: async (vaConfig) => {
+          if (useVBStore.getState().isNoMinutes()) {
+            console.warn("no minutes", vaConfig.label);
             return;
           }
-          const state = get().getOrInitAssistant(vaConfig);
-          if (!state.loaded) {
-            console.warn("processInvoke: not loaded", vaConfig.label, state);
+          if (!useVBStore.getState().allReady) {
+            console.warn("processInvoke: stores not loaded", vaConfig.label);
+            return;
+          }
+
+          let state = get().getOrInitAssistant(vaConfig);
+
+          if (state.onProcess) {
+            console.warn("processInvoke: on process", vaConfig.label, state);
             return;
           }
           if (state.invokeQueue.length == 0) {
@@ -1208,12 +969,16 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             );
             return;
           }
-          if (state.onProcess) {
-            console.warn("processInvoke: on process", vaConfig.label, state);
-            return;
-          }
+          // 排他処理を行うために、早めに onProcess を立てる
+          set(
+            produce((storeState: AssistantsStateStore) => {
+              storeState.assistantsMap.set(vaConfig.assistantId, {
+                ...state,
+                onProcess: true,
+              });
+            })
+          );
 
-          // ここまでのガード条件で、必ず hydrate が完了しているので、以下は set() での更新が可能
           const targetMessage = state.invokeQueue[0];
           const invokeQueue = state.invokeQueue.slice(1);
 
@@ -1244,14 +1009,17 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                 state.assistantsMap.set(vaConfig.assistantId, startState);
               })
             );
-            console.warn(
+            state = get().getOrInitAssistant(vaConfig);
+            /*
+            console.log(
               "processInvoke: start",
               vaConfig.label,
               get().assistantsMap.get(vaConfig.assistantId)
             );
+            */
 
-            window.electron
-              .invoke(
+            try {
+              const res: InvokeResult = await window.electron.invoke(
                 IPCInvokeKeys.LANGCHAIN_ASSISTANT_INVOKE,
                 param,
                 minutesStartTimestamp,
@@ -1265,72 +1033,218 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
                 vaConfig.aiConfig.langGraphConf,
                 vaConfig.aiConfig.structuredOutputSchema,
                 vaConfig.aiConfig.attachHistoryLimit
-              )
-              .then((res) => res as InvokeResult)
-              .then((res) => {
-                const message = res.message;
-                message.agendaIds = targetMessage.agendaIds; // FIXME: agendaIds　が seed から引き回されていない！！
+              );
 
-                console.log(
-                  "processInvoke: Invoke result:",
+              const message = res.message;
+              message.agendaIds = targetMessage.agendaIds; // FIXME: agendaIds　が seed から引き回されていない！！
+
+              const newState: AssistantState = {
+                ...state,
+                invokeQueue: invokeQueue,
+                messages: [...(state.messages ?? []), message], // メッセージのインスタンスは残さないと後々判定できない
+                messagesWithInvoked: [
+                  ...(state.messagesWithInvoked ?? []),
                   message,
-                  targetMessage
-                );
+                ],
+                //req: undefined,
+                onProcess: false, // fixme: map の場合には onProcess が続いている
+                resolvingQueue: undefined,
+                attachment: "none" as AttachmentMode,
+              };
 
-                const newState: AssistantState = {
-                  ...state,
-                  invokeQueue: invokeQueue,
-                  messages: [...(state.messages ?? []), message], // メッセージのインスタンスは残さないと後々判定できない
-                  messagesWithInvoked: [
-                    ...(state.messagesWithInvoked ?? []),
-                    message,
-                  ],
-                  req: undefined,
-                  onProcess: false,
-                  resolvingQueue: undefined,
-                  attachment: "none" as AttachmentMode,
-                };
+              set(
+                produce((state: AssistantsStateStore) => {
+                  state.assistantsMap.set(vaConfig.assistantId, newState);
+                })
+              );
+              /*
+              console.log(
+                "processInvoke: end",
+                vaConfig.label,
+                get().assistantsMap.get(vaConfig.assistantId),
+                targetMessage
+              );
+              */
+            } catch (e) {
+              // エラー時も非同期処理後に状態を再度更新
+              const errorMessage = getDefaultMessage();
+              errorMessage.content = "Assistant invoke error";
+              errorMessage.error = e instanceof Error ? e.message : String(e);
+              errorMessage.connectedMessageIds = connectedMessageIds;
 
-                set(
-                  produce((state: AssistantsStateStore) => {
-                    state.assistantsMap.set(vaConfig.assistantId, newState);
-                  })
-                );
-                console.warn(
-                  "processInvoke: end",
-                  vaConfig.label,
-                  get().assistantsMap.get(vaConfig.assistantId)
-                );
-              })
-              .catch((e) => {
-                // エラー時も非同期処理後に状態を再度更新
-                const errorMessage = getDefaultMessage();
-                errorMessage.content = "Assistant invoke error";
-                errorMessage.error = e instanceof Error ? e.message : String(e);
-                errorMessage.connectedMessageIds = connectedMessageIds;
+              console.log("processInvoke: Invoke error:", errorMessage);
+              const newState: AssistantState = {
+                ...state,
+                invokeQueue: invokeQueue,
+                messages: [...(state.messages ?? []), errorMessage], // メッセージのインスタンスは残さないと後々判定できない
+                messagesWithInvoked: [
+                  ...(state.messagesWithInvoked ?? []),
+                  errorMessage,
+                ],
+                onProcess: false,
+                resolvingQueue: undefined,
+                attachment: "none" as AttachmentMode,
+              };
 
-                console.log("processInvoke: Invoke error:", errorMessage);
-                const newState: AssistantState = {
-                  ...state,
-                  invokeQueue: invokeQueue,
-                  messages: [...(state.messages ?? []), errorMessage], // メッセージのインスタンスは残さないと後々判定できない
-                  messagesWithInvoked: [
-                    ...(state.messagesWithInvoked ?? []),
-                    errorMessage,
-                  ],
-                  req: undefined,
-                  onProcess: false,
-                  resolvingQueue: undefined,
-                  attachment: "none" as AttachmentMode,
-                };
-
-                set(
-                  produce((state: AssistantsStateStore) => {
-                    state.assistantsMap.set(vaConfig.assistantId, newState);
-                  })
-                );
-              });
+              set(
+                produce((state: AssistantsStateStore) => {
+                  state.assistantsMap.set(vaConfig.assistantId, newState);
+                })
+              );
+            }
           }
+        },
+
+        // == dispatch ===
+
+        invokeAssistant(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          const state = get().getOrInitAssistant(vaConfig);
+          const invokeQueue = [...state.invokeQueue, ...payload.queue];
+          const messagesWithInvoked = [
+            ...(state.messagesWithInvoked ?? []),
+            ...payload.queue,
+          ];
+          get().setAssistant({
+            ...state,
+            invokeQueue,
+            messagesWithInvoked,
+          });
+        },
+
+        processRejected(vaConfig) {
+          if (!useVBStore.getState().allReady) return;
+          const state = get().getOrInitAssistant(vaConfig);
+          get().setAssistant({
+            ...state,
+            attachment: "none",
+            onProcess: false,
+            resolvingQueue: undefined,
+          });
+        },
+
+        appendFunctionalMessage(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          if (
+            payload.startTimestamp == minutesStartTimestamp &&
+            payload.assistantName == vaConfig.assistantName
+          ) {
+            const state = get().getOrInitAssistant(vaConfig);
+            get().setAssistant({
+              ...state,
+              messages: [...(state.messages ?? []), payload.message], // メッセージのインスタンスは残さないと後々判定できない
+              messagesWithInvoked: [
+                ...(state.messagesWithInvoked ?? []),
+                payload.message,
+              ],
+              attachment: "none" as AttachmentMode,
+            });
+          }
+        },
+
+        initialize(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          // 定義済みの専用Treadを削除して新しいThreadを作成する。　⇒　正常時は changeMinutes　が最後に呼ばれて終了する
+          if (
+            payload.startTimestamp == minutesStartTimestamp &&
+            payload.assistantName == vaConfig.assistantName
+          ) {
+            get().setAssistant({
+              ...initAssistantState(vaConfig),
+              messages: [],
+              messagesWithInvoked: [],
+              onProcess: false,
+            });
+            get().enqueueTopicRelatedInvoke(vaConfig); // 並行処理
+          }
+        },
+
+        removeMessage(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          const state = get().getOrInitAssistant(vaConfig);
+          const targetIndex =
+            (state.messages ?? []).findIndex(
+              (value) => value.id === payload.messageId
+            ) ?? -1;
+          if (targetIndex >= 0) {
+            let newState = {
+              ...state,
+              messages: [
+                ...(state.messages ?? []).slice(0, targetIndex),
+                ...(state.messages ?? []).slice(targetIndex + 1),
+              ],
+            };
+
+            const targetIndexWithInvoked = (
+              state.messagesWithInvoked ?? []
+            ).findIndex((value) => value.id === payload.messageId);
+
+            if (targetIndexWithInvoked >= 0) {
+              newState = {
+                ...newState,
+                messagesWithInvoked: [
+                  ...(state.messagesWithInvoked ?? []).slice(
+                    0,
+                    targetIndexWithInvoked
+                  ),
+                  ...(state.messagesWithInvoked ?? []).slice(
+                    targetIndexWithInvoked + 1
+                  ),
+                ],
+              };
+            }
+
+            get().setAssistant(newState);
+          }
+        },
+
+        clearAll(vaConfig) {
+          if (!useVBStore.getState().allReady) return;
+          get().setAssistant(initAssistantState(vaConfig));
+        },
+
+        setAttachment(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          get().setAssistant({
+            ...get().getOrInitAssistant(vaConfig),
+            attachment: payload.attachmentMode,
+          });
+        },
+
+        updateMessage(vaConfig, payload) {
+          if (!useVBStore.getState().allReady) return;
+          const state = get().getOrInitAssistant(vaConfig);
+
+          let newMessages = [...(state.messages ?? [])];
+          let newMessagesWithInvoked = [...(state.messagesWithInvoked ?? [])];
+          payload.messages.forEach((message) => {
+            const updateIndex =
+              newMessages.findIndex((value) => value.id === message.id) ?? -1;
+            if (updateIndex >= 0) {
+              newMessages = [
+                ...newMessages.slice(0, updateIndex),
+                message,
+                ...newMessages.slice(updateIndex + 1),
+              ];
+            }
+            const updateIndexWithInvoked = newMessagesWithInvoked.findIndex(
+              (value) => value.id === message.id
+            );
+            if (updateIndexWithInvoked >= 0) {
+              newMessagesWithInvoked = [
+                ...newMessagesWithInvoked.slice(0, updateIndexWithInvoked),
+                message,
+                ...newMessagesWithInvoked.slice(updateIndexWithInvoked + 1),
+              ];
+            }
+          });
+          const newState = {
+            ...state,
+            messages: newMessages,
+            messagesWithInvoked: newMessagesWithInvoked,
+          };
+
+          get().setAssistant(newState);
         },
       })),
       {
@@ -1349,6 +1263,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("assistant");
               console.log(
                 "useAssistantsStoreCore: rehydrated",
                 minutesStartTimestamp,

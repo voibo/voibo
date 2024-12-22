@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import { ActionBase } from "./ActionBase.js";
 import { Topic } from "../../../common/content/topic.js";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
 import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
-import { ActionBase } from "./ActionBase.js";
+import { useMinutesAssistantStore } from "../store/useAssistantsStore.jsx";
 
 export type TopicAction =
   | ActionBase<"setTopic", { topics: Topic[] }>
@@ -28,10 +29,16 @@ export type TopicAction =
 export const processTopicAction = async (action: TopicAction) => {
   const startTimestamp = useVBStore.getState().startTimestamp;
   const minutesState = useMinutesStore(startTimestamp).getState();
+  const assistantState = useMinutesAssistantStore(startTimestamp).getState();
   const vbReactflowState = useVBReactflowStore.getState();
   switch (action.type) {
     case "setTopic":
       minutesState.setTopic(action.payload.topics);
+      minutesState.assistants.forEach((vaConfig) =>
+        assistantState.enqueueTopicRelatedInvoke(vaConfig)
+      );
+      // After the node is added by setTopic, it is placed in the DOM, and then measured, and then the layout works.
+      // Therefore, the layout cannot be executed here.
       vbReactflowState.setTopics(action.payload.topics);
       break;
     case "updateTopic":
@@ -40,7 +47,8 @@ export const processTopicAction = async (action: TopicAction) => {
       break;
     case "removeTopic":
       minutesState.removeTopic(action.payload.topicID);
-      vbReactflowState.relocateTopics(); // This relocation is needed to make new edge with considering removed topic.
+      // This relocation is needed to make new edge with considering removed topic.
+      vbReactflowState.relocateTopics();
       break;
     case "deleteAllTopic":
       minutesState.deleteAllTopic();

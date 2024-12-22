@@ -24,7 +24,6 @@ import {
   TableRow,
 } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import {
   VirtualAssistantConfDialog,
   VirtualAssistantConfDialogMode,
@@ -145,9 +144,7 @@ export const VirtualAssistantManager = (props: { handleClose: () => void }) => {
   };
 
   const avatarIconStyle = { width: "1.5rem", height: "1.5rem" };
-  const assistants = minutesStore((state) => state.assistants).filter(
-    (assistant) => assistant.assistantId !== GENERAL_ASSISTANT_NAME
-  );
+  const assistants = minutesStore((state) => state.assistants);
 
   // bg-blue-400
   return (

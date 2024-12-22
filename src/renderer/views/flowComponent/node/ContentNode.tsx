@@ -22,11 +22,9 @@ import useClickHandler from "../../component/common/useClickHandler.jsx";
 import { Content } from "../../../../common/content/content.js";
 import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { NodeBase } from "./NodeBase.jsx";
+import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
 
-export type ContentNodeParam = {
-  content: Content;
-};
+export type ContentNodeParam = ContentNodeBaseParam;
 
 export type ContentNode = Node<ContentNodeParam, "content">;
 
@@ -37,9 +35,9 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
   if (!minutesStartTimestamp) {
     return <></>;
   }
-  const content = useMinutesContentStore(minutesStartTimestamp)
-    .getState()
-    .getContent(props.data.content.id);
+  const content = useMinutesContentStore(minutesStartTimestamp)((state) =>
+    state.getContent(props.data.id)
+  );
   if (!content) {
     return <></>;
   }
@@ -167,8 +165,7 @@ const ContentVisibleView = (props: { content: Content }) => {
 
 export default memo(ContentNode, (prevProps, nextProps) => {
   const shouldNotUpdate =
-    prevProps.data.content.id === nextProps.data.content.id &&
-    prevProps.data.content === nextProps.data.content &&
+    prevProps.data.id === nextProps.data.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.dragging === nextProps.dragging;
   return shouldNotUpdate;

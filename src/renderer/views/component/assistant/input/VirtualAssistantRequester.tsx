@@ -26,16 +26,15 @@ import {
 } from "@mui/material";
 import { Dispatch, useState } from "react";
 import {
-  AssistantAction,
   AssistantState,
   makeTopicOrientedInvokeParam,
-} from "../../../store/useAssistantsStore.js";
-import { useVBStore } from "../../../store/useVBStore.js";
-import { useMinutesStore } from "../../../store/useMinutesStore.js";
+} from "../../../store/useAssistantsStore.jsx";
+import { useVBStore } from "../../../store/useVBStore.jsx";
+import { useMinutesStore } from "../../../store/useMinutesStore.jsx";
 import { TypicalRequest } from "../../../../../common/content/assisatant.js";
 
 // requestor
-
+/*
 export const VirtualAssistantRequester = (props: {
   state: AssistantState;
   dispatch: Dispatch<AssistantAction>;
@@ -159,3 +158,4 @@ export const VirtualAssistantRequester = (props: {
     </div>
   );
 };
+*/

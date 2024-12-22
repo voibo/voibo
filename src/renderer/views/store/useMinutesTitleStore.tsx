@@ -139,8 +139,8 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
           if (error) {
             console.error("an error happened during hydration", error);
           } else if (state) {
-            console.log("useMinutesTitleStore hydrated");
             state.setHasHydrated(true);
+            console.log("useMinutesTitleStore hydrated");
           }
         };
       },

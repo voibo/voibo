@@ -15,7 +15,6 @@ limitations under the License.
 */
 import { DiscussionSegment } from "../../../common/discussion.js";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
-import { useTopicStore } from "../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
 
@@ -76,7 +75,6 @@ export const processDiscussionAction = async (action: DiscussionAction) => {
       useVBStore.setState({
         interimSegment: null,
       });
-      useTopicStore.getState().updateTopicSeeds(false);
       break;
     default:
       console.warn("processDiscussionAction: unexpected default", action);

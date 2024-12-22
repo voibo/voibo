@@ -23,9 +23,10 @@ import {
 import { createStore, del, get, set } from "idb-keyval";
 import { v4 as uuidv4 } from "uuid";
 import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
-import { NO_MINUTES_START_TIMESTAMP } from "./useVBStore.jsx";
+import { NO_MINUTES_START_TIMESTAMP, useVBStore } from "./useVBStore.jsx";
 import {
   EnglishTopicPrompt,
+  TopicInvokeParam,
   TopicSchema,
 } from "../../../common/content/assisatant.js";
 import { SystemDefaultTemplate } from "../component/assistant/AssistantTemplates.js";
@@ -42,8 +43,17 @@ import {
   DefaultSplitter,
   DiscussionSplitterConf,
 } from "../component/topic/DiscussionSplitter.jsx";
-import { Topic } from "../../../common/content/topic.js";
+import {
+  isLLMAnalyzedTopics,
+  LLMAnalyzedTopics,
+  Topic,
+  TopicRequest,
+  TopicSeed,
+} from "../../../common/content/topic.js";
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
+import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
+import { processTopicAction } from "../action/TopicAction.js";
+import { IPCInvokeKeys } from "../../../common/constants.js";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -66,7 +76,8 @@ const MinutesPersistStorage: StateStorage = {
   },
 };
 
-export type MinutesStore = {
+// === State ===
+type MinutesState = {
   startTimestamp: number;
   discussionSplitter: DiscussionSplitterConf;
   discussion: DiscussionSegment[];
@@ -75,33 +86,70 @@ export type MinutesStore = {
   assistants: VirtualAssistantConf[];
 };
 
-export const DefaultMinutesStore: MinutesStore = {
-  startTimestamp: NO_MINUTES_START_TIMESTAMP,
-  discussionSplitter: DefaultSplitter,
-  discussion: [],
-  topicAIConf: {
-    modelType: "gpt-4",
-    systemPrompt: EnglishTopicPrompt,
-    structuredOutputSchema: TopicSchema,
-    temperature: 0,
-  },
-  topics: [],
-  assistants: [],
+type TopicManagerState = {
+  // res: state
+  topicProcessing: boolean;
+  topicError: Error | null;
+  topicRes: {
+    data: LLMAnalyzedTopics;
+  } | null;
+
+  // request prompt queue
+  topicPrompts: TopicRequest[];
+
+  // seed
+  topicSeeds: TopicSeed[];
 };
 
-export const initMinutesState = (startTimestamp: number): MinutesStore => {
+export type MinutesStore = MinutesState & TopicManagerState;
+
+const initMinutesState = (startTimestamp: number): MinutesStore => {
   return {
-    ...DefaultMinutesStore,
+    // MinutesState
     startTimestamp: startTimestamp,
+    discussionSplitter: DefaultSplitter,
+    discussion: [],
+    topicAIConf: {
+      modelType: "gpt-4",
+      systemPrompt: EnglishTopicPrompt,
+      structuredOutputSchema: TopicSchema,
+      temperature: 0,
+    },
+    topics: [],
+    assistants: [],
+
+    // TopicManagerState
+    topicProcessing: false,
+    topicError: null,
+    topicRes: null,
+    topicPrompts: [],
+    topicSeeds: [],
   };
 };
 
-export type MinutesDispatchStore = AssistantConfDispatch &
+export type MinutesDispatchStore = TopicManagerDispatch &
+  AssistantConfDispatch &
   DiscussionSplitterConfDispatch &
   TopicAIConfDispatch &
   TopicDispatch &
   DiscussionDispatch &
   MinutesDispatch;
+
+type TopicManagerDispatch = {
+  updateTopicSeeds: (enforceUpdateAll: boolean) => void;
+  startTopicProcess: () => void;
+  processTopic: () => Promise<void>;
+  resTopicError: (props: {
+    error: Error;
+    prompts: TopicRequest[];
+    topicSeed: TopicSeed[];
+  }) => void;
+  resTopicSuccess: (props: {
+    res: { data: LLMAnalyzedTopics };
+    prompts: TopicRequest[];
+    topicSeed: TopicSeed[];
+  }) => void;
+};
 
 type AssistantConfDispatch = {
   addVirtualAssistantConf: (assistant: VirtualAssistantConf) => void;
@@ -330,6 +378,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         setMinutesLines: (minutes) => {
           const action = () => {
             set((state) => ({ discussion: [...state.discussion, ...minutes] }));
+            get().updateTopicSeeds(false);
           };
           if (!get().hasHydrated) {
             enqueueAction(action);
@@ -449,6 +498,239 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             minutesStartTimestamp
           );
         },
+
+        // == TopicManagerDispatch ==
+
+        // action
+        startTopicProcess: () => {
+          if (!useVBStore.getState().allReady) return;
+          set({ topicProcessing: true, topicError: null, topicRes: null });
+        },
+        processTopic: async () => {
+          if (
+            !useVBStore.getState().allReady ||
+            useVBStore.getState().isNoMinutes()
+          )
+            return;
+          const targetIndex = get().topicPrompts.findIndex(
+            (v) => !v.isRequested
+          );
+          if (get().topicProcessing || targetIndex < 0) return;
+
+          // start process
+          get().startTopicProcess();
+
+          const startTimestamp = useVBStore.getState().startTimestamp;
+          const getAgenda =
+            useMinutesAgendaStore(startTimestamp).getState().getAgenda;
+          const topicAIConf =
+            useMinutesStore(startTimestamp).getState().topicAIConf;
+
+          // make a request
+          const currentTopic = get().topicPrompts[targetIndex];
+          const topicRes = get().topicRes;
+          let lastResult = "";
+          if (topicRes && topicRes.data.topics.length > 0) {
+            const lastTopic =
+              topicRes.data.topics[topicRes.data.topics.length - 1];
+            lastResult = `${lastTopic.title}\n\n ${
+              Array.isArray(lastTopic.topic)
+                ? lastTopic.topic.join("\n")
+                : lastTopic.topic
+            }`;
+
+            if (lastTopic.seedData && lastTopic.seedData.agendaIdList) {
+              lastTopic.seedData.agendaIdList.forEach((agendaId) => {
+                const relatedAgenda = getAgenda(agendaId);
+                console.log(
+                  "useTopicManager: lastTopic agendaIdList",
+                  relatedAgenda
+                );
+              });
+            }
+          }
+
+          // agenda
+          /*
+          if (currentTopic.seedData.agendaIdList) {
+            currentTopic.seedData.agendaIdList.forEach((agendaId) => {
+              const relatedAgenda = getAgenda(agendaId);
+            });
+          }
+            */
+
+          const prompt = `"""Immediate Previous Content\n${lastResult}\n"""\n\n"""Content\n${currentTopic.text}\n"""\n`;
+          const updatePrompts = [...get().topicPrompts];
+          updatePrompts[targetIndex].isRequested = true;
+          await window.electron
+            .invoke(IPCInvokeKeys.GET_TOPIC, {
+              systemPrompt: get().topicAIConf.systemPrompt, // EnglishTopicPrompt
+              structuredOutputSchema: topicAIConf.structuredOutputSchema,
+              inputPrompt: prompt,
+              modelType: topicAIConf.modelType,
+              temperature: topicAIConf.temperature,
+              difyConf: topicAIConf.difyConf,
+              flowiseConf: topicAIConf.flowiseConf,
+            } as TopicInvokeParam)
+            .then((resJSON) => {
+              console.log("useTopicManager: getTopic", resJSON);
+              if (isLLMAnalyzedTopics(resJSON)) {
+                resJSON.topics.forEach((topic) => {
+                  topic.id = uuidv4();
+                  topic.seedData = currentTopic.seedData;
+                  topic.agendaIds = currentTopic.seedData.agendaIdList ?? [];
+                });
+                const responsePrompt = get().topicPrompts[targetIndex];
+                get().topicSeeds.forEach((seed) => {
+                  if (seed == responsePrompt.seedData) {
+                    seed.requireUpdate = false;
+                  }
+                });
+                get().resTopicSuccess({
+                  res: {
+                    data: resJSON,
+                  },
+                  prompts: updatePrompts,
+                  topicSeed: get().topicSeeds,
+                });
+              } else {
+                console.error("resError: Invalid JSON data", resJSON);
+                const responsePrompt = get().topicPrompts[targetIndex];
+                get().topicSeeds.forEach((seed) => {
+                  if (seed == responsePrompt.seedData) {
+                    seed.requireUpdate = false;
+                  }
+                });
+                get().resTopicError({
+                  error: new Error("Invalid JSON data"),
+                  prompts: updatePrompts,
+                  topicSeed: get().topicSeeds,
+                });
+              }
+            })
+            .catch((e) => {
+              console.error("resError :general error", e);
+              const responsePrompt = get().topicPrompts[targetIndex];
+              get().topicSeeds.forEach((seed) => {
+                if (seed == responsePrompt.seedData) {
+                  seed.requireUpdate = false;
+                }
+              });
+              get().resTopicError({
+                error: e,
+                prompts: updatePrompts,
+                topicSeed: get().topicSeeds,
+              });
+            });
+        },
+
+        updateTopicSeeds: (enforceUpdateAll: boolean) => {
+          if (!useVBStore.getState().allReady) return;
+          // 現在の全discussionから、全topicSeedを再構築する
+          const topicSeeds: TopicSeed[] = [];
+          const startTimestamp = useVBStore.getState().startTimestamp;
+          const minutesStore = useMinutesStore(startTimestamp).getState();
+          minutesStore.discussion.forEach((segment) => {
+            const currentStartTimestamp = Number(segment.timestamp);
+            const currentEndTimestamp = segment.texts.reduce(
+              (pre, current) => pre + Number(current.length) / 1000,
+              currentStartTimestamp
+            );
+            const text = segment.texts.reduce(
+              (inPrev, inCurrent) => inPrev + inCurrent.text,
+              ""
+            );
+            if (segment.topicStartedPoint) {
+              topicSeeds.push({
+                startTimestamp: currentStartTimestamp,
+                endTimestamp: currentEndTimestamp,
+                text,
+                requireUpdate: enforceUpdateAll,
+                agendaIdList: [
+                  ...useMinutesAgendaStore(startTimestamp)
+                    .getState()
+                    .getDiscussedAgendas({
+                      startFromMStartMsec: currentStartTimestamp * 1000,
+                      endFromMStartMsec: currentEndTimestamp * 1000,
+                    })
+                    .map((agenda) => agenda.id),
+                ],
+              });
+              //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
+            } else if (topicSeeds.length > 0) {
+              topicSeeds[topicSeeds.length - 1].endTimestamp =
+                currentEndTimestamp;
+              topicSeeds[topicSeeds.length - 1].text += "\n" + text;
+            }
+          });
+
+          // 現在のtopicSeedsと比較して、変更があれば更新対象にする
+          let updatedTopicSeed: TopicSeed[] = [];
+          if (enforceUpdateAll) {
+            updatedTopicSeed = topicSeeds;
+          } else {
+            topicSeeds.forEach((seed) => {
+              const currentSeed = get().topicSeeds.find(
+                (currentSeed) =>
+                  currentSeed.startTimestamp == seed.startTimestamp &&
+                  currentSeed.endTimestamp == seed.endTimestamp &&
+                  currentSeed.text == seed.text
+              );
+              if (!currentSeed) {
+                updatedTopicSeed.push({ ...seed, requireUpdate: true });
+              } else {
+                updatedTopicSeed.push(seed);
+              }
+            });
+          }
+
+          // 更新対象の topicSeed を TopicRequest に変換
+          const targetTopicSeedRequests: TopicRequest[] = updatedTopicSeed
+            .filter((seed) => seed.requireUpdate)
+            .map((seed) => {
+              return {
+                text: seed.text,
+                seedData: seed,
+                isRequested: false,
+              };
+            });
+
+          set({
+            topicPrompts: targetTopicSeedRequests,
+            topicSeeds: updatedTopicSeed,
+          });
+        },
+
+        resTopicSuccess: ({ res, prompts, topicSeed }) => {
+          if (!useVBStore.getState().allReady) return;
+          set({
+            topicProcessing: false,
+            topicError: null,
+            topicRes: res,
+            topicPrompts: prompts,
+            topicSeeds: topicSeed,
+          });
+
+          // FIXME: exceptional handling
+          // all actions should be called from store, but this is exceptional handling.
+          processTopicAction({
+            type: "setTopic",
+            payload: {
+              topics: res.data.topics,
+            },
+          });
+        },
+
+        resTopicError: ({ error, prompts, topicSeed }) => {
+          if (!useVBStore.getState().allReady) return;
+          set({
+            topicProcessing: false,
+            topicError: error,
+            topicRes: null,
+            topicPrompts: prompts,
+            topicSeeds: topicSeed,
+          });
+        },
       })),
       {
         name: minutesStartTimestamp.toString(),
@@ -456,6 +738,14 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
           () => MinutesPersistStorage,
           ExpandJSONOptions
         ),
+        partialize: (state) => ({
+          startTimestamp: state.startTimestamp,
+          discussionSplitter: state.discussionSplitter,
+          discussion: state.discussion,
+          topicAIConf: state.topicAIConf,
+          topics: state.topics,
+          assistants: state.assistants,
+        }),
         onRehydrateStorage: (state) => {
           return (state, error) => {
             if (error) {
@@ -466,6 +756,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("minutes");
               console.log(
                 "useMinutesStoreCore: rehydrated",
                 state.startTimestamp,
@@ -478,3 +769,4 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
     )
   );
 };
+//

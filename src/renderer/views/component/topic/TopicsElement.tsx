@@ -27,12 +27,11 @@ import {
 import { Button, Chip } from "@mui/material";
 import { useEffect, useState } from "react";
 import { secondsToHMS } from "../../../util.js";
+import { Topic } from "../../../../common/content/topic.js";
 import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
 import { useDiscussionHistory } from "../discussion/DiscussionHistory.jsx";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
-import { useTopicStore } from "../../store/useTopicManagerStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { Topic } from "../../../../common/content/topic.js";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
@@ -150,7 +149,10 @@ const Actions = (props: {
 };
 
 export const TopicsHeader = () => {
-  const updateTopicSeeds = useTopicStore((state) => state.updateTopicSeeds);
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const updateTopicSeeds = useMinutesStore(startTimestamp)(
+    (state) => state.updateTopicSeeds
+  );
   const [openDialog, setOpenDialog] = useState(false);
 
   const handleClick = () => {

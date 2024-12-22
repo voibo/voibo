@@ -29,6 +29,7 @@ import { StateStorage } from "zustand/middleware";
 import { useMinutesAssistantStore } from "./useAssistantsStore.jsx";
 import { useMinutesContentStore } from "./useContentStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
+import { useVBStore } from "./useVBStore.jsx";
 
 // == Group ==
 export type Group = {
@@ -240,6 +241,7 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
               );
             } else if (state) {
               state.setHasHydrated(true);
+              useVBStore.getState().setHydrated("group");
               console.log(
                 "useMinutesGroupStoreCore: rehydrated",
                 minutesStartTimestamp,

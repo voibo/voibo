@@ -17,7 +17,6 @@ import { Folder, ViewAgenda } from "@mui/icons-material";
 import { Button, ButtonGroup } from "@mui/material";
 import { NodeToolbar } from "@xyflow/react";
 import { NodeProps, Position } from "@xyflow/system";
-import { GENERAL_ASSISTANT_NAME } from "../../../../common/content/assisatant.js";
 import { AgendaSelectorDialogBody } from "../../component/agenda/AgendaSelector.jsx";
 import { AIAssistantAvatar } from "../../component/assistant/message/AIAssistantAvatar.jsx";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
@@ -36,6 +35,13 @@ import { ContentNode } from "./ContentNode.jsx";
 import { TopicNode } from "./TopicNode.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { Agenda } from "../../../../common/content/agenda.js";
+
+export type ContentNodeBaseParam = {
+  id: string;
+  type: "content" | "topic" | "assistantMessage";
+  agendaIds: string[];
+  groupIds: string[];
+};
 
 export const NodeBase = (props: {
   nodeProps: NodeProps<TopicNode | AssistantMessageNode | ContentNode>;
@@ -78,14 +84,10 @@ export const NodeBase = (props: {
   // assistants
   const assistants = useMinutesStore(startTimestamp)(
     (state) => state.assistants
-  ).filter(
-    (assistant) =>
-      assistant.assistantId !== GENERAL_ASSISTANT_NAME &&
-      assistant.updateMode === "manual"
-  );
+  ).filter((assistant) => assistant.updateMode === "manual");
 
   // agendaList
-  const agendaList = (props.nodeProps.data.content.agendaIds ?? []) // 過渡期のためのデータ変換
+  const agendaList = (props.nodeProps.data.agendaIds ?? []) // 過渡期のためのデータ変換
     .map((agendaId) =>
       useMinutesAgendaStore(startTimestamp).getState().getAgenda(agendaId)
     )
@@ -101,7 +103,7 @@ export const NodeBase = (props: {
       content: (
         <GroupSelectorDialogBody
           minutesStartTimestamp={startTimestamp}
-          initialGroupIds={nodeProps.data.content.groupIds ?? []}
+          initialGroupIds={nodeProps.data.groupIds ?? []}
           handleClose={handleClose}
         />
       ),
@@ -117,7 +119,7 @@ export const NodeBase = (props: {
     detailViewDialog({
       content: (
         <AgendaSelectorDialogBody
-          initialAgendaIds={nodeProps.data.content.agendaIds ?? []}
+          initialAgendaIds={nodeProps.data.agendaIds ?? []}
           handleClose={handleClose}
         />
       ),
@@ -173,9 +175,7 @@ export const NodeBase = (props: {
         >
           <div className="flex justify-between items-start">
             <BelongAgendaChips agendaList={agendaList} />
-            <BelongGroupChips
-              groupIds={nodeProps.data.content.groupIds ?? []}
-            />
+            <BelongGroupChips groupIds={nodeProps.data.groupIds ?? []} />
           </div>
         </div>
       </div>
@@ -198,20 +198,17 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
 
   const handleAssistantButtonClick = () => {
     if (!isAssistantHydrated) return;
-    assistantStore.getState().assistantDispatch(assistantConfig)({
-      type: "invokeAssistant",
-      payload: {
-        queue: [
-          makeInvokeParam({
-            basePrompt: assistantConfig.aiConfig.systemPrompt,
-            messages: useVBReactflowStore.getState().getSequencedSelection(),
-            attachOption: assistantConfig.attachOption ?? {
-              attachment: "topic",
-              target: "manualSelected",
-            },
-          }),
-        ],
-      },
+    assistantStore.getState().invokeAssistant(assistantConfig, {
+      queue: [
+        makeInvokeParam({
+          basePrompt: assistantConfig.aiConfig.systemPrompt,
+          messages: useVBReactflowStore.getState().getSequencedSelection(),
+          attachOption: assistantConfig.attachOption ?? {
+            attachment: "topic",
+            target: "manualSelected",
+          },
+        }),
+      ],
     });
   };
 

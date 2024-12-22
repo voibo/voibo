@@ -21,10 +21,19 @@ import { Segment } from "../../../common/discussion.js";
 
 export const NO_MINUTES_START_TIMESTAMP = 0;
 
+export type IDB_NAMES =
+  | "minutes"
+  | "agenda"
+  | "assistant"
+  | "content"
+  | "group";
+
 export type VBState = {
   // current minutes start timestamp.
   // if no minutes, it is NO_MINUTES_START_TIMESTAMP
   startTimestamp: number;
+  allReady: boolean;
+  hydrated: Map<IDB_NAMES, boolean>;
 
   // gui
   mainMenuOpen: boolean;
@@ -41,11 +50,20 @@ export type VBState = {
 
 type VBDispatch = {
   isNoMinutes: () => boolean;
+  setHydrated: (name: IDB_NAMES) => void;
 };
 
 export const useVBStore = create<VBState & VBDispatch>()(
   subscribeWithSelector((set, get) => ({
     startTimestamp: NO_MINUTES_START_TIMESTAMP,
+    allReady: false,
+    hydrated: new Map<IDB_NAMES, boolean>([
+      ["minutes", false],
+      ["agenda", false],
+      ["assistant", false],
+      ["content", false],
+      ["group", false],
+    ]),
 
     // gui
     mainMenuOpen: true,
@@ -61,5 +79,11 @@ export const useVBStore = create<VBState & VBDispatch>()(
 
     // utils
     isNoMinutes: () => get().startTimestamp === NO_MINUTES_START_TIMESTAMP,
+    setHydrated: (name: IDB_NAMES) => {
+      const hydrated = get().hydrated;
+      hydrated.set(name, true);
+      set({ hydrated });
+      set({ allReady: Array.from(hydrated.values()).every((v) => v) });
+    },
   }))
 );

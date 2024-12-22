@@ -236,8 +236,8 @@ export function focusGroup(props: {
     .getContentImplementedNodes()
     .filter((node) =>
       (targetType === "agenda"
-        ? node.data.content.agendaIds ?? []
-        : node.data.content.groupIds ?? []
+        ? node.data.agendaIds ?? []
+        : node.data.groupIds ?? []
       ).includes(targetId)
     );
   if (targetNodes.length === 0) {
