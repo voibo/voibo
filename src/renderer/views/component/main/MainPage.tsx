@@ -23,9 +23,7 @@ import { VBNodeStage } from "../../flowComponent/VBNodeStage.jsx";
 import { VBSettings } from "../setting/VBSettings.jsx";
 import { useVBMainStoreEffect } from "../../store/useVBMainStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { useTopicManager } from "../topic/useTopicManager.jsx";
 import { processVBAction } from "../../action/VBAction.js";
-import { state } from "mermaid/dist/rendering-util/rendering-elements/shapes/state.js";
 
 export const drawerWidth = 240;
 
@@ -60,9 +58,6 @@ export const MainPage = () => {
       });
     });
   }, []);
-
-  // Topic Manager
-  useTopicManager();
 
   return (
     <div className="flex bg-indigo-950  text-zinc-600">
