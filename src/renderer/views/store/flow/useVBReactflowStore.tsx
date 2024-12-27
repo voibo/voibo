@@ -31,38 +31,47 @@ import {
 import { create } from "zustand";
 
 import { subscribeWithSelector } from "zustand/middleware";
-import { Message } from "../../../common/content/assisatant.js";
+import { Message } from "../../../../common/content/assisatant.js";
 import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
-  removeAssistantMessage,
-} from "../flowComponent/node/AssistantMessageNode.jsx";
-import {
-  ContentNode,
-  removeContent,
-} from "../flowComponent/node/ContentNode.jsx";
-import { DiscussionNode } from "../flowComponent/node/DisscussionNode.jsx";
-import { TopicHeaderNode } from "../flowComponent/node/TopicHeaderNode.jsx";
+} from "../../flowComponent/node/AssistantMessageNode.jsx";
+import { ContentNode } from "../../flowComponent/node/ContentNode.jsx";
+import { DiscussionNode } from "../../flowComponent/node/DisscussionNode.jsx";
+import { TopicHeaderNode } from "../../flowComponent/node/TopicHeaderNode.jsx";
 import {
   isTopicNode,
   TopicNode,
   TopicNodeParam,
-} from "../flowComponent/node/TopicNode.jsx";
-import { Topic } from "../../../common/content/topic.js";
-import { Content } from "../../../common/content/content.js";
+} from "../../flowComponent/node/TopicNode.jsx";
+import { Topic } from "../../../../common/content/topic.js";
+import { Content } from "../../../../common/content/content.js";
 import {
   AssistantState,
   useMinutesAssistantStore,
   VirtualAssistantConf,
-} from "./useAssistantsStore.jsx";
-import { useMinutesContentStore } from "./useContentStore.jsx";
-import { Group, useMinutesGroupStore } from "./useGroupStore.jsx";
-import { useVBStore } from "./useVBStore.jsx";
-import { useMinutesStore } from "./useMinutesStore.jsx";
-import { processTopicAction } from "../action/TopicAction.js";
-import { Agenda } from "../../../common/content/agenda.js";
+} from "../useAssistantsStore.jsx";
+import { useMinutesContentStore } from "../useContentStore.jsx";
+import { Group, useMinutesGroupStore } from "../useGroupStore.jsx";
+import { useVBStore } from "../useVBStore.jsx";
+import { useMinutesStore } from "../useMinutesStore.jsx";
+import { processTopicAction } from "../../action/TopicAction.js";
+import { Agenda } from "../../../../common/content/agenda.js";
+import { processAssistantMessageAction } from "../../action/AssistantMessageAction.js";
+import { processContentAction } from "../../action/ContentAction.js";
+import { DummyNode } from "../../flowComponent/node/DummyNode.jsx";
 
 // ==== ReactFlow  ====
+type Bounds = {
+  measured: {
+    height: number;
+    width: number;
+  };
+  position: {
+    x: number;
+    y: number;
+  };
+};
 
 type LayoutParam = {
   initialViewPort: Viewport;
@@ -87,7 +96,7 @@ export const getLayoutParam = (): LayoutParam => {
   return {
     initialViewPort: {
       x: 100,
-      y: 0,
+      y: 100,
       zoom: 1,
     },
     topic: {
@@ -109,6 +118,794 @@ export const getLayoutParam = (): LayoutParam => {
 
 export type TopicBothEndsNode = TopicHeaderNode | DiscussionNode;
 
+export type VBReactflowState = {
+  // # connecter for ReactFlow
+  // subscribe からしか変更してはいけない
+  nodes: Node[];
+  edges: Edge[];
+
+  // selected 表示管理
+  selectedSequences: string[];
+
+  // assistant 表示管理
+  _assistantLocatedNodeMap: Map<
+    string,
+    {
+      node: Node;
+      assistants: Array<AssistantMessageNode>;
+    }
+  >;
+
+  // # 実体
+  // layout
+  _layoutTopicsQueue: Array<TopicNode>;
+  dummyNodes: DummyNode[];
+
+  // topics
+  topicBothEndsNodes: Array<TopicBothEndsNode>;
+  topicNodes: TopicNode[];
+  topicEdges: Edge[];
+
+  // assistant
+  assistantNodes: AssistantMessageNode[];
+  assistantEdges: Edge[];
+
+  // content
+  contentNodes: ContentNode[];
+  contentEdges: Edge[];
+};
+
+const DefaultVBReactflowState: VBReactflowState = {
+  // # connecter for ReactFlow --
+  // These properties should not be updated directly.
+  nodes: [],
+  edges: [],
+  // ---
+
+  // layout
+  _layoutTopicsQueue: [],
+
+  // selected 表示管理
+  selectedSequences: [],
+
+  // assistant 表示管理
+  _assistantLocatedNodeMap: new Map(),
+
+  // core
+  dummyNodes: [
+    /*
+    {
+      id: "dummy_top_left",
+      type: "dummy",
+      position: { x: 0, y: 0 },
+      data: {},
+      deletable: false,
+      selectable: false,
+      draggable: false,
+    },
+    {
+      id: "dummy_bottom_right",
+      type: "dummy",
+      position: { x: 10000, y: 10000 },
+      data: {},
+      deletable: false,
+      selectable: false,
+      draggable: false,
+    },
+    */
+  ],
+  topicNodes: [],
+  topicBothEndsNodes: [
+    {
+      id: "topicHeader",
+      type: "topicHeader",
+      position: { x: 0, y: 0 },
+      width: getLayoutParam().topic.width,
+      data: {},
+      deletable: false,
+      //selectable: false, // if false, the button inside cannot be clicked.
+      draggable: false,
+    },
+    {
+      id: "discussion",
+      type: "discussion",
+      position: { x: 0, y: 0 },
+      width: getLayoutParam().topic.width,
+      data: {},
+      deletable: false,
+      //selectable: false,
+      draggable: false,
+    },
+  ],
+  topicEdges: [],
+  assistantNodes: [],
+  assistantEdges: [],
+
+  contentNodes: [],
+  contentEdges: [],
+};
+
+export type VBReactflowDispatchStore = {
+  // # connecter for ReactFlow --
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+  // ## Node manipulation
+  onNodeDragStop: OnNodeDrag;
+  onNodeDragStart: OnNodeDrag;
+  onNodesDelete: OnNodesDelete;
+  // ---
+
+  // # Util
+  upsertTopicNode: (node: TopicNode) => void;
+  updateAssistantAt: (targetNode: Node) => void;
+  getContentImplementedNodes: () => Array<
+    TopicNode | AssistantMessageNode | ContentNode
+  >;
+  layout: (layoutParam: LayoutParam) => void;
+  layoutTopics: (measuredNodes: TopicNode[]) => void;
+
+  // selection
+  getSequencedSelection: () => Array<Topic | Message | Content>;
+  deselectAll: () => void;
+  updateSequencedSelectionsGroup: (groups: Group[]) => void;
+  updateSequencedSelectionsAgenda: (agendas: Agenda[]) => void;
+
+  // topic util
+  updateTopic: (topic: Topic) => void;
+  setTopics: (topics: Topic[]) => void;
+  relocateTopics: () => void;
+
+  // get by node id
+  getTopicByNodeID: (nodeId: string) => Topic | undefined;
+  getContentByNodeID: (nodeId: string) => Content | undefined;
+  getVirtualAssistantConfByNodeID: (
+    nodeId: string
+  ) => VirtualAssistantConf | undefined;
+  getAssistantMessageByNodeID: (nodeId: string) => Message | undefined;
+};
+
+// VBReactflowDispatchStoreストア
+export const useVBReactflowStore = create<
+  VBReactflowState & VBReactflowDispatchStore
+>()(
+  subscribeWithSelector((set, get) => ({
+    ...DefaultVBReactflowState,
+
+    // react flow standard
+    onNodesChange: (changes) => {
+      set({
+        topicBothEndsNodes: applyNodeChanges(
+          changes,
+          get().topicBothEndsNodes
+        ) as Array<TopicBothEndsNode>,
+        topicNodes: applyNodeChanges(changes, get().topicNodes) as TopicNode[],
+        assistantNodes: applyNodeChanges(
+          changes,
+          get().assistantNodes
+        ) as AssistantMessageNode[],
+        contentNodes: applyNodeChanges(
+          changes,
+          get().contentNodes
+        ) as ContentNode[],
+        dummyNodes: applyNodeChanges(changes, get().dummyNodes) as DummyNode[],
+      });
+
+      // select sequences
+      changes
+        .filter((change) => change.type === "select")
+        .forEach((change) => {
+          const selectedNode = get().nodes.find(
+            (node) => node.id === change.id
+          );
+          if (selectedNode) {
+            switch (change.selected) {
+              case true:
+                set({
+                  selectedSequences: [...get().selectedSequences, change.id],
+                });
+                break;
+              case false:
+                set({
+                  selectedSequences: get().selectedSequences.filter(
+                    (id) => id !== change.id
+                  ),
+                });
+                break;
+            }
+          }
+        });
+    },
+    onEdgesChange: (changes) => {
+      set({
+        topicEdges: applyEdgeChanges(changes, get().topicEdges),
+        assistantEdges: applyEdgeChanges(changes, get().assistantEdges),
+        contentEdges: applyEdgeChanges(changes, get().contentEdges),
+      });
+    },
+    onConnect: (connection) => {
+      set({
+        topicEdges: addEdge(connection, get().topicEdges),
+        assistantEdges: addEdge(connection, get().assistantEdges),
+        contentEdges: addEdge(connection, get().contentEdges),
+      });
+    },
+    onNodeDragStart: (event, node) => {
+      console.log("onNodeDragStart", event, node);
+    },
+    onNodeDragStop: (event, node, nodes) => {
+      updateNodePosition(node, get);
+    },
+    onNodesDelete: (nodes) => {
+      console.log("onNodesDelete", nodes);
+      nodes.forEach((node) => {
+        switch (node.type) {
+          case "topic":
+            processTopicAction({
+              type: "removeTopic",
+              payload: { topicID: (node.data as TopicNodeParam).id },
+            });
+            break;
+          case "assistantMessage":
+            processAssistantMessageAction({
+              type: "removeAssistantMessage",
+              payload: {
+                data: node.data as AssistantMessageNodeParam,
+              },
+            });
+          case "content":
+            processContentAction({
+              type: "removeContent",
+              payload: {
+                contentId: node.id,
+              },
+            });
+            break;
+        }
+      });
+    },
+
+    // == sequenced selection ==
+
+    getSequencedSelection: () => {
+      const result: Array<Topic | Message | Content> = [];
+      get().selectedSequences.forEach((id) => {
+        // content
+        const content = get().getContentByNodeID(id);
+        if (content) {
+          result.push(content);
+        }
+        // topic
+        const topic = get().getTopicByNodeID(id);
+        if (topic) {
+          result.push(topic);
+        }
+        // assistant
+        const assistant = get().getAssistantMessageByNodeID(id);
+        if (assistant) {
+          result.push(assistant);
+        }
+      });
+      return result;
+    },
+    deselectAll: () => {
+      set({ selectedSequences: [] });
+    },
+    updateSequencedSelectionsGroup(groups) {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      if (!startTimestamp) return;
+
+      get().selectedSequences.forEach((id) => {
+        console.log("updateSequencedSelectionsGroup", id, groups);
+        // content
+        const content = get().getContentByNodeID(id);
+        if (content) {
+          useMinutesContentStore(startTimestamp)
+            .getState()
+            .setContent({
+              ...content,
+              groupIds: groups.map((group) => group.id),
+            });
+        }
+
+        // topic
+        const topic = get().getTopicByNodeID(id);
+        if (topic) {
+          processTopicAction({
+            type: "updateTopic",
+            payload: {
+              topic: {
+                ...topic,
+                groupIds: groups.map((group) => group.id),
+              },
+            },
+          });
+        }
+
+        // assistant
+        const assistant = get().getAssistantMessageByNodeID(id);
+        const assistantConfig = get().getVirtualAssistantConfByNodeID(id);
+        if (assistant && assistantConfig) {
+          useMinutesAssistantStore(startTimestamp)
+            .getState()
+            .updateMessage(assistantConfig, {
+              messages: [
+                {
+                  ...assistant,
+                  groupIds: groups.map((group) => group.id),
+                },
+              ],
+            });
+        }
+      });
+
+      // remove unnecessary group
+      useMinutesGroupStore(startTimestamp).getState().removeUnnecessaryGroup();
+    },
+    updateSequencedSelectionsAgenda(agendas) {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      if (!startTimestamp) return;
+
+      get().selectedSequences.forEach((id) => {
+        // content
+        const content = get().getContentByNodeID(id);
+        if (content) {
+          useMinutesContentStore(startTimestamp)
+            .getState()
+            .setContent({
+              ...content,
+              agendaIds: agendas.map((agenda) => agenda.id),
+            });
+        }
+
+        // topic
+        const topic = get().getTopicByNodeID(id);
+        if (topic) {
+          processTopicAction({
+            type: "updateTopic",
+            payload: {
+              topic: {
+                ...topic,
+                agendaIds: agendas.map((agenda) => agenda.id),
+              },
+            },
+          });
+        }
+
+        // assistant
+        const assistantConfig = get().getVirtualAssistantConfByNodeID(id);
+        const message = get().getAssistantMessageByNodeID(id);
+        if (assistantConfig && message) {
+          useMinutesAssistantStore(startTimestamp)
+            .getState()
+            .updateMessage(assistantConfig, {
+              messages: [
+                {
+                  ...message,
+                  agendaIds: agendas.map((agenda) => agenda.id),
+                },
+              ],
+            });
+        }
+      });
+    },
+
+    // == get by node id ==
+    getTopicByNodeID: (nodeId) => {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      const topicNode = get().topicNodes.find((node) => node.id === nodeId);
+      if (topicNode) {
+        return useMinutesStore(startTimestamp)
+          .getState()
+          .topics.find((topic) => topic.id === topicNode.id);
+      }
+    },
+    getContentByNodeID: (nodeId) => {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      const contentNode = get().contentNodes.find((node) => node.id === nodeId);
+      if (contentNode) {
+        return useMinutesContentStore(startTimestamp)
+          .getState()
+          .getContent(contentNode.id);
+      }
+    },
+    getVirtualAssistantConfByNodeID: (nodeId) => {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      const assistantNode = get().assistantNodes.find(
+        (node) => node.id === nodeId
+      );
+      if (assistantNode) {
+        return useMinutesStore(startTimestamp)
+          .getState()
+          .assistants.find(
+            (assistant) =>
+              assistant.assistantId === assistantNode.data.assistantId
+          );
+      }
+    },
+    getAssistantMessageByNodeID: (nodeId) => {
+      const startTimestamp = useVBStore.getState().startTimestamp;
+      const assistantNode = get().assistantNodes.find(
+        (node) => node.id === nodeId
+      );
+      if (assistantNode) {
+        const assistantConfig = useMinutesStore(startTimestamp)
+          .getState()
+          .assistants.find(
+            (assistant) =>
+              assistant.assistantId === assistantNode.data.assistantId
+          );
+        return assistantConfig
+          ? (
+              useMinutesAssistantStore(startTimestamp)
+                .getState()
+                .getOrInitAssistant(assistantConfig).messages ?? []
+            ).find((message) => message.id === assistantNode.id)
+          : undefined;
+      }
+    },
+
+    // == util ==
+
+    getContentImplementedNodes: () => {
+      return [
+        ...get().topicNodes,
+        ...get().assistantNodes,
+        ...get().contentNodes,
+      ];
+    },
+
+    upsertTopicNode: (node) => {
+      set((state) => {
+        const nodeIndex = state.topicNodes.findIndex((n) => n.id === node.id);
+        let updatedNodes = [...state.topicNodes];
+        if (nodeIndex !== -1) {
+          // ノードが既に存在する場合は更新
+          updatedNodes[nodeIndex] = { ...node }; // 強制更新
+        } else {
+          // ノードが存在しない場合は topic の最後に追加
+          updatedNodes = [...state.topicNodes, node];
+        }
+        return { topicNodes: updatedNodes };
+      });
+    },
+
+    updateAssistantAt: (targetNode) => {
+      const locate = locateAssistantAt(targetNode);
+      // 永続化
+      locate.updatedAssistantNodes.forEach((node) =>
+        updateNodePosition(node, get)
+      );
+
+      // position 更新
+      const assistantTreeNodes = get().assistantNodes.map((node) => {
+        const located = locate.updatedAssistantNodes.find(
+          (assistantNode) => assistantNode.id === node.id
+        ) as AssistantMessageNode | undefined;
+        return located ? located : node;
+      });
+      set({ assistantNodes: assistantTreeNodes });
+    },
+
+    layout: (layoutParam) => {
+      // アルゴリズム
+      // Topicは TopicHeader の下に TopicNode を配置。
+      // 最新のTopicNodeの下に次のTopicNodeを配置し、最後のTopicNodeの下にDiscussionNodeを配置する。
+      // TopicNodeが移動されている場合には、それに連動して次のTopicNodeも移動する。
+      // AssistantNodeは、SequenceIds の最終要素となっているNodeの右横に配置する。
+      // 複数のAssistantNodeが同じNodeに紐づいている場合には、横に並べる。
+
+      const topicBothEndsNodes = get().topicBothEndsNodes;
+      const topicNodes = get().topicNodes;
+      const assistantTreeNodes = get().assistantNodes;
+      const contentNodes = get().contentNodes;
+
+      const constructTopicTree = constructTopicTreeNodes({
+        topicBothEndsNodes,
+        topicNodes,
+      });
+
+      // == Layout  ==
+      const updatedBothEndsNodes: TopicBothEndsNode[] = [];
+      const updateTopicNodes: TopicNode[] = [];
+      const updatedAssistantNodes: AssistantMessageNode[] = [];
+
+      let lastTopicGroupData = {
+        measured: { height: 0, width: 0 },
+        position: { x: 0, y: 0 },
+      };
+      constructTopicTree.forEach((topicNode) => {
+        // topic の配置
+        const topicLocation = locateTopic(topicNode, lastTopicGroupData);
+        if (
+          topicNode.type === "topicHeader" ||
+          topicNode.type === "discussion"
+        ) {
+          updatedBothEndsNodes.push(
+            topicLocation.updatedTopicNode as TopicBothEndsNode
+          );
+        } else {
+          updateTopicNodes.push(topicLocation.updatedTopicNode as TopicNode);
+        }
+
+        updateAssistantLocatedNodeMap();
+
+        // topic に関連する assistant の配置
+        const location = locateAssistantAt(topicLocation.updatedTopicNode);
+        updatedAssistantNodes.push(...location.updatedAssistantNodes);
+        lastTopicGroupData = location.groupBounds;
+      });
+
+      set({
+        topicBothEndsNodes: updatedBothEndsNodes,
+        topicNodes: updateTopicNodes,
+      });
+      // topic系 position 永続化
+      updateTopicNodes.forEach((node) => updateNodePosition(node, get));
+      topicBothEndsNodes.forEach((node) => updateNodePosition(node, get));
+
+      // 反映された topic の位置を元に、assistant の対象位置を更新
+
+      // Assistant location
+      // Content
+      contentNodes.forEach((contentNode) =>
+        updatedAssistantNodes.push(
+          ...locateAssistantAt(contentNode).updatedAssistantNodes
+        )
+      );
+      // Assistant connected Assistant
+      assistantTreeNodes.forEach((assistantNode) =>
+        updatedAssistantNodes.push(
+          ...locateAssistantAt(assistantNode).updatedAssistantNodes
+        )
+      );
+
+      // == Update ==
+      updatedAssistantNodes.forEach((node) => updateNodePosition(node, get));
+
+      // 表示変更
+      set({
+        assistantNodes: updatedAssistantNodes,
+        contentNodes: contentNodes,
+      });
+    },
+
+    layoutTopics: (measuredNodes) => {
+      // _layoutTopicsQueue に含まれている　candidate　だけを対象にする
+      const layoutQueue = get()._layoutTopicsQueue;
+      const currentNodes = get().topicNodes;
+      const targetNodes = measuredNodes.filter((candidate) =>
+        layoutQueue.find((target) => target.id === candidate.id)
+      );
+      // targetNodes に含まれていない layoutTopicsQueue
+      const remainedQueue = layoutQueue.filter(
+        (node) => !targetNodes.includes(node)
+      );
+
+      console.log("layoutTopics", targetNodes, measuredNodes);
+      if (targetNodes.length > 0 && currentNodes.length >= targetNodes.length) {
+        // 位置を更新
+        const topicNodes = [...currentNodes.slice(0, -targetNodes.length)]; // 既に　_layoutTopicsQueue　の nodeは存在する。
+        const topicBothEndsNodes = get().topicBothEndsNodes;
+
+        let lastNode =
+          topicNodes.length > 0
+            ? topicNodes[topicNodes.length - 1]
+            : topicBothEndsNodes[0];
+        let lastBounds = {
+          measured: {
+            height: lastNode.measured?.height ?? 0,
+            width: lastNode.measured?.width ?? 0,
+          },
+          position: lastNode.position,
+        };
+
+        for (const topicNode of targetNodes) {
+          const located = locateTopic(topicNode, lastBounds);
+          updateNodePosition(located.updatedTopicNode, get); // 変更を永続化
+          topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
+          lastBounds = located.bounds;
+        }
+
+        set({
+          _layoutTopicsQueue: remainedQueue,
+          topicNodes: topicNodes,
+          topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+            topicNodes,
+            topicBothEndsNodes
+          ),
+          topicEdges: makeTopicEdges({
+            nodes: constructTopicTreeNodes({
+              topicNodes,
+              topicBothEndsNodes,
+            }),
+          }),
+        });
+      }
+    },
+
+    updateTopic: (topic) => {
+      const topicNodes = get().topicNodes.map((node) =>
+        node.id === topic.id ? makeTopicNode({ topic }) : node
+      );
+      set({
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          get().topicBothEndsNodes
+        ),
+      });
+    },
+
+    setTopics: (topics) => {
+      const newTopicNodes = topics.map((topic) => makeTopicNode({ topic }));
+      const topicNodes = [...get().topicNodes];
+      const topicBothEndsNodes = get().topicBothEndsNodes;
+      let lastNode =
+        topicNodes.length > 0
+          ? topicNodes[topicNodes.length - 1]
+          : topicBothEndsNodes[0];
+      let lastBounds = {
+        measured: {
+          height: lastNode.measured?.height ?? 0,
+          width: lastNode.measured?.width ?? 0,
+        },
+        position: lastNode.position,
+      };
+      const _layoutTopicsQueue: Array<TopicNode> = [];
+      for (const topicNode of newTopicNodes) {
+        const located = locateTopic(topicNode, lastBounds);
+        updateNodePosition(located.updatedTopicNode, get); // 変更を永続化
+        _layoutTopicsQueue.push(located.updatedTopicNode as TopicNode);
+        topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
+        lastBounds = located.bounds;
+      }
+      set({
+        _layoutTopicsQueue: _layoutTopicsQueue,
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          topicBothEndsNodes
+        ),
+      });
+    },
+
+    relocateTopics: () => {
+      set({
+        topicNodes: DefaultVBReactflowState.topicNodes,
+        topicBothEndsNodes: DefaultVBReactflowState.topicBothEndsNodes,
+        topicEdges: DefaultVBReactflowState.topicEdges,
+      });
+
+      const topics = useMinutesStore(
+        useVBStore.getState().startTimestamp
+      ).getState().topics;
+      const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
+      const topicBothEndsNodes = calcRelocatedTopicBothEndsNodes(
+        topicNodes,
+        get().topicBothEndsNodes
+      );
+      set({
+        topicNodes,
+        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
+          topicNodes,
+          topicBothEndsNodes
+        ),
+        topicEdges: makeTopicEdges({
+          nodes: constructTopicTreeNodes({
+            topicNodes,
+            topicBothEndsNodes,
+          }),
+        }),
+      });
+    },
+  }))
+);
+
+// ReactFlow standard subscribe
+useVBReactflowStore.subscribe((current, pre) => {
+  if (
+    current.topicNodes !== pre.topicNodes ||
+    current.assistantNodes !== pre.assistantNodes ||
+    current.contentNodes !== pre.contentNodes ||
+    current.dummyNodes !== pre.dummyNodes
+  ) {
+    useVBReactflowStore.setState({
+      nodes: [
+        ...constructTopicTreeNodes({
+          topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
+          topicNodes: useVBReactflowStore.getState().topicNodes,
+        }),
+        ...useVBReactflowStore.getState().assistantNodes,
+        ...useVBReactflowStore.getState().contentNodes,
+        ...useVBReactflowStore.getState().dummyNodes,
+      ],
+      edges: [
+        ...useVBReactflowStore.getState().topicEdges,
+        ...useVBReactflowStore.getState().assistantEdges,
+      ],
+    });
+  }
+});
+
+// == Node Measured ==
+
+useVBReactflowStore.subscribe(
+  (state) => state.nodes,
+  (nodes, prevNodes) => {
+    const newlyMeasuredNodes = nodes.filter(
+      (node) =>
+        node.measured && // measured
+        !prevNodes.some(
+          (prevNode) => prevNode.id === node.id && prevNode.measured
+        ) // unmeasured at the previous state
+    );
+
+    if (newlyMeasuredNodes.length > 0) {
+      // can process with measured nodes
+      console.log(
+        "useVBReactflowStore.subscribe: Measured node:",
+        newlyMeasuredNodes
+      );
+      // topic nodes
+      useVBReactflowStore
+        .getState()
+        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
+    }
+  }
+);
+
+// assistant message Node 自動配置
+useVBReactflowStore.subscribe(
+  (state) => state.assistantNodes,
+  (assistantNodes, preAssistantNodes) => {
+    // topic
+    assistantNodes
+      .filter((node) => !!node.measured)
+      .filter(
+        (node) =>
+          !!preAssistantNodes.find(
+            (preNode) =>
+              preNode.id === node.id && preNode.measured === undefined
+          )
+      )
+      // 位置が原点のものが未配置の可能性あり
+      .filter((node) => node.position.x === 0 && node.position.y == 0)
+      // 対象に
+      .forEach((node) => {
+        const message = useVBReactflowStore
+          .getState()
+          .getAssistantMessageByNodeID(node.data.id);
+        if (message && message.connectedMessageIds.length > 0) {
+          const targetNode = useVBReactflowStore
+            .getState()
+            .nodes.find(
+              (node) =>
+                node.id ===
+                message.connectedMessageIds[
+                  message.connectedMessageIds.length - 1
+                ]
+            );
+          if (targetNode) {
+            // 対象Node　の右に配置して
+            useVBReactflowStore.getState().updateAssistantAt(targetNode);
+          }
+        }
+      });
+  },
+  {
+    equalityFn: (a, b) => {
+      return (
+        a.length === b.length &&
+        a.every(
+          (node, index) =>
+            node.id === b[index].id && node.measured === b[index].measured
+        )
+      );
+    },
+  }
+);
+
 // # Util to declare the structure of the topic tree
 const makeTopicNode = (props: { topic: Topic }): TopicNode => {
   const { topic } = props;
@@ -123,32 +920,6 @@ const makeTopicNode = (props: { topic: Topic }): TopicNode => {
       agendaIds: topic.agendaIds,
       groupIds: topic.groupIds,
     },
-  };
-};
-
-const makeTopicHeaderNode = (): TopicHeaderNode => {
-  return {
-    id: "topicHeader",
-    type: "topicHeader",
-    position: { x: 0, y: 0 },
-    width: getLayoutParam().topic.width,
-    data: {},
-    deletable: false,
-    //selectable: false, // ここを false にすると、中身のボタンもクリックできなくなる
-    draggable: false,
-  };
-};
-
-const makeDiscussionNode = (): DiscussionNode => {
-  return {
-    id: "discussion",
-    type: "discussion",
-    position: { x: 0, y: 0 },
-    width: getLayoutParam().topic.width,
-    data: {},
-    deletable: false,
-    //selectable: false,
-    draggable: false,
   };
 };
 
@@ -248,7 +1019,6 @@ const makeAssistantMessageEdge = (props: {
 };
 
 // Content
-
 const makeContentNode = (props: { content: Content }): ContentNode => {
   const { content } = props;
   return {
@@ -265,749 +1035,6 @@ const makeContentNode = (props: { content: Content }): ContentNode => {
   };
 };
 
-// Types
-
-export type VBReactflowState = {
-  // # connecter for ReactFlow
-  // subscribe からしか変更してはいけない
-  nodes: Node[];
-  edges: Edge[];
-
-  // selected 表示管理
-  selectedSequences: string[];
-
-  // assistant 表示管理
-  _assistantLocatedNodeMap: Map<
-    string,
-    {
-      node: Node;
-      assistants: Array<AssistantMessageNode>;
-    }
-  >;
-
-  // # 実体
-  // layout
-  _layoutTopicsQueue: Array<TopicNode>;
-
-  // topics
-  topicBothEndsNodes: Array<TopicBothEndsNode>;
-  topicNodes: TopicNode[];
-  topicEdges: Edge[];
-
-  // assistant
-  assistantNodes: AssistantMessageNode[];
-  assistantEdges: Edge[];
-
-  // content
-  contentNodes: ContentNode[];
-  contentEdges: Edge[];
-};
-type Bounds = {
-  measured: {
-    height: number;
-    width: number;
-  };
-  position: {
-    x: number;
-    y: number;
-  };
-};
-export type VBReactflowDispatchStore = {
-  // # connecter for ReactFlow
-  // 内容を変更してはならない
-  onNodesChange: OnNodesChange;
-  onEdgesChange: OnEdgesChange;
-  onConnect: OnConnect;
-
-  // Node manipulation
-  onNodeDragStop: OnNodeDrag;
-  onNodeDragStart: OnNodeDrag;
-  onNodesDelete: OnNodesDelete;
-
-  // # Util
-  upsertTopicNode: (node: TopicNode) => void;
-  updateAssistantAt: (targetNode: Node) => void;
-  getContentImplementedNodes: () => Array<
-    TopicNode | AssistantMessageNode | ContentNode
-  >;
-  layout: (layoutParam: LayoutParam) => void;
-  layoutTopics: (measuredNodes: TopicNode[]) => void;
-
-  // selection
-  getSequencedSelection: () => Array<Topic | Message | Content>;
-  deselectAll: () => void;
-  updateSequencedSelectionsGroup: (groups: Group[]) => void;
-  updateSequencedSelectionsAgenda: (agendas: Agenda[]) => void;
-
-  // topic util
-  updateTopic: (topic: Topic) => void;
-  setTopics: (topics: Topic[]) => void;
-  relocateTopics: () => void;
-};
-
-export const DefaultVBReactflowState: VBReactflowState = {
-  // connecter for ReactFlow
-  // subscribe からしか変更してはいけない
-  nodes: [],
-  edges: [],
-
-  // layout
-  _layoutTopicsQueue: [],
-
-  // selected 表示管理
-  selectedSequences: [],
-
-  // assistant 表示管理
-  _assistantLocatedNodeMap: new Map(),
-
-  // core
-  topicNodes: [],
-  topicBothEndsNodes: [makeTopicHeaderNode(), makeDiscussionNode()],
-  topicEdges: [],
-  assistantNodes: [],
-  assistantEdges: [],
-
-  contentNodes: [],
-  contentEdges: [],
-};
-
-export const getContentByNodeID = (nodeId: string): Content | undefined => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const contentNode = useVBReactflowStore
-    .getState()
-    .contentNodes.find((node) => node.id === nodeId);
-  if (contentNode) {
-    return useMinutesContentStore(startTimestamp)
-      .getState()
-      .getContent(contentNode.id);
-  }
-};
-
-export const getTopicByNodeID = (nodeId: string): Topic | undefined => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const topicNode = useVBReactflowStore
-    .getState()
-    .topicNodes.find((node) => node.id === nodeId);
-  if (topicNode) {
-    return useMinutesStore(startTimestamp)
-      .getState()
-      .topics.find((topic) => topic.id === topicNode.id);
-  }
-};
-
-export const getVirtualAssistantConfByNodeID = (
-  nodeId: string
-): VirtualAssistantConf | undefined => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const assistantNode = useVBReactflowStore
-    .getState()
-    .assistantNodes.find((node) => node.id === nodeId);
-  if (assistantNode) {
-    return useMinutesStore(startTimestamp)
-      .getState()
-      .assistants.find(
-        (assistant) => assistant.assistantId === assistantNode.data.assistantId
-      );
-  }
-};
-
-export const getAssistantMessageByNodeID = (
-  nodeId: string
-): Message | undefined => {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  const assistantNode = useVBReactflowStore
-    .getState()
-    .assistantNodes.find((node) => node.id === nodeId);
-  if (assistantNode) {
-    const assistantConfig = useMinutesStore(startTimestamp)
-      .getState()
-      .assistants.find(
-        (assistant) => assistant.assistantId === assistantNode.data.assistantId
-      );
-    return assistantConfig
-      ? (
-          useMinutesAssistantStore(startTimestamp)
-            .getState()
-            .getOrInitAssistant(assistantConfig).messages ?? []
-        ).find((message) => message.id === assistantNode.id)
-      : undefined;
-  }
-};
-
-// VBReactflowDispatchStoreストア
-export const useVBReactflowStore = create<
-  VBReactflowState & VBReactflowDispatchStore
->()(
-  subscribeWithSelector((set, get) => ({
-    ...DefaultVBReactflowState,
-
-    getSequencedSelection: () => {
-      const result: Array<Topic | Message | Content> = [];
-      get().selectedSequences.forEach((id) => {
-        // content
-        const content = getContentByNodeID(id);
-        if (content) {
-          result.push(content);
-        }
-        // topic
-        const topic = getTopicByNodeID(id);
-        if (topic) {
-          result.push(topic);
-        }
-        // assistant
-        const assistant = getAssistantMessageByNodeID(id);
-        if (assistant) {
-          result.push(assistant);
-        }
-      });
-      return result;
-    },
-
-    deselectAll: () => {
-      set({ selectedSequences: [] });
-    },
-
-    updateSequencedSelectionsGroup(groups) {
-      const startTimestamp = useVBStore.getState().startTimestamp;
-      if (!startTimestamp) return;
-
-      get().selectedSequences.forEach((id) => {
-        console.log("updateSequencedSelectionsGroup", id, groups);
-        // content
-        const content = getContentByNodeID(id);
-        if (content) {
-          useMinutesContentStore(startTimestamp)
-            .getState()
-            .setContent({
-              ...content,
-              groupIds: groups.map((group) => group.id),
-            });
-        }
-
-        // topic
-        const topic = getTopicByNodeID(id);
-        if (topic) {
-          processTopicAction({
-            type: "updateTopic",
-            payload: {
-              topic: {
-                ...topic,
-                groupIds: groups.map((group) => group.id),
-              },
-            },
-          });
-        }
-
-        // assistant
-        const assistant = getAssistantMessageByNodeID(id);
-        const assistantConfig = getVirtualAssistantConfByNodeID(id);
-        if (assistant && assistantConfig) {
-          useMinutesAssistantStore(startTimestamp)
-            .getState()
-            .updateMessage(assistantConfig, {
-              messages: [
-                {
-                  ...assistant,
-                  groupIds: groups.map((group) => group.id),
-                },
-              ],
-            });
-        }
-      });
-
-      // remove unnecessary group
-      useMinutesGroupStore(startTimestamp).getState().removeUnnecessaryGroup();
-    },
-
-    updateSequencedSelectionsAgenda(agendas) {
-      const startTimestamp = useVBStore.getState().startTimestamp;
-      if (!startTimestamp) return;
-
-      get().selectedSequences.forEach((id) => {
-        // content
-        const content = getContentByNodeID(id);
-        if (content) {
-          useMinutesContentStore(startTimestamp)
-            .getState()
-            .setContent({
-              ...content,
-              agendaIds: agendas.map((agenda) => agenda.id),
-            });
-        }
-
-        // topic
-        const topic = getTopicByNodeID(id);
-        if (topic) {
-          processTopicAction({
-            type: "updateTopic",
-            payload: {
-              topic: {
-                ...topic,
-                agendaIds: agendas.map((agenda) => agenda.id),
-              },
-            },
-          });
-        }
-
-        // assistant
-        const assistantConfig = getVirtualAssistantConfByNodeID(id);
-        const message = getAssistantMessageByNodeID(id);
-        if (assistantConfig && message) {
-          useMinutesAssistantStore(startTimestamp)
-            .getState()
-            .updateMessage(assistantConfig, {
-              messages: [
-                {
-                  ...message,
-                  agendaIds: agendas.map((agenda) => agenda.id),
-                },
-              ],
-            });
-        }
-      });
-    },
-
-    getContentImplementedNodes: () => {
-      return [
-        ...get().topicNodes,
-        ...get().assistantNodes,
-        ...get().contentNodes,
-      ];
-    },
-
-    onNodesChange: (changes) => {
-      set({
-        topicBothEndsNodes: applyNodeChanges(
-          changes,
-          get().topicBothEndsNodes
-        ) as Array<TopicBothEndsNode>,
-        topicNodes: applyNodeChanges(changes, get().topicNodes) as TopicNode[],
-        assistantNodes: applyNodeChanges(
-          changes,
-          get().assistantNodes
-        ) as AssistantMessageNode[],
-        //agendaNodes: applyNodeChanges(changes, get().agendaNodes),
-        contentNodes: applyNodeChanges(
-          changes,
-          get().contentNodes
-        ) as ContentNode[],
-      });
-
-      // select sequences
-      changes
-        .filter((change) => change.type === "select")
-        .forEach((change) => {
-          const selectedNode = get().nodes.find(
-            (node) => node.id === change.id
-          );
-          if (selectedNode) {
-            switch (change.selected) {
-              case true:
-                set({
-                  selectedSequences: [...get().selectedSequences, change.id],
-                });
-                break;
-              case false:
-                set({
-                  selectedSequences: get().selectedSequences.filter(
-                    (id) => id !== change.id
-                  ),
-                });
-                break;
-            }
-          }
-        });
-    },
-    onEdgesChange: (changes) => {
-      set({
-        topicEdges: applyEdgeChanges(changes, get().topicEdges),
-        assistantEdges: applyEdgeChanges(changes, get().assistantEdges),
-        contentEdges: applyEdgeChanges(changes, get().contentEdges),
-      });
-    },
-    onConnect: (connection) => {
-      set({
-        topicEdges: addEdge(connection, get().topicEdges),
-        assistantEdges: addEdge(connection, get().assistantEdges),
-        contentEdges: addEdge(connection, get().contentEdges),
-      });
-    },
-    onNodeDragStart: (event, node) => {
-      console.log("onNodeDragStart", event, node);
-    },
-    onNodeDragStop: (event, node, nodes) => {
-      updateNodePosition(node);
-    },
-    onNodesDelete: (nodes) => {
-      console.log("onNodesDelete", nodes);
-      nodes.forEach((node) => {
-        switch (node.type) {
-          case "topic":
-            processTopicAction({
-              type: "removeTopic",
-              payload: { topicID: (node.data as TopicNodeParam).id },
-            });
-            break;
-          case "assistantMessage":
-            removeAssistantMessage(node.data as AssistantMessageNodeParam);
-          case "content":
-            removeContent(node.id);
-            break;
-        }
-      });
-    },
-
-    // util
-    upsertTopicNode: (node) => {
-      set((state) => {
-        const nodeIndex = state.topicNodes.findIndex((n) => n.id === node.id);
-        let updatedNodes = [...state.topicNodes];
-        if (nodeIndex !== -1) {
-          // ノードが既に存在する場合は更新
-          updatedNodes[nodeIndex] = { ...node }; // 強制更新
-        } else {
-          // ノードが存在しない場合は topic の最後に追加
-          updatedNodes = [...state.topicNodes, node];
-        }
-        return { topicNodes: updatedNodes };
-      });
-    },
-
-    updateAssistantAt: (targetNode) => {
-      const locate = locateAssistantAt(targetNode);
-      // 永続化
-      locate.updatedAssistantNodes.forEach((node) => updateNodePosition(node));
-
-      // position 更新
-      const assistantTreeNodes = get().assistantNodes.map((node) => {
-        const located = locate.updatedAssistantNodes.find(
-          (assistantNode) => assistantNode.id === node.id
-        ) as AssistantMessageNode | undefined;
-        return located ? located : node;
-      });
-      set({ assistantNodes: assistantTreeNodes });
-    },
-
-    layout: (layoutParam) => {
-      // アルゴリズム
-      // Topicは TopicHeader の下に TopicNode を配置。
-      // 最新のTopicNodeの下に次のTopicNodeを配置し、最後のTopicNodeの下にDiscussionNodeを配置する。
-      // TopicNodeが移動されている場合には、それに連動して次のTopicNodeも移動する。
-      // AssistantNodeは、SequenceIds の最終要素となっているNodeの右横に配置する。
-      // 複数のAssistantNodeが同じNodeに紐づいている場合には、横に並べる。
-
-      const topicBothEndsNodes = get().topicBothEndsNodes;
-      const topicNodes = get().topicNodes;
-      const assistantTreeNodes = get().assistantNodes;
-      const contentNodes = get().contentNodes;
-
-      const constructTopicTree = constructTopicTreeNodes({
-        topicBothEndsNodes,
-        topicNodes,
-      });
-
-      // == Layout  ==
-      const updatedBothEndsNodes: TopicBothEndsNode[] = [];
-      const updateTopicNodes: TopicNode[] = [];
-      const updatedAssistantNodes: AssistantMessageNode[] = [];
-
-      let lastTopicGroupData = {
-        measured: { height: 0, width: 0 },
-        position: { x: 0, y: 0 },
-      };
-      constructTopicTree.forEach((topicNode) => {
-        // topic の配置
-        const topicLocation = locateTopic(topicNode, lastTopicGroupData);
-        if (
-          topicNode.type === "topicHeader" ||
-          topicNode.type === "discussion"
-        ) {
-          updatedBothEndsNodes.push(
-            topicLocation.updatedTopicNode as TopicBothEndsNode
-          );
-        } else {
-          updateTopicNodes.push(topicLocation.updatedTopicNode as TopicNode);
-        }
-
-        updateAssistantLocatedNodeMap();
-
-        // topic に関連する assistant の配置
-        const location = locateAssistantAt(topicLocation.updatedTopicNode);
-        updatedAssistantNodes.push(...location.updatedAssistantNodes);
-        lastTopicGroupData = location.groupBounds;
-      });
-
-      set({
-        topicBothEndsNodes: updatedBothEndsNodes,
-        topicNodes: updateTopicNodes,
-      });
-      // topic系 position 永続化
-      updateTopicNodes.forEach((node) => updateNodePosition(node));
-      topicBothEndsNodes.forEach((node) => updateNodePosition(node));
-
-      // 反映された topic の位置を元に、assistant の対象位置を更新
-
-      // Assistant location
-      // Content
-      contentNodes.forEach((contentNode) =>
-        updatedAssistantNodes.push(
-          ...locateAssistantAt(contentNode).updatedAssistantNodes
-        )
-      );
-      // Assistant connected Assistant
-      assistantTreeNodes.forEach((assistantNode) =>
-        updatedAssistantNodes.push(
-          ...locateAssistantAt(assistantNode).updatedAssistantNodes
-        )
-      );
-
-      // == Update ==
-      updatedAssistantNodes.forEach((node) => updateNodePosition(node));
-
-      // 表示変更
-      set({
-        assistantNodes: updatedAssistantNodes,
-        contentNodes: contentNodes,
-      });
-    },
-
-    /**
-     * TopicNodeとして仮配置して measure されたTopicNodeを、正しい位置に配置する
-     * @param measuredNodes
-     */
-    layoutTopics: (measuredNodes) => {
-      // _layoutTopicsQueue に含まれている　candidate　だけを対象にする
-      const layoutQueue = get()._layoutTopicsQueue;
-      const currentNodes = get().topicNodes;
-      const targetNodes = measuredNodes.filter((candidate) =>
-        layoutQueue.find((target) => target.id === candidate.id)
-      );
-      // targetNodes に含まれていない layoutTopicsQueue
-      const remainedQueue = layoutQueue.filter(
-        (node) => !targetNodes.includes(node)
-      );
-
-      console.log("layoutTopics", targetNodes, measuredNodes);
-      if (targetNodes.length > 0 && currentNodes.length >= targetNodes.length) {
-        // 位置を更新
-        const topicNodes = [...currentNodes.slice(0, -targetNodes.length)]; // 既に　_layoutTopicsQueue　の nodeは存在する。
-        const topicBothEndsNodes = get().topicBothEndsNodes;
-
-        let lastNode =
-          topicNodes.length > 0
-            ? topicNodes[topicNodes.length - 1]
-            : topicBothEndsNodes[0];
-        let lastBounds = {
-          measured: {
-            height: lastNode.measured?.height ?? 0,
-            width: lastNode.measured?.width ?? 0,
-          },
-          position: lastNode.position,
-        };
-
-        for (const topicNode of targetNodes) {
-          const located = locateTopic(topicNode, lastBounds);
-          updateNodePosition(located.updatedTopicNode); // 変更を永続化
-          topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
-          lastBounds = located.bounds;
-        }
-
-        set({
-          _layoutTopicsQueue: remainedQueue,
-          topicNodes: topicNodes,
-          topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
-            topicNodes,
-            topicBothEndsNodes
-          ),
-          topicEdges: makeTopicEdges({
-            nodes: constructTopicTreeNodes({
-              topicNodes,
-              topicBothEndsNodes,
-            }),
-          }),
-        });
-      }
-    },
-
-    // Topic util
-    updateTopic: (topic) => {
-      const topicNodes = get().topicNodes.map((node) =>
-        node.id === topic.id ? makeTopicNode({ topic }) : node
-      );
-      set({
-        topicNodes,
-        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
-          topicNodes,
-          get().topicBothEndsNodes
-        ),
-      });
-    },
-
-    setTopics: (topics) => {
-      const newTopicNodes = topics.map((topic) => makeTopicNode({ topic }));
-      const topicNodes = [...get().topicNodes];
-      const topicBothEndsNodes = get().topicBothEndsNodes;
-      let lastNode =
-        topicNodes.length > 0
-          ? topicNodes[topicNodes.length - 1]
-          : topicBothEndsNodes[0];
-      let lastBounds = {
-        measured: {
-          height: lastNode.measured?.height ?? 0,
-          width: lastNode.measured?.width ?? 0,
-        },
-        position: lastNode.position,
-      };
-      const _layoutTopicsQueue: Array<TopicNode> = [];
-      for (const topicNode of newTopicNodes) {
-        const located = locateTopic(topicNode, lastBounds);
-        updateNodePosition(located.updatedTopicNode); // 変更を永続化
-        _layoutTopicsQueue.push(located.updatedTopicNode as TopicNode);
-        topicNodes.push(located.updatedTopicNode as TopicNode); // 上でTopicから生成したNodeを使うため
-        lastBounds = located.bounds;
-      }
-      set({
-        _layoutTopicsQueue: _layoutTopicsQueue,
-        topicNodes,
-        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
-          topicNodes,
-          topicBothEndsNodes
-        ),
-      });
-    },
-
-    relocateTopics: () => {
-      set({
-        topicNodes: DefaultVBReactflowState.topicNodes,
-        topicBothEndsNodes: DefaultVBReactflowState.topicBothEndsNodes,
-        topicEdges: DefaultVBReactflowState.topicEdges,
-      });
-
-      const topics = useMinutesStore(
-        useVBStore.getState().startTimestamp
-      ).getState().topics;
-      const topicNodes = topics.map((topic) => makeTopicNode({ topic }));
-      const topicBothEndsNodes = calcRelocatedTopicBothEndsNodes(
-        topicNodes,
-        get().topicBothEndsNodes
-      );
-      set({
-        topicNodes,
-        topicBothEndsNodes: calcRelocatedTopicBothEndsNodes(
-          topicNodes,
-          topicBothEndsNodes
-        ),
-        topicEdges: makeTopicEdges({
-          nodes: constructTopicTreeNodes({
-            topicNodes,
-            topicBothEndsNodes,
-          }),
-        }),
-      });
-    },
-  }))
-);
-
-// ReactFlow standard subscribe
-useVBReactflowStore.subscribe((current, pre) => {
-  if (
-    current.topicNodes !== pre.topicNodes ||
-    current.assistantNodes !== pre.assistantNodes ||
-    current.contentNodes !== pre.contentNodes
-  ) {
-    useVBReactflowStore.setState({
-      nodes: [
-        ...constructTopicTreeNodes({
-          topicBothEndsNodes: useVBReactflowStore.getState().topicBothEndsNodes,
-          topicNodes: useVBReactflowStore.getState().topicNodes,
-        }),
-        ...useVBReactflowStore.getState().assistantNodes,
-        ...useVBReactflowStore.getState().contentNodes,
-      ],
-      edges: [
-        ...useVBReactflowStore.getState().topicEdges,
-        ...useVBReactflowStore.getState().assistantEdges,
-      ],
-    });
-  }
-});
-
-// == Node Measured ==
-
-useVBReactflowStore.subscribe(
-  (state) => state.nodes,
-  (nodes, prevNodes) => {
-    const newlyMeasuredNodes = nodes.filter(
-      (node) =>
-        node.measured && // measured
-        !prevNodes.some(
-          (prevNode) => prevNode.id === node.id && prevNode.measured
-        ) // unmeasured at the previous state
-    );
-
-    if (newlyMeasuredNodes.length > 0) {
-      // can process with measured nodes
-      console.log(
-        "useVBReactflowStore.subscribe: Measured node:",
-        newlyMeasuredNodes
-      );
-      // topic nodes
-      useVBReactflowStore
-        .getState()
-        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
-    }
-  }
-);
-
-// assistant message Node 自動配置
-useVBReactflowStore.subscribe(
-  (state) => state.assistantNodes,
-  (assistantNodes, preAssistantNodes) => {
-    // topic
-    assistantNodes
-      .filter((node) => !!node.measured)
-      .filter(
-        (node) =>
-          !!preAssistantNodes.find(
-            (preNode) =>
-              preNode.id === node.id && preNode.measured === undefined
-          )
-      )
-      // 位置が原点のものが未配置の可能性あり
-      .filter((node) => node.position.x === 0 && node.position.y == 0)
-      // 対象に
-      .forEach((node) => {
-        const message = getAssistantMessageByNodeID(node.data.id);
-        if (message && message.connectedMessageIds.length > 0) {
-          const targetNode = useVBReactflowStore
-            .getState()
-            .nodes.find(
-              (node) =>
-                node.id ===
-                message.connectedMessageIds[
-                  message.connectedMessageIds.length - 1
-                ]
-            );
-          if (targetNode) {
-            // 対象Node　の右に配置して
-            useVBReactflowStore.getState().updateAssistantAt(targetNode);
-          }
-        }
-      });
-  },
-  {
-    equalityFn: (a, b) => {
-      return (
-        a.length === b.length &&
-        a.every(
-          (node, index) =>
-            node.id === b[index].id && node.measured === b[index].measured
-        )
-      );
-    },
-  }
-);
-
 // == Util ==
 
 // assistant 毎に配置すべきNodeを取得
@@ -1018,7 +1045,9 @@ const updateAssistantLocatedNodeMap = () => {
   assistantTreeNodes.forEach((assistantNode) => {
     // Assistantは紐づく最後のNodeに配置する
     // Assistant が connectedMessageIds を持っていないことは、運用上ありえないはず
-    const assistantMessage = getAssistantMessageByNodeID(assistantNode.id);
+    const assistantMessage = useVBReactflowStore
+      .getState()
+      .getAssistantMessageByNodeID(assistantNode.id);
     if (assistantMessage && assistantMessage.connectedMessageIds.length > 0) {
       _assistantLastNodeMap.set(
         assistantNode.id,
@@ -1059,7 +1088,10 @@ const updateAssistantLocatedNodeMap = () => {
   });
 };
 
-const updateNodePosition = (node: Node) => {
+const updateNodePosition = (
+  node: Node,
+  get: () => VBReactflowState & VBReactflowDispatchStore
+) => {
   const startTimestamp = useVBStore.getState().startTimestamp;
   if (useVBStore.getState().isNoMinutes()) return;
   const position = {
@@ -1068,7 +1100,7 @@ const updateNodePosition = (node: Node) => {
   };
   switch (node.type) {
     case "topic":
-      const topic = getTopicByNodeID(node.id);
+      const topic = get().getTopicByNodeID(node.id);
       if (!topic) return;
       useMinutesStore(startTimestamp)
         .getState()
@@ -1078,8 +1110,8 @@ const updateNodePosition = (node: Node) => {
         });
       break;
     case "assistantMessage":
-      const vaConfig = getVirtualAssistantConfByNodeID(node.id);
-      const assistantMessage = getAssistantMessageByNodeID(node.id);
+      const vaConfig = get().getVirtualAssistantConfByNodeID(node.id);
+      const assistantMessage = get().getAssistantMessageByNodeID(node.id);
       if (!assistantMessage || !vaConfig) return;
       console.log(
         "updateNodePosition: assistantMessage",
@@ -1098,7 +1130,7 @@ const updateNodePosition = (node: Node) => {
         });
       break;
     case "content":
-      const content = getContentByNodeID(node.id);
+      const content = get().getContentByNodeID(node.id);
       if (!content) return;
       useMinutesContentStore(startTimestamp)
         .getState()
@@ -1287,7 +1319,9 @@ const updateAssistantNodes = ({
     });
 
     const assistantEdges = assistantNodes.flatMap((assistantMessageNode) => {
-      const message = getAssistantMessageByNodeID(assistantMessageNode.id);
+      const message = useVBReactflowStore
+        .getState()
+        .getAssistantMessageByNodeID(assistantMessageNode.id);
       return message
         ? message.connectedMessageIds.map((messageId) =>
             makeAssistantMessageEdge({
@@ -1304,7 +1338,7 @@ const updateAssistantNodes = ({
   }
 };
 
-// === prepareNode with Subscribe ===
+// === prepareNode with Subscribe on MinutesAction ===
 
 let unsubscribeAssistantStore: (() => void) | null = null;
 export const prepareAssistantNodeTo = (startTimestamp: number) => {

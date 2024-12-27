@@ -24,18 +24,25 @@ import {
   prepareAssistantNodeTo,
   prepareContentsNodeTo,
   useVBReactflowStore,
-} from "../store/useVBReactflowStore.jsx";
+} from "../store/flow/useVBReactflowStore.jsx";
 import {
   NO_MINUTES_START_TIMESTAMP,
   useVBStore,
 } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
+import { NavigateFunction } from "react-router-dom";
 
 export type MinutesAction =
-  | ActionBase<"createNewMinutes">
-  | ActionBase<"deleteMinutes", { startTimestamp: number }>
-  | ActionBase<"openMinutes", { startTimestamp: number }>
-  | ActionBase<"openHomeMenu">;
+  | ActionBase<"createNewMinutes", { navigate: NavigateFunction }>
+  | ActionBase<
+      "deleteMinutes",
+      { startTimestamp: number; navigate: NavigateFunction }
+    >
+  | ActionBase<
+      "openMinutes",
+      { startTimestamp: number; navigate: NavigateFunction }
+    >
+  | ActionBase<"openHomeMenu", { navigate: NavigateFunction }>;
 
 export const processMinutesAction = async (action: MinutesAction) => {
   let startTimestamp = NO_MINUTES_START_TIMESTAMP;
@@ -54,16 +61,16 @@ export const processMinutesAction = async (action: MinutesAction) => {
       useMinutesStore(startTimestamp).getState().createNewMinutes();
 
       await prepareStoresTo(startTimestamp);
-      renderStage();
+      renderStage(action.payload.navigate);
       break;
     case "openMinutes":
       startTimestamp = action.payload.startTimestamp;
 
       await prepareStoresTo(startTimestamp);
-      renderStage();
+      renderStage(action.payload.navigate);
       break;
     case "openHomeMenu":
-      openHomeMenu();
+      openHomeMenu(action.payload.navigate);
       break;
     case "deleteMinutes":
       console.log("useVBStore: deleteMinutes: 0");
@@ -75,34 +82,36 @@ export const processMinutesAction = async (action: MinutesAction) => {
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
 
       // open home
-      openHomeMenu();
+      openHomeMenu(action.payload.navigate);
       break;
     default:
       console.warn("processTopicAction: unexpected default", action);
   }
 };
 
-const renderStage = () => {
+const renderStage = (navigate: NavigateFunction) => {
   useVBStore.setState({
     mainMenuOpen: false,
     recording: false,
     interimSegment: null,
   });
+  navigate("/main");
 };
 
-const renderHome = () => {
+const renderHome = (navigate: NavigateFunction) => {
   useVBStore.setState({
     recording: false,
     mainMenuOpen: true,
     interimSegment: null,
   });
+  navigate("/");
 };
 
-const openHomeMenu = async () => {
+const openHomeMenu = async (navigate: NavigateFunction) => {
   await prepareStoresTo(NO_MINUTES_START_TIMESTAMP);
   // reactflow
   useVBReactflowStore.getState().relocateTopics();
-  renderHome();
+  renderHome(navigate);
 };
 
 /**

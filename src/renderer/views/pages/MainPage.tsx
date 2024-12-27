@@ -13,24 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {
-  createHashRouter,
-  createRoutesFromElements,
-  Route,
-  RouterProvider,
-} from "react-router-dom";
-import { MainPage } from "./views/pages/MainPage.jsx";
-import { HomePage } from "./views/pages/HomePage.jsx";
+import { VBNodeStage } from "../flowComponent/VBNodeStage.jsx";
 
-export const App = () => {
-  // router
-  const router = createHashRouter(
-    createRoutesFromElements(
-      <Route errorElement={<div>Error</div>}>
-        <Route path="/" element={<HomePage />}></Route>
-        <Route path="/main" element={<MainPage />}></Route>
-      </Route>
-    )
+export const MainPage = () => {
+  // <div className="flex bg-indigo-950  text-zinc-600">
+  return (
+    <>
+      <audio id="globalAudio"></audio>
+      <VBNodeStage />
+    </>
   );
-  return <RouterProvider router={router} />;
 };

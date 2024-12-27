@@ -18,7 +18,7 @@ import { Button, Tooltip } from "@mui/material";
 import {
   getLayoutParam,
   useVBReactflowStore,
-} from "../store/useVBReactflowStore.jsx";
+} from "../store/flow/useVBReactflowStore.jsx";
 import { useDnD } from "./DnDContext.jsx";
 
 export const StageToolBar = () => {

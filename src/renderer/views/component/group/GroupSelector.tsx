@@ -20,7 +20,7 @@ import {
   makeDefaultGroup,
   useMinutesGroupStore,
 } from "../../store/useGroupStore.jsx";
-import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
+import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
 
 /**
  * Group 選択コンポーネント

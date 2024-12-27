@@ -28,7 +28,7 @@ import {
   useVBReactflowStore,
   VBReactflowDispatchStore,
   VBReactflowState,
-} from "../store/useVBReactflowStore.jsx";
+} from "../store/flow/useVBReactflowStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useWindowSize } from "../component/main/useWindowSize.jsx";
 
@@ -81,10 +81,16 @@ export const TargetFocuser = () => {
   );
 
   // minutes 変更時
+
   useEffect(() => {
     if (nodesInitialized) {
-      const timerId = setTimeout(() => setTargetFocus(options[2]), 500); // 500 msec はマジックナンバー
-      return () => clearTimeout(timerId);
+      console.log("nodesInitialized");
+      focusAllNodes(reactFlow).then(() => {
+        const clear = setTimeout(() => {
+          focusLastTopic({ reactFlow, flowState, windowSize });
+        }, 1000);
+        return () => clearTimeout(clear);
+      });
     }
   }, [startTimestamp, nodesInitialized]);
 
@@ -188,15 +194,15 @@ export const TargetFocuser = () => {
 
 export function focusAllNodes(
   reactFlow: ReturnType<typeof useReactFlow>
-): void {
-  reactFlow.fitView(StageTransitionOption);
+): Promise<boolean> {
+  return reactFlow.fitView(StageTransitionOption);
 }
 
 export function focusFirstTopic(
   reactFlow: ReturnType<typeof useReactFlow>
-): void {
+): Promise<boolean> {
   console.log("focusFirstTopic");
-  reactFlow.setViewport(
+  return reactFlow.setViewport(
     getLayoutParam().initialViewPort,
     StageTransitionOption
   );
@@ -206,7 +212,7 @@ export function focusLastTopic(props: {
   reactFlow: ReturnType<typeof useReactFlow>;
   flowState: VBReactflowState & VBReactflowDispatchStore;
   windowSize: ReturnType<typeof useWindowSize>;
-}): void {
+}): Promise<boolean> {
   const { reactFlow, flowState, windowSize } = props;
   const layoutRoot = getLayoutParam().initialViewPort;
   const discussionNode = flowState.topicBothEndsNodes[1];
@@ -214,11 +220,12 @@ export function focusLastTopic(props: {
     (discussionNode?.position.y || 0) * -1 +
     windowSize.height -
     (discussionNode?.measured?.height ?? 0) -
-    200; // header height と footer height を考慮したマジックナンバー;
-  reactFlow.setViewport(
+    100; // header height と footer height を考慮したマジックナンバー;
+  console.log("focusLastTopic: reactFlow.setViewport");
+  return reactFlow.setViewport(
     {
-      x: discussionNode.position.x * layoutRoot.zoom,
-      y: newY * layoutRoot.zoom,
+      x: Math.max(discussionNode.position.x * layoutRoot.zoom, layoutRoot.x),
+      y: Math.min(newY * layoutRoot.zoom, layoutRoot.y),
       zoom: layoutRoot.zoom,
     },
     StageTransitionOption
@@ -230,7 +237,7 @@ export function focusGroup(props: {
   flowState: VBReactflowState & VBReactflowDispatchStore;
   targetId: string;
   targetType: "group" | "agenda";
-}): void {
+}): Promise<boolean> {
   const { reactFlow, flowState, targetId, targetType } = props;
   const targetNodes = flowState
     .getContentImplementedNodes()
@@ -242,7 +249,10 @@ export function focusGroup(props: {
     );
   if (targetNodes.length === 0) {
     console.log(`No nodes found in the ${targetType}.`);
-    return;
+    return Promise.resolve(false);
   }
-  reactFlow.fitBounds(getNodesBounds(targetNodes), StageTransitionOption);
+  return reactFlow.fitBounds(
+    getNodesBounds(targetNodes),
+    StageTransitionOption
+  );
 }
