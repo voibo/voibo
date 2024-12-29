@@ -24,38 +24,27 @@ import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
 
+export function isContentNode(node: Node): node is ContentNode {
+  return node.type === "content";
+}
+
 export type ContentNodeParam = ContentNodeBaseParam;
 
 export type ContentNode = Node<ContentNodeParam, "content">;
 
 const ContentNode = (props: NodeProps<ContentNode>) => {
-  // pre process
-  // minutesStartTimestamp と対象 content がない場合は何も表示しない
-  const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-  if (!minutesStartTimestamp) {
-    return <></>;
-  }
-  const content = useMinutesContentStore(minutesStartTimestamp)((state) =>
+  const startTimestamp = useVBStore.getState().startTimestamp;
+  const content = useMinutesContentStore(startTimestamp)((state) =>
     state.getContent(props.data.id)
   );
-  if (!content) {
-    return <></>;
-  }
 
   // process
   const [editMode, setEditMode] = useState(false);
-
   const clickHandler = useClickHandler({
     onDoubleClick: () => {
       setEditMode(true);
     },
   });
-
-  // Remove
-  const handleRemove = (event: any) => {
-    //event.preventDefault();
-    removeContent(content.id);
-  };
 
   useEffect(() => {
     if (!props.selected && editMode) {
@@ -73,7 +62,7 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
           {editMode ? (
             <ContentEditView
               content={content}
-              minutesStartTimestamp={minutesStartTimestamp}
+              minutesStartTimestamp={startTimestamp}
             />
           ) : (
             <ContentVisibleView content={content} />
@@ -170,12 +159,3 @@ export default memo(ContentNode, (prevProps, nextProps) => {
     prevProps.dragging === nextProps.dragging;
   return shouldNotUpdate;
 });
-
-// Util
-
-export function removeContent(contentId: string) {
-  const startTimestamp = useVBStore.getState().startTimestamp;
-  if (startTimestamp) {
-    useMinutesContentStore(startTimestamp).getState().removeContent(contentId);
-  }
-}

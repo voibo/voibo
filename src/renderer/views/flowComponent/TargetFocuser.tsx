@@ -17,6 +17,7 @@ import { FilterCenterFocus, Folder, ViewAgenda } from "@mui/icons-material";
 import { Button, ListSubheader, MenuItem, Select } from "@mui/material";
 import {
   getNodesBounds,
+  Node,
   useNodesInitialized,
   useReactFlow,
 } from "@xyflow/react";
@@ -28,11 +29,15 @@ import {
   useVBReactflowStore,
   VBReactflowDispatchStore,
   VBReactflowState,
-} from "../store/useVBReactflowStore.jsx";
+} from "../store/flow/useVBReactflowStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useWindowSize } from "../component/main/useWindowSize.jsx";
+import { isTopicNode } from "./node/TopicNode.jsx";
+import { isAssistantMessageNode } from "./node/AssistantMessageNode.jsx";
+import { isDiscussionNode } from "./node/DisscussionNode.jsx";
+import { isTopicHeaderNode } from "./node/TopicHeaderNode.jsx";
 
-export const StageTransitionOption = { padding: 0.1, duration: 100 };
+//export const StageTransitionOption = { duration: 100 }; // duration を入れると、then が効かなくなるので、使い方に注意
 
 type TargetFocuserOption = {
   type: "system" | "agenda" | "group";
@@ -44,6 +49,7 @@ export const TargetFocuser = () => {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
 
   const reactFlow = useReactFlow();
+
   const nodesInitialized = useNodesInitialized({
     includeHiddenNodes: true,
   });
@@ -80,11 +86,13 @@ export const TargetFocuser = () => {
     options[0]
   );
 
-  // minutes 変更時
+  // node 追加時
   useEffect(() => {
     if (nodesInitialized) {
-      const timerId = setTimeout(() => setTargetFocus(options[2]), 500); // 500 msec はマジックナンバー
-      return () => clearTimeout(timerId);
+      expandStage(reactFlow).then(() => {
+        console.log("TargetFocuser: nodesInitialized: 1:", startTimestamp);
+        focusAppendedSpecialNode({ reactFlow, flowState, windowSize });
+      });
     }
   }, [startTimestamp, nodesInitialized]);
 
@@ -185,28 +193,85 @@ export const TargetFocuser = () => {
 };
 
 // == Focus function ==
+export function expandStage(reactFlow: ReturnType<typeof useReactFlow>) {
+  console.log("TargetFocuser: expandStage");
+  return reactFlow.setViewport({
+    x: 0,
+    y: 0,
+    zoom: 0.01,
+  });
+}
+
+export function focusAppendedSpecialNode(props: {
+  reactFlow: ReturnType<typeof useReactFlow>;
+  flowState: VBReactflowState & VBReactflowDispatchStore;
+  windowSize: ReturnType<typeof useWindowSize>;
+}): Promise<boolean> {
+  const { reactFlow, flowState, windowSize } = props;
+  const targetNodes = flowState.lastAppendedNodes;
+  if (targetNodes.length === 0) {
+    console.log(`No last appended nodes found.`);
+    return Promise.resolve(false);
+  }
+  // 1. if included topic, focus last topic
+  if (targetNodes.some((node) => isTopicNode(node))) {
+    return focusLastTopic(props);
+  }
+  // 2. if included AssistantMessage and no topic, focus last AssistantMessage and connected nodes
+  const lastAssistantNode = targetNodes.findLast((node) =>
+    isAssistantMessageNode(node)
+  );
+  if (lastAssistantNode) {
+    const message = useVBReactflowStore
+      .getState()
+      .getAssistantMessageByNodeID(lastAssistantNode.data.id);
+    let connectedSource: Node[] = [];
+    if (message) {
+      connectedSource = useVBReactflowStore
+        .getState()
+        .nodes.filter((node) => message.connectedMessageIds.includes(node.id));
+    }
+    return reactFlow.fitBounds(
+      getNodesBounds([lastAssistantNode, ...connectedSource])
+    );
+  }
+
+  // 3. if included TopicHeader and Discussion, focus first topic
+  if (
+    targetNodes.length === 2 &&
+    targetNodes.every(
+      (node) => isDiscussionNode(node) || isTopicHeaderNode(node)
+    )
+  ) {
+    console.log("TargetFocuser: focusAppendedSpecialNode: 3");
+    // Hack:  FIXME: focusFirstTopic does not work without waiting 500ms. Why?
+    setTimeout(() => {
+      return focusFirstTopic(reactFlow);
+    }, 500);
+  }
+
+  return Promise.resolve(true);
+}
 
 export function focusAllNodes(
   reactFlow: ReturnType<typeof useReactFlow>
-): void {
-  reactFlow.fitView(StageTransitionOption);
+): Promise<boolean> {
+  console.log("TargetFocuser: focusAllNodes");
+  return reactFlow.fitView();
 }
 
 export function focusFirstTopic(
   reactFlow: ReturnType<typeof useReactFlow>
-): void {
-  console.log("focusFirstTopic");
-  reactFlow.setViewport(
-    getLayoutParam().initialViewPort,
-    StageTransitionOption
-  );
+): Promise<boolean> {
+  console.log("TargetFocuser: focusFirstTopic");
+  return reactFlow.setViewport(getLayoutParam().initialViewPort);
 }
 
 export function focusLastTopic(props: {
   reactFlow: ReturnType<typeof useReactFlow>;
   flowState: VBReactflowState & VBReactflowDispatchStore;
   windowSize: ReturnType<typeof useWindowSize>;
-}): void {
+}): Promise<boolean> {
   const { reactFlow, flowState, windowSize } = props;
   const layoutRoot = getLayoutParam().initialViewPort;
   const discussionNode = flowState.topicBothEndsNodes[1];
@@ -214,15 +279,14 @@ export function focusLastTopic(props: {
     (discussionNode?.position.y || 0) * -1 +
     windowSize.height -
     (discussionNode?.measured?.height ?? 0) -
-    200; // header height と footer height を考慮したマジックナンバー;
-  reactFlow.setViewport(
-    {
-      x: discussionNode.position.x * layoutRoot.zoom,
-      y: newY * layoutRoot.zoom,
-      zoom: layoutRoot.zoom,
-    },
-    StageTransitionOption
-  );
+    100; // the magic number considering the header height and footer height
+  const newViewPort = {
+    x: Math.max(discussionNode.position.x * layoutRoot.zoom, layoutRoot.x),
+    y: Math.min(newY * layoutRoot.zoom, layoutRoot.y),
+    zoom: layoutRoot.zoom,
+  };
+  console.log("TargetFocuser: focusLastTopic:", newViewPort);
+  return reactFlow.setViewport(newViewPort);
 }
 
 export function focusGroup(props: {
@@ -230,7 +294,7 @@ export function focusGroup(props: {
   flowState: VBReactflowState & VBReactflowDispatchStore;
   targetId: string;
   targetType: "group" | "agenda";
-}): void {
+}): Promise<boolean> {
   const { reactFlow, flowState, targetId, targetType } = props;
   const targetNodes = flowState
     .getContentImplementedNodes()
@@ -242,7 +306,6 @@ export function focusGroup(props: {
     );
   if (targetNodes.length === 0) {
     console.log(`No nodes found in the ${targetType}.`);
-    return;
   }
-  reactFlow.fitBounds(getNodesBounds(targetNodes), StageTransitionOption);
+  return reactFlow.fitBounds(getNodesBounds(targetNodes));
 }

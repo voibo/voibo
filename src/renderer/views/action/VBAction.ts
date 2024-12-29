@@ -27,7 +27,7 @@ export const processVBAction = async (action: VBAction) => {
   switch (action.type) {
     case "changeVBSettingsDialogOpen":
       useVBStore.setState({
-        vbSettingsDialogOpen: !useVBStore().vbSettingsDialogOpen,
+        vbSettingsDialogOpen: !useVBStore.getState().vbSettingsDialogOpen,
       });
       break;
     case "setAudioFolder":
@@ -37,7 +37,7 @@ export const processVBAction = async (action: VBAction) => {
       break;
     case "togglePlayWavMute":
       useVBStore.setState({
-        playWavMute: !useVBStore().playWavMute,
+        playWavMute: !useVBStore.getState().playWavMute,
       });
       break;
     case "updateInterimSegment":

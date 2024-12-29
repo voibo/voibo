@@ -44,57 +44,53 @@ import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
-import { useMinutesContentStore } from "../../store/useContentStore.jsx";
-import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
-import { ExpandJSONOptions } from "../../store/IDBKeyValPersistStorage.jsx";
+import { useNavigate } from "react-router-dom";
 
-export const HeaderComponent = () => {
+export const HeaderMainComponent = () => {
   const vbState = useVBStore((state) => state);
-
+  const navigate = useNavigate();
   const handleOpenHome = () => {
     processMinutesAction({
       type: "openHomeMenu",
+      payload: {
+        navigate,
+      },
     });
-  };
 
+    navigate("/");
+  };
   return (
-    <div className="p-4 grid grid-cols-3 w-screen ">
-      <div className="flex items-center">
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          onClick={handleOpenHome}
-          edge="start"
-          sx={{
-            ...(vbState.mainMenuOpen && { display: "none" }),
-          }}
-          className="mr-2"
-          disabled={vbState.recording}
-        >
-          <img
-            src="./asset/va_logo_black.svg"
-            className="h-8 object-contain "
-          />
-        </IconButton>
-        <div className="flex flex-row items-end">
-          <MinutesTitle />
-          <div className="ml-4 flex flex-row text-xs items-center text-white/50">
-            <AccessTime className="h-4 w-4 mr-2" />
-            <div className="w-12">
-              {formatTimestamp(vbState.startTimestamp)}
-            </div>
-          </div>
+    <div className="border p-2 rounded flex items-center bg-indigo-950 h-16">
+      <IconButton
+        color="inherit"
+        aria-label="open drawer"
+        onClick={handleOpenHome}
+        edge="start"
+        className="mx-2"
+        disabled={vbState.recording}
+      >
+        <img src="./asset/va_logo_black.svg" className="h-8 object-contain " />
+      </IconButton>
+      <div className="flex flex-row">
+        <MinutesTitle />
+        <div className="ml-4 flex flex-row text-xs items-center text-white/50">
+          <AccessTime className="h-4 w-4 mr-2" />
+          <div className="w-16">{formatTimestamp(vbState.startTimestamp)}</div>
         </div>
       </div>
-      <div className="flex flew-row items-center justify-center">
-        <div>
-          <TranscribeButton />
-        </div>
+
+      <div className="ml-16 mr-4 flex flew-row items-center justify-center">
+        <TranscribeButton />
       </div>
-      <div className="flex flex-row items-center space-x-2 justify-end">
-        <AssistantButton />
-        <OthersMenuButton />
-      </div>
+    </div>
+  );
+};
+
+export const HeaderSubComponent = () => {
+  return (
+    <div className="flex items-center justify-center bg-indigo-950 border p-2 rounded h-16">
+      <AssistantButton />
+      <OthersMenuButton />
     </div>
   );
 };
@@ -102,7 +98,7 @@ export const HeaderComponent = () => {
 const MinutesTitle = (props: {}) => {
   const vbState = useVBStore((state) => state);
   const useMinutesTitle = useMinutesTitleStore((state) => state);
-  const defaultTitle = `会議: ${formatTimestamp(vbState.startTimestamp)}`;
+  const defaultTitle = `Meeting: ${formatTimestamp(vbState.startTimestamp)}`;
   let minutesTitle =
     useMinutesTitle.getMinutesTitle(vbState.startTimestamp ?? 0) ??
     defaultTitle;
@@ -165,7 +161,7 @@ const AssistantButton = (props: {}) => {
 
   return (
     <>
-      <Button onClick={handleClick} className="text-white mr-2">
+      <Button onClick={handleClick} className="text-white ">
         <SmartToyOutlined />
       </Button>
       {renderDetailViewDialog()}
@@ -176,6 +172,7 @@ const AssistantButton = (props: {}) => {
 const OthersMenuButton = () => {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
   const recording = useVBStore((state) => state.recording);
+  const navigate = useNavigate();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -199,9 +196,8 @@ const OthersMenuButton = () => {
       .getMinutesTitle(targetMinutes);
     const minutesStore = useMinutesStore(targetMinutes).getState();
     const assistantStore = useMinutesAssistantStore(targetMinutes).getState();
-    const contentStore = useMinutesContentStore(targetMinutes).getState();
 
-    if (minutesTitle && minutesStore && assistantStore && contentStore) {
+    if (minutesTitle && minutesStore && assistantStore) {
       const zip = new JSZip();
       const results: JSZip[] = [];
 
@@ -242,22 +238,6 @@ const OthersMenuButton = () => {
         )
       );
 
-      // contents
-      results.push(
-        zip.file("contents.json", JSON.stringify(contentStore.getAllContent()))
-      );
-      results.push(
-        zip.file(
-          "contents.md",
-          contentStore
-            .getAllContent()
-            .map((content) => {
-              return `${content.content}`;
-            })
-            .join("\n\n\n")
-        )
-      );
-
       // assistants
       assistantStore.assistantsMap.forEach((assistant) => {
         (assistant.messages ?? []).forEach((message) => {
@@ -277,32 +257,6 @@ const OthersMenuButton = () => {
       });
 
       console.log("DL: minutes", minutesStore);
-
-      // debug
-      if (true) {
-        results.push(
-          zip.file(
-            "debug/minutesStore.json",
-            JSON.stringify(minutesStore, ExpandJSONOptions.replacer)
-          )
-        );
-        results.push(
-          zip.file(
-            "debug/assistantStore.json",
-            JSON.stringify(assistantStore, ExpandJSONOptions.replacer)
-          )
-        );
-        results.push(
-          zip.file(
-            "debug/VBReactflowStore.json",
-            JSON.stringify(
-              useVBReactflowStore.getState(),
-              ExpandJSONOptions.replacer
-            )
-          )
-        );
-      }
-
       // construct contents
       Promise.all(results).then(() => {
         zip.generateAsync({ type: "blob" }).then((content) => {
@@ -317,6 +271,9 @@ const OthersMenuButton = () => {
     setAnchorEl(null);
     processMinutesAction({
       type: "openHomeMenu",
+      payload: {
+        navigate,
+      },
     });
   };
 
@@ -342,6 +299,7 @@ const OthersMenuButton = () => {
       type: "deleteMinutes",
       payload: {
         startTimestamp: startTimestamp,
+        navigate,
       },
     });
   };

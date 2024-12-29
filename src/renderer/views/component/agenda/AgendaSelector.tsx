@@ -16,7 +16,7 @@ limitations under the License.
 import { useState } from "react";
 import { Autocomplete, Button, Chip, TextField } from "@mui/material";
 import { useMinutesAgendaStore } from "../../store/useAgendaStore.jsx";
-import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
+import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
 import { Agenda } from "../../../../common/content/agenda.js";
 import { useVBStore } from "../../store/useVBStore.jsx";
 

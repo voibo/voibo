@@ -21,6 +21,7 @@ import {
   ReactFlowProvider,
   SelectionMode,
   useReactFlow,
+  Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useRef } from "react";
@@ -32,7 +33,7 @@ import {
   useVBReactflowStore,
   VBReactflowDispatchStore,
   VBReactflowState,
-} from "../store/useVBReactflowStore.jsx";
+} from "../store/flow/useVBReactflowStore.jsx";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
@@ -44,6 +45,11 @@ import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
+import {
+  HeaderMainComponent,
+  HeaderSubComponent,
+} from "../component/main/HeaderComponent.jsx";
+import DummyNode from "./node/DummyNode.jsx";
 
 const ZOOM_MIN = 0.001;
 
@@ -51,14 +57,14 @@ export const VBNodeStage = (props: {}) => {
   // Warning: Seems like you have not used zustand provider as an ancestor を解消する方法
   // https://reactflow.dev/learn/troubleshooting
   // h-[calc(100vh-5rem)]
+  // <div className="w-screen h-[calc(100vh-4.5rem)]">
+  //<div className="w-screen h-screen">
   return (
-    <div className="w-screen h-[calc(100vh-4.5rem)]">
-      <ReactFlowProvider>
-        <DnDProvider>
-          <VANodeStageCore />
-        </DnDProvider>
-      </ReactFlowProvider>
-    </div>
+    <ReactFlowProvider>
+      <DnDProvider>
+        <VANodeStageCore />
+      </DnDProvider>
+    </ReactFlowProvider>
   );
 };
 
@@ -89,13 +95,13 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStop,
     onNodesDelete,
   } = useVBReactflowStore(useShallow(selector));
+  const startTimestamp = useVBStore((stat) => stat.startTimestamp);
 
   const reactFlow = useReactFlow();
 
   // DnD
   const reactFlowWrapper = useRef(null);
   const [type] = useDnD();
-  const startTimestamp = useVBStore((stat) => stat.startTimestamp) ?? 0;
 
   const onDragOver = useCallback((event: any) => {
     event.preventDefault();
@@ -122,9 +128,17 @@ const VANodeStageCore = (props: {}) => {
     [type, startTimestamp]
   );
 
+  const viewPort = useVBReactflowStore((state) => state.lastViewport);
+  const handleViewPortChange = (viewPort: Viewport) => {
+    console.log("handleViewPortChange", viewPort);
+    useVBReactflowStore.setState({ lastViewport: viewPort });
+  };
+
   return (
-    <div ref={reactFlowWrapper} style={{ width: "100%", height: "100%" }}>
+    <div ref={reactFlowWrapper} className="w-screen h-screen">
       <ReactFlow
+        viewport={viewPort}
+        onViewportChange={handleViewPortChange}
         nodes={nodes}
         edges={edges}
         minZoom={ZOOM_MIN}
@@ -143,6 +157,7 @@ const VANodeStageCore = (props: {}) => {
           discussion: DiscussionNode,
           assistantMessage: AssistantMessageNode,
           content: ContentNode,
+          dummy: DummyNode,
         }}
         panOnScroll={true}
         panOnScrollMode={PanOnScrollMode.Free}
@@ -152,10 +167,16 @@ const VANodeStageCore = (props: {}) => {
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <CustomMiniMap />
-        <div className="absolute top-2 right-2 z-10">
-          <AgendaPanel />
-        </div>
       </ReactFlow>
+      <div className="absolute top-2 left-2 z-10">
+        <HeaderMainComponent />
+      </div>
+      <div className="absolute top-2 right-2 z-10">
+        <HeaderSubComponent />
+      </div>
+      <div className="absolute top-20 right-2 z-10">
+        <AgendaPanel />
+      </div>
       <StageToolBar />
       <div className="absolute bottom-2 right-2 z-10">
         <TargetFocuser />

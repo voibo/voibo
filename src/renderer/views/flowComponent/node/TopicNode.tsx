@@ -80,11 +80,3 @@ export default memo(TopicNodeComponent, (prevProps, nextProps) => {
     prevProps.dragging === nextProps.dragging;
   return shouldNotUpdate;
 });
-
-// Util
-
-/*
-export function removeTopic(topicID: string) {
-  processTopicAction({ type: "removeTopic", payload: { topicID } });
-}
-  */

@@ -17,7 +17,7 @@ import { ActionBase } from "./ActionBase.js";
 import { Topic } from "../../../common/content/topic.js";
 import { useVBStore } from "../store/useVBStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
-import { useVBReactflowStore } from "../store/useVBReactflowStore.jsx";
+import { useVBReactflowStore } from "../store/flow/useVBReactflowStore.jsx";
 import { useMinutesAssistantStore } from "../store/useAssistantsStore.jsx";
 
 export type TopicAction =

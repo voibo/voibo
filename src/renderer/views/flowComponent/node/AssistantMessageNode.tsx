@@ -17,14 +17,15 @@ import { memo } from "react";
 import { Node, NodeProps, Handle, Position } from "@xyflow/react";
 import { useDetailViewDialog } from "../../component/common/useDetailViewDialog.jsx";
 import { VAMessage } from "../../component/assistant/message/VAMessage.jsx";
-import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
-import { useMinutesStore } from "../../store/useMinutesStore.jsx";
-import {
-  getAssistantMessageByNodeID,
-  getVirtualAssistantConfByNodeID,
-} from "../../store/useVBReactflowStore.jsx";
+import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
+
+export function isAssistantMessageNode(
+  node: Node
+): node is AssistantMessageNode {
+  return node.type === "assistantMessage";
+}
 
 export type AssistantMessageNodeParam = ContentNodeBaseParam & {
   assistantId: string;
@@ -42,8 +43,12 @@ export const AssistantMessageNode = (
   const { detailViewDialog, renderDetailViewDialog, handleClose } =
     useDetailViewDialog();
   const startTimestamp = useVBStore((state) => state.startTimestamp);
-  const assistantConfig = getVirtualAssistantConfByNodeID(data.id); // この場合 snapshot になるので変更を見ていないのでは？
-  const message = getAssistantMessageByNodeID(data.id); // この場合 snapshot になるので変更を見ていないのでは？
+  const assistantConfig = useVBReactflowStore(
+    (state) => state
+  ).getVirtualAssistantConfByNodeID(data.id);
+  const message = useVBReactflowStore(
+    (state) => state
+  ).getAssistantMessageByNodeID(data.id);
 
   return (
     assistantConfig &&
@@ -66,7 +71,6 @@ export const AssistantMessageNode = (
             avatarLocation="V"
           />
         </NodeBase>
-        {renderDetailViewDialog()}
         <Handle
           id={`right-${props.id}`}
           type="source"
@@ -74,11 +78,11 @@ export const AssistantMessageNode = (
           className="invisible"
           isConnectable={false}
         />
+        {renderDetailViewDialog()}
       </>
     )
   );
 };
-//export default AssistantMessageNode;
 
 export default memo(AssistantMessageNode, (prevProps, nextProps) => {
   // 同一のコンテンツが選択されている場合= true は再描画しない
@@ -88,23 +92,3 @@ export default memo(AssistantMessageNode, (prevProps, nextProps) => {
     prevProps.selected === nextProps.selected;
   return shouldNotUpdate;
 });
-
-// Util
-
-export function removeAssistantMessage(data: AssistantMessageNodeParam) {
-  const messageId = data.id;
-  const startTimestamp = useVBStore((state) => state.startTimestamp);
-  const assistantConfig = useMinutesStore(startTimestamp)(
-    (state) => state.assistants
-  ).find((assistant) => assistant.assistantId === data.assistantId);
-  if (
-    useVBStore.getState().allReady &&
-    !useVBStore.getState().isNoMinutes() &&
-    assistantConfig
-  ) {
-    console.log("removeAssistantMessage", messageId, assistantConfig);
-    useMinutesAssistantStore(startTimestamp)
-      .getState()
-      .removeMessage(assistantConfig, { messageId });
-  }
-}

@@ -28,13 +28,12 @@ import {
   VirtualAssistantConf,
 } from "../../store/useAssistantsStore.jsx";
 import { useMinutesGroupStore } from "../../store/useGroupStore.jsx";
-import { useVBReactflowStore } from "../../store/useVBReactflowStore.jsx";
+import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
 import { ContentNode } from "./ContentNode.jsx";
 import { TopicNode } from "./TopicNode.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
-import { Agenda } from "../../../../common/content/agenda.js";
 
 export type ContentNodeBaseParam = {
   id: string;
@@ -87,11 +86,13 @@ export const NodeBase = (props: {
   ).filter((assistant) => assistant.updateMode === "manual");
 
   // agendaList
+  /*
   const agendaList = (props.nodeProps.data.agendaIds ?? []) // 過渡期のためのデータ変換
     .map((agendaId) =>
       useMinutesAgendaStore(startTimestamp).getState().getAgenda(agendaId)
     )
     .filter((agenda) => agenda !== undefined);
+    */
 
   // change group
   const { detailViewDialog, renderDetailViewDialog, handleClose } =
@@ -174,7 +175,7 @@ export const NodeBase = (props: {
           }}
         >
           <div className="flex justify-between items-start">
-            <BelongAgendaChips agendaList={agendaList} />
+            <BelongAgendaChips agendaIds={nodeProps.data.agendaIds ?? []} />
             <BelongGroupChips groupIds={nodeProps.data.groupIds ?? []} />
           </div>
         </div>
@@ -231,9 +232,18 @@ const AssistantButton = (props: { assistantConfig: VirtualAssistantConf }) => {
   );
 };
 
-const BelongAgendaChips = (props: { agendaList: Agenda[] }) => {
-  const { agendaList } = props;
-  return (
+const BelongAgendaChips = (props: { agendaIds: string[] }) => {
+  const { agendaIds } = props;
+  const isNoMinutes = useVBStore((state) => state.isNoMinutes)();
+  const startTimestamp = useVBStore((state) => state.startTimestamp);
+  const getAgenda = useMinutesAgendaStore(startTimestamp)(
+    (state) => state // state を全体を監視
+  ).getAgenda;
+
+  const agendaList = agendaIds
+    .map((agendaId) => getAgenda(agendaId))
+    .filter((agenda) => agenda !== undefined);
+  return !isNoMinutes ? (
     <div className="flex flex-col items-start justify-center mt-1">
       {agendaList.map((agenda, index) => (
         <div
@@ -247,6 +257,8 @@ const BelongAgendaChips = (props: { agendaList: Agenda[] }) => {
         </div>
       ))}
     </div>
+  ) : (
+    <></>
   );
 };
 
@@ -254,18 +266,15 @@ const BelongGroupChips = (props: { groupIds: string[] }) => {
   const { groupIds } = props;
   const isNoMinutes = useVBStore((state) => state.isNoMinutes)();
   const minutesStartTimestamp = useVBStore((state) => state.startTimestamp);
-  const isGroupHydrated = useMinutesGroupStore(minutesStartTimestamp)(
-    (state) => state.hasHydrated
-  );
 
   const getGroup = useMinutesGroupStore(minutesStartTimestamp)(
-    (state) => state.getGroup
-  );
+    (state) => state // 全体を監視
+  ).getGroup;
   const groupList = groupIds
     .map((groupId) => getGroup(groupId))
     .filter((group) => group !== undefined);
 
-  return !isNoMinutes && isGroupHydrated ? (
+  return !isNoMinutes ? (
     <div className="flex flex-col items-end justify-center mt-1">
       {groupList.map((group, index) => (
         <div

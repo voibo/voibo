@@ -24,7 +24,7 @@ export const TranscribeButton = () => {
   return (
     <Button
       variant="outlined"
-      className="p-0 min-w-0 rounded-full h-10 w-10 text-white border-0"
+      className="p-0 min-w-0 rounded-full h-10 w-10 border-0"
       onClick={
         recording ? transcriber.stopTranscribe : transcriber.startTranscribe
       }
@@ -32,7 +32,7 @@ export const TranscribeButton = () => {
       {recording ? (
         <RadioButtonChecked className="text-red-600 text-3xl" />
       ) : (
-        <RadioButtonChecked className=" text-3xl" />
+        <RadioButtonChecked className="text-emerald-400 text-3xl" />
       )}
     </Button>
   );

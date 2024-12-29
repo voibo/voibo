@@ -16,6 +16,10 @@ limitations under the License.
 import { Handle, Node, NodeProps, Position } from "@xyflow/react";
 import { useDiscussionHistory } from "../../component/discussion/DiscussionHistory.jsx";
 
+export function isDiscussionNode(node: Node): node is DiscussionNode {
+  return node.type === "discussion";
+}
+
 export type DiscussionNodeParam = {};
 
 export type DiscussionNode = Node<DiscussionNodeParam, "discussion">;
