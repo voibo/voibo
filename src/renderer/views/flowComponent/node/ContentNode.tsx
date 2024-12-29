@@ -24,6 +24,10 @@ import { useMinutesContentStore } from "../../store/useContentStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
 
+export function isContentNode(node: Node): node is ContentNode {
+  return node.type === "content";
+}
+
 export type ContentNodeParam = ContentNodeBaseParam;
 
 export type ContentNode = Node<ContentNodeParam, "content">;

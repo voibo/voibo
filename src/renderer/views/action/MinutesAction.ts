@@ -58,19 +58,21 @@ export const processMinutesAction = async (action: MinutesAction) => {
 
       // renderer
       useVBStore.setState({ startTimestamp });
-      useMinutesStore(startTimestamp).getState().createNewMinutes();
+      await renderStage(action.payload.navigate);
 
+      useMinutesStore(startTimestamp).getState().createNewMinutes();
       await prepareStoresTo(startTimestamp);
-      renderStage(action.payload.navigate);
       break;
     case "openMinutes":
       startTimestamp = action.payload.startTimestamp;
-
+      console.log("useVBStore: openMinutes: 0", startTimestamp);
       await prepareStoresTo(startTimestamp);
-      renderStage(action.payload.navigate);
+      console.log("useVBStore: openMinutes: 1", startTimestamp);
+      await renderStage(action.payload.navigate);
+      console.log("useVBStore: openMinutes: 2", startTimestamp);
       break;
     case "openHomeMenu":
-      openHomeMenu(action.payload.navigate);
+      await openHomeMenu(action.payload.navigate);
       break;
     case "deleteMinutes":
       console.log("useVBStore: deleteMinutes: 0");
@@ -82,36 +84,36 @@ export const processMinutesAction = async (action: MinutesAction) => {
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
 
       // open home
-      openHomeMenu(action.payload.navigate);
+      await openHomeMenu(action.payload.navigate);
       break;
     default:
       console.warn("processTopicAction: unexpected default", action);
   }
 };
 
-const renderStage = (navigate: NavigateFunction) => {
+const renderStage = async (navigate: NavigateFunction) => {
   useVBStore.setState({
     mainMenuOpen: false,
     recording: false,
     interimSegment: null,
   });
-  navigate("/main");
+  await navigate("/main");
 };
 
-const renderHome = (navigate: NavigateFunction) => {
+const renderHome = async (navigate: NavigateFunction) => {
   useVBStore.setState({
     recording: false,
     mainMenuOpen: true,
     interimSegment: null,
   });
-  navigate("/");
+  await navigate("/");
 };
 
 const openHomeMenu = async (navigate: NavigateFunction) => {
   await prepareStoresTo(NO_MINUTES_START_TIMESTAMP);
   // reactflow
   useVBReactflowStore.getState().relocateTopics();
-  renderHome(navigate);
+  await renderHome(navigate);
 };
 
 /**

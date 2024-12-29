@@ -16,7 +16,8 @@ limitations under the License.
 import { ZoomIn, ZoomOut } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import { MiniMap, useReactFlow, useViewport } from "@xyflow/react";
-import { StageTransitionOption } from "./TargetFocuser.jsx";
+
+const StageTransitionOption = { duration: 100 }; // duration を入れると、then が効かなくなるので、使い方に注意
 
 export type ChangeViewMode =
   | "topicStart"

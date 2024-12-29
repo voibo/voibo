@@ -17,6 +17,10 @@ import { memo } from "react";
 import { Handle, Position, Node, NodeProps } from "@xyflow/react";
 import { TopicsHeader } from "../../component/topic/TopicsElement.jsx";
 
+export function isTopicHeaderNode(node: Node): node is TopicHeaderNode {
+  return node.type === "topicHeader";
+}
+
 export type TopicHeaderNodeParam = {};
 export type TopicHeaderNode = Node<TopicHeaderNodeParam, "topicHeader">;
 

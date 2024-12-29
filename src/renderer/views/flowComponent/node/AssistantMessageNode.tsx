@@ -21,6 +21,12 @@ import { useVBStore } from "../../store/useVBStore.jsx";
 import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
 import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
 
+export function isAssistantMessageNode(
+  node: Node
+): node is AssistantMessageNode {
+  return node.type === "assistantMessage";
+}
+
 export type AssistantMessageNodeParam = ContentNodeBaseParam & {
   assistantId: string;
 };

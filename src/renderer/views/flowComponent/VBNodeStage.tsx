@@ -16,21 +16,20 @@ limitations under the License.
 import {
   Background,
   BackgroundVariant,
-  Panel,
   PanOnScrollMode,
   ReactFlow,
   ReactFlowProvider,
   SelectionMode,
   useReactFlow,
+  Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
 import { Content, getDefaultContent } from "../../../common/content/content.js";
 import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
-  getLayoutParam,
   useVBReactflowStore,
   VBReactflowDispatchStore,
   VBReactflowState,
@@ -96,13 +95,13 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStop,
     onNodesDelete,
   } = useVBReactflowStore(useShallow(selector));
+  const startTimestamp = useVBStore((stat) => stat.startTimestamp);
 
   const reactFlow = useReactFlow();
 
   // DnD
   const reactFlowWrapper = useRef(null);
   const [type] = useDnD();
-  const startTimestamp = useVBStore((stat) => stat.startTimestamp) ?? 0;
 
   const onDragOver = useCallback((event: any) => {
     event.preventDefault();
@@ -129,17 +128,17 @@ const VANodeStageCore = (props: {}) => {
     [type, startTimestamp]
   );
 
-  const rootLayout = getLayoutParam();
-  const [viewPort, setViewPort] = useState(rootLayout.initialViewPort);
+  const viewPort = useVBReactflowStore((state) => state.lastViewport);
+  const handleViewPortChange = (viewPort: Viewport) => {
+    console.log("handleViewPortChange", viewPort);
+    useVBReactflowStore.setState({ lastViewport: viewPort });
+  };
 
   return (
     <div ref={reactFlowWrapper} className="w-screen h-screen">
       <ReactFlow
         viewport={viewPort}
-        onViewportChange={(viewPort) => {
-          console.log("onViewportChange", viewPort);
-          setViewPort(viewPort);
-        }}
+        onViewportChange={handleViewPortChange}
         nodes={nodes}
         edges={edges}
         minZoom={ZOOM_MIN}

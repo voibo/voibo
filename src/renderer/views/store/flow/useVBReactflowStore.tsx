@@ -35,8 +35,12 @@ import { Message } from "../../../../common/content/assisatant.js";
 import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
+  isAssistantMessageNode,
 } from "../../flowComponent/node/AssistantMessageNode.jsx";
-import { ContentNode } from "../../flowComponent/node/ContentNode.jsx";
+import {
+  ContentNode,
+  isContentNode,
+} from "../../flowComponent/node/ContentNode.jsx";
 import { DiscussionNode } from "../../flowComponent/node/DisscussionNode.jsx";
 import { TopicHeaderNode } from "../../flowComponent/node/TopicHeaderNode.jsx";
 import {
@@ -97,7 +101,7 @@ export const getLayoutParam = (): LayoutParam => {
     initialViewPort: {
       x: 100,
       y: 100,
-      zoom: 1,
+      zoom: 1.0,
     },
     topic: {
       width: 600,
@@ -139,7 +143,9 @@ export type VBReactflowState = {
   // # 実体
   // layout
   _layoutTopicsQueue: Array<TopicNode>;
-  dummyNodes: DummyNode[];
+  _dummyNodes: DummyNode[];
+  lastAppendedNodes: Node[];
+  lastViewport: Viewport;
 
   // topics
   topicBothEndsNodes: Array<TopicBothEndsNode>;
@@ -163,16 +169,10 @@ const DefaultVBReactflowState: VBReactflowState = {
   // ---
 
   // layout
+  lastAppendedNodes: [],
+  lastViewport: getLayoutParam().initialViewPort,
   _layoutTopicsQueue: [],
-
-  // selected 表示管理
-  selectedSequences: [],
-
-  // assistant 表示管理
-  _assistantLocatedNodeMap: new Map(),
-
-  // core
-  dummyNodes: [
+  _dummyNodes: [
     /*
     {
       id: "dummy_top_left",
@@ -194,6 +194,14 @@ const DefaultVBReactflowState: VBReactflowState = {
     },
     */
   ],
+
+  // selected 表示管理
+  selectedSequences: [],
+
+  // assistant 表示管理
+  _assistantLocatedNodeMap: new Map(),
+
+  // core
   topicNodes: [],
   topicBothEndsNodes: [
     {
@@ -288,7 +296,10 @@ export const useVBReactflowStore = create<
           changes,
           get().contentNodes
         ) as ContentNode[],
-        dummyNodes: applyNodeChanges(changes, get().dummyNodes) as DummyNode[],
+        _dummyNodes: applyNodeChanges(
+          changes,
+          get()._dummyNodes
+        ) as DummyNode[],
       });
 
       // select sequences
@@ -808,7 +819,7 @@ useVBReactflowStore.subscribe((current, pre) => {
     current.topicNodes !== pre.topicNodes ||
     current.assistantNodes !== pre.assistantNodes ||
     current.contentNodes !== pre.contentNodes ||
-    current.dummyNodes !== pre.dummyNodes
+    current._dummyNodes !== pre._dummyNodes
   ) {
     useVBReactflowStore.setState({
       nodes: [
@@ -818,7 +829,7 @@ useVBReactflowStore.subscribe((current, pre) => {
         }),
         ...useVBReactflowStore.getState().assistantNodes,
         ...useVBReactflowStore.getState().contentNodes,
-        ...useVBReactflowStore.getState().dummyNodes,
+        ...useVBReactflowStore.getState()._dummyNodes,
       ],
       edges: [
         ...useVBReactflowStore.getState().topicEdges,
@@ -833,7 +844,7 @@ useVBReactflowStore.subscribe((current, pre) => {
 useVBReactflowStore.subscribe(
   (state) => state.nodes,
   (nodes, prevNodes) => {
-    const newlyMeasuredNodes = nodes.filter(
+    const lastAppendedNodes = nodes.filter(
       (node) =>
         node.measured && // measured
         !prevNodes.some(
@@ -841,16 +852,14 @@ useVBReactflowStore.subscribe(
         ) // unmeasured at the previous state
     );
 
-    if (newlyMeasuredNodes.length > 0) {
-      // can process with measured nodes
-      console.log(
-        "useVBReactflowStore.subscribe: Measured node:",
-        newlyMeasuredNodes
-      );
+    if (lastAppendedNodes.length > 0) {
+      useVBReactflowStore.setState({
+        lastAppendedNodes,
+      });
       // topic nodes
       useVBReactflowStore
         .getState()
-        .layoutTopics(newlyMeasuredNodes.filter((node) => isTopicNode(node)));
+        .layoutTopics(lastAppendedNodes.filter((node) => isTopicNode(node)));
     }
   }
 );

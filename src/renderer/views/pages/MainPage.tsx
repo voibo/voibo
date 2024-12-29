@@ -18,9 +18,9 @@ import { VBNodeStage } from "../flowComponent/VBNodeStage.jsx";
 export const MainPage = () => {
   // <div className="flex bg-indigo-950  text-zinc-600">
   return (
-    <>
+    <div className="  text-zinc-600">
       <audio id="globalAudio"></audio>
       <VBNodeStage />
-    </>
+    </div>
   );
 };
