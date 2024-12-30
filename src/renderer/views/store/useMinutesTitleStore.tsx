@@ -149,5 +149,5 @@ export const useMinutesTitleStore = create<MinutesTitleStore>()(
 );
 
 export function makeDefaultTitle(startTimestamp: number): string {
-  return `会議: ${formatTimestamp(startTimestamp)}`;
+  return `MTG: ${formatTimestamp(startTimestamp)}`;
 }
