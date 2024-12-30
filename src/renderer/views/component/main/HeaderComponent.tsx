@@ -38,7 +38,10 @@ import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
-import { useMinutesTitleStore } from "../../store/useMinutesTitleStore.jsx";
+import {
+  makeDefaultTitle,
+  useMinutesTitleStore,
+} from "../../store/useMinutesTitleStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
@@ -98,7 +101,7 @@ export const HeaderSubComponent = () => {
 const MinutesTitle = (props: {}) => {
   const vbState = useVBStore((state) => state);
   const useMinutesTitle = useMinutesTitleStore((state) => state);
-  const defaultTitle = `Meeting: ${formatTimestamp(vbState.startTimestamp)}`;
+  const defaultTitle = makeDefaultTitle(vbState.startTimestamp);
   let minutesTitle =
     useMinutesTitle.getMinutesTitle(vbState.startTimestamp ?? 0) ??
     defaultTitle;
