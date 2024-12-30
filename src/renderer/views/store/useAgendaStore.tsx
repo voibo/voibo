@@ -66,6 +66,7 @@ export type AgendaStoreAction = {
   getAgenda: (agendaId: string) => Agenda | undefined;
   getAllAgendas: () => Agenda[];
   removeAgenda: (agendaId: string) => void;
+  delete: () => void;
 };
 
 export type MinutesAgenda = {
@@ -291,6 +292,10 @@ const useAgendaStoreCore = (startTimestamp: number) => {
               //console.log("useAgendaStore: removeAgenda", minutesStartTimestamp);
             })
           );
+        },
+        delete: () => {
+          api.persist.clearStorage();
+          storeCache.delete(startTimestamp);
         },
 
         // Hydrate

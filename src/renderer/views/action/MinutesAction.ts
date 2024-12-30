@@ -52,36 +52,34 @@ export const processMinutesAction = async (action: MinutesAction) => {
       startTimestamp = Date.now();
       // title
       useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
-
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
-
       // renderer
       useVBStore.setState({ startTimestamp });
       await renderStage(action.payload.navigate);
-
       useMinutesStore(startTimestamp).getState().createNewMinutes();
       await prepareStoresTo(startTimestamp);
       break;
     case "openMinutes":
       startTimestamp = action.payload.startTimestamp;
-      console.log("useVBStore: openMinutes: 0", startTimestamp);
       await prepareStoresTo(startTimestamp);
-      console.log("useVBStore: openMinutes: 1", startTimestamp);
       await renderStage(action.payload.navigate);
-      console.log("useVBStore: openMinutes: 2", startTimestamp);
       break;
     case "openHomeMenu":
       await openHomeMenu(action.payload.navigate);
       break;
     case "deleteMinutes":
-      console.log("useVBStore: deleteMinutes: 0");
-      // delete minutes
-      const minutesState = useMinutesStore(startTimestamp).getState();
-      minutesState.deleteMinutes();
+      // delete the minutes from all stores
+      startTimestamp = action.payload.startTimestamp;
       useMinutesTitleStore
         .getState()
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
+
+      useMinutesStore(startTimestamp).getState().delete();
+      useMinutesAgendaStore(startTimestamp).getState().delete();
+      useMinutesAssistantStore(startTimestamp).getState().delete();
+      useMinutesContentStore(startTimestamp).getState().delete();
+      useMinutesGroupStore(startTimestamp).getState().delete();
 
       // open home
       await openHomeMenu(action.payload.navigate);

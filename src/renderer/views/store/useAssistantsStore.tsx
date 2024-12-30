@@ -386,13 +386,13 @@ export function makeTopicOrientedInvokeParam({
 // ==== Zustand ====
 
 const storeCache = new Map<number, ReturnType<typeof useAssistantsStoreCore>>();
-export const useMinutesAssistantStore = (minutesStartTimestamp: number) => {
+export const useMinutesAssistantStore = (startTimestamp: number) => {
   let newStore;
-  if (storeCache.has(minutesStartTimestamp)) {
-    newStore = storeCache.get(minutesStartTimestamp)!;
+  if (storeCache.has(startTimestamp)) {
+    newStore = storeCache.get(startTimestamp)!;
   } else {
-    newStore = useAssistantsStoreCore(minutesStartTimestamp);
-    storeCache.set(minutesStartTimestamp, newStore);
+    newStore = useAssistantsStoreCore(startTimestamp);
+    storeCache.set(startTimestamp, newStore);
   }
   return newStore;
 };
@@ -407,6 +407,7 @@ export type AssistantsDispatchStore = {
   removeAssistant: (assistantId: string) => void;
   enqueueTopicRelatedInvoke: (vaConfig: VirtualAssistantConf) => void;
   processInvoke: (vaConfig: VirtualAssistantConf) => void;
+  delete: () => void;
 
   // dispatch
   invokeAssistant: (
@@ -444,8 +445,8 @@ export type AssistantsDispatchStore = {
   ) => void;
 };
 
-const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
-  console.log("useAssistantsStoreCore", minutesStartTimestamp);
+const useAssistantsStoreCore = (startTimestamp: number) => {
+  console.log("useAssistantsStoreCore", startTimestamp);
   let unsubscribeMindMapCreated: () => void;
   return create<
     AssistantsStateStore & AssistantsDispatchStore & HydrateState
@@ -1022,7 +1023,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               const res: InvokeResult = await window.electron.invoke(
                 IPCInvokeKeys.LANGCHAIN_ASSISTANT_INVOKE,
                 param,
-                minutesStartTimestamp,
+                startTimestamp,
                 vaConfig.assistantName,
                 vaConfig.assistantId,
                 connectedMessageIds,
@@ -1126,7 +1127,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
         appendFunctionalMessage(vaConfig, payload) {
           if (!useVBStore.getState().allReady) return;
           if (
-            payload.startTimestamp == minutesStartTimestamp &&
+            payload.startTimestamp == startTimestamp &&
             payload.assistantName == vaConfig.assistantName
           ) {
             const state = get().getOrInitAssistant(vaConfig);
@@ -1146,7 +1147,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
           if (!useVBStore.getState().allReady) return;
           // 定義済みの専用Treadを削除して新しいThreadを作成する。　⇒　正常時は changeMinutes　が最後に呼ばれて終了する
           if (
-            payload.startTimestamp == minutesStartTimestamp &&
+            payload.startTimestamp == startTimestamp &&
             payload.assistantName == vaConfig.assistantName
           ) {
             get().setAssistant({
@@ -1246,9 +1247,14 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
 
           get().setAssistant(newState);
         },
+
+        delete: () => {
+          api.persist.clearStorage();
+          storeCache.delete(startTimestamp);
+        },
       })),
       {
-        name: minutesStartTimestamp.toString(),
+        name: startTimestamp.toString(),
         storage: createJSONStorage(
           () => AssistantPersistStorage,
           ExpandJSONOptions
@@ -1258,7 +1264,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
             if (error) {
               console.error(
                 "an error happened during hydration",
-                minutesStartTimestamp,
+                startTimestamp,
                 error
               );
             } else if (state) {
@@ -1266,7 +1272,7 @@ const useAssistantsStoreCore = (minutesStartTimestamp: number) => {
               useVBStore.getState().setHydrated("assistant");
               console.log(
                 "useAssistantsStoreCore: rehydrated",
-                minutesStartTimestamp,
+                startTimestamp,
                 state
               );
             }

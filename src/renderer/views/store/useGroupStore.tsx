@@ -65,6 +65,7 @@ export type GroupDispatchStore = {
   getAllGroup: () => Group[];
   removeGroup: (id: string) => void;
   removeUnnecessaryGroup: () => void;
+  delete: () => void;
 };
 
 const storeCache = new Map<
@@ -72,15 +73,15 @@ const storeCache = new Map<
   ReturnType<typeof useMinutesGroupStoreCore>
 >();
 
-export const useMinutesGroupStore = (minutesStartTimestamp: number) => {
+export const useMinutesGroupStore = (startTimestamp: number) => {
   let newStore;
-  if (storeCache.has(minutesStartTimestamp)) {
+  if (storeCache.has(startTimestamp)) {
     // 既にキャッシュに存在する場合はそれを利用
-    newStore = storeCache.get(minutesStartTimestamp)!;
+    newStore = storeCache.get(startTimestamp)!;
   } else {
     // ない場合は新たに作成してキャッシュに保存
-    newStore = useMinutesGroupStoreCore(minutesStartTimestamp);
-    storeCache.set(minutesStartTimestamp, newStore);
+    newStore = useMinutesGroupStoreCore(startTimestamp);
+    storeCache.set(startTimestamp, newStore);
   }
   return newStore;
 };
@@ -223,6 +224,11 @@ const useMinutesGroupStoreCore = (minutesStartTimestamp: number) => {
           } else {
             action(); // 完了していればすぐに実行
           }
+        },
+
+        delete: () => {
+          api.persist.clearStorage();
+          storeCache.delete(minutesStartTimestamp);
         },
       })),
       {
