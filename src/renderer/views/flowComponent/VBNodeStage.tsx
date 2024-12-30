@@ -49,7 +49,6 @@ import {
   HeaderMainComponent,
   HeaderSubComponent,
 } from "../component/main/HeaderComponent.jsx";
-import DummyNode from "./node/DummyNode.jsx";
 
 const ZOOM_MIN = 0.001;
 
@@ -130,7 +129,7 @@ const VANodeStageCore = (props: {}) => {
 
   const viewPort = useVBReactflowStore((state) => state.lastViewport);
   const handleViewPortChange = (viewPort: Viewport) => {
-    console.log("handleViewPortChange", viewPort);
+    //console.log("handleViewPortChange", viewPort);
     useVBReactflowStore.setState({ lastViewport: viewPort });
   };
 
@@ -157,7 +156,6 @@ const VANodeStageCore = (props: {}) => {
           discussion: DiscussionNode,
           assistantMessage: AssistantMessageNode,
           content: ContentNode,
-          dummy: DummyNode,
         }}
         panOnScroll={true}
         panOnScrollMode={PanOnScrollMode.Free}

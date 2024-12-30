@@ -56,27 +56,28 @@ export type ContentDispatchStore = {
   getContent: (id: string) => Content | undefined;
   getAllContent: () => Content[];
   removeContent: (id: string) => void;
+  delete: () => void;
 };
 
 const storeCache = new Map<
   number,
   ReturnType<typeof useMinutesContentStoreCore>
 >();
-export const useMinutesContentStore = (minutesStartTimestamp: number) => {
+export const useMinutesContentStore = (startTimestamp: number) => {
   let newStore;
-  if (storeCache.has(minutesStartTimestamp)) {
+  if (storeCache.has(startTimestamp)) {
     // 既にキャッシュに存在する場合はそれを利用
-    newStore = storeCache.get(minutesStartTimestamp)!;
+    newStore = storeCache.get(startTimestamp)!;
   } else {
     // ない場合は新たに作成してキャッシュに保存
-    newStore = useMinutesContentStoreCore(minutesStartTimestamp);
-    storeCache.set(minutesStartTimestamp, newStore);
+    newStore = useMinutesContentStoreCore(startTimestamp);
+    storeCache.set(startTimestamp, newStore);
   }
   return newStore;
 };
 
 type ContentAction = () => void;
-const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
+const useMinutesContentStoreCore = (startTimestamp: number) => {
   //console.log("useMinutesContentStoreCore", minutesStartTimestamp);
   // Hydration が完了するまでの操作を保存する Queue
   const actionQueue: ContentAction[] = [];
@@ -163,9 +164,13 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
             action(); // 完了していればすぐに実行
           }
         },
+        delete: () => {
+          api.persist.clearStorage();
+          storeCache.delete(startTimestamp);
+        },
       })),
       {
-        name: minutesStartTimestamp.toString(),
+        name: startTimestamp.toString(),
         storage: createJSONStorage(
           () => ContentPersistStorage,
           ExpandJSONOptions
@@ -175,14 +180,11 @@ const useMinutesContentStoreCore = (minutesStartTimestamp: number) => {
             if (error) {
               console.error(
                 "An error happened during hydration",
-                minutesStartTimestamp,
+                startTimestamp,
                 error
               );
             } else if (state) {
-              console.log(
-                "useMinutesContentStore: rehydrated",
-                minutesStartTimestamp
-              );
+              console.log("useMinutesContentStore: rehydrated", startTimestamp);
               state.setHasHydrated(true);
               useVBStore.getState().setHydrated("content");
             }

@@ -186,7 +186,7 @@ type DiscussionDispatch = {
 };
 
 type MinutesDispatch = {
-  deleteMinutes: () => void;
+  delete: () => void;
   createNewMinutes: () => void;
   waitForHydration: () => Promise<void>;
   isNoMinutes: () => boolean;
@@ -483,20 +483,10 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             })),
           });
         },
-        deleteMinutes: () => {
-          // 即時反映
-          console.warn(
-            "useMinutesStore: deleteMinutes: 0",
-            minutesStartTimestamp
-          );
+        delete: () => {
           clearQueue();
-          //useMinutesStoreCore(startTimestamp).persist.clearStorage();
           api.persist.clearStorage();
           storeCache.delete(minutesStartTimestamp);
-          console.warn(
-            "useMinutesStore: deleteMinutes: 1",
-            minutesStartTimestamp
-          );
         },
 
         // == TopicManagerDispatch ==

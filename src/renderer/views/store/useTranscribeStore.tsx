@@ -57,11 +57,10 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
     // actions
     startTranscribe: async (): Promise<void> => {
+      if (useVBStore.getState().isNoMinutes()) return;
       try {
-        const startTimestamp =
-          useVBStore.getState().startTimestamp ?? Date.now();
+        const startTimestamp = useVBStore.getState().startTimestamp;
         const settingsData = useVBSettingsStore.getState();
-        console.log("startRecording", settingsData);
 
         if (settingsData && settingsData.hasHydrated) {
           // closeAudio
@@ -135,7 +134,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
             vad.start();
           }
 
-          console.log("start Recording", startTimestamp);
+          console.log("start Recording", startTimestamp, settingsData);
           useVBStore.setState({
             startTimestamp: startTimestamp,
             recording: true,
@@ -181,8 +180,12 @@ export const useTranscribeStore = create<TranscribeStore>()(
     },
 
     splitTranscribe: () => {
-      get().stopTranscribe();
-      get().startTranscribe();
+      if (useVBStore.getState().isNoMinutes()) return;
+      // recording
+      if (useVBStore.getState().recording) {
+        get().stopTranscribe();
+        get().startTranscribe();
+      }
     },
   }))
 );

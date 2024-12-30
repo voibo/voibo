@@ -20,6 +20,7 @@ import {
   Node,
   useNodesInitialized,
   useReactFlow,
+  Viewport,
 } from "@xyflow/react";
 import { useEffect, useState } from "react";
 import { useMinutesAgendaStore } from "../store/useAgendaStore.jsx";
@@ -36,6 +37,7 @@ import { isTopicNode } from "./node/TopicNode.jsx";
 import { isAssistantMessageNode } from "./node/AssistantMessageNode.jsx";
 import { isDiscussionNode } from "./node/DisscussionNode.jsx";
 import { isTopicHeaderNode } from "./node/TopicHeaderNode.jsx";
+import { isContentNode } from "./node/ContentNode.jsx";
 
 //export const StageTransitionOption = { duration: 100 }; // duration を入れると、then が効かなくなるので、使い方に注意
 
@@ -89,9 +91,18 @@ export const TargetFocuser = () => {
   // node 追加時
   useEffect(() => {
     if (nodesInitialized) {
-      expandStage(reactFlow).then(() => {
-        console.log("TargetFocuser: nodesInitialized: 1:", startTimestamp);
-        focusAppendedSpecialNode({ reactFlow, flowState, windowSize });
+      expandStage(reactFlow).then((lastViewport) => {
+        console.log(
+          "TargetFocuser: nodesInitialized: 1:",
+          startTimestamp,
+          lastViewport
+        );
+        focusAppendedSpecialNode({
+          reactFlow,
+          flowState,
+          windowSize,
+          lastViewport,
+        });
       });
     }
   }, [startTimestamp, nodesInitialized]);
@@ -139,83 +150,94 @@ export const TargetFocuser = () => {
   };
 
   return (
-    startTimestamp && (
-      <div className="flex w-full rounded border border-white bg-indigo-950">
-        <Select
-          fullWidth
-          size="small"
-          variant="outlined"
-          className="text-white "
-          value={targetFocus.id}
-          onChange={handleSelect}
-        >
-          {systemList.map((option) => (
-            <MenuItem key={option.id} value={option.id}>
-              {option.label}
-            </MenuItem>
-          ))}
-          <ListSubheader className="text-white bg-blue-600 p-1 text-sm">
-            <ViewAgenda className="mr-2" />
-            Agenda
-          </ListSubheader>
-          {agendaList.map((option) => (
-            <MenuItem
-              key={option.id}
-              value={option.id}
-              className="bg-blue-50 flex items-center justify-start"
-            >
-              <ViewAgenda className="mr-2" sx={{ fontSize: "0.8rem" }} />
-              {option.title}
-            </MenuItem>
-          ))}
-          <ListSubheader className="text-white bg-orange-600 p-1 text-sm">
-            <Folder className="mr-2" />
-            Group
-          </ListSubheader>
-          {groupList.map((option) => (
-            <MenuItem
-              key={option.id}
-              value={option.id}
-              className="bg-orange-50"
-            >
-              <Folder className="mr-2" sx={{ fontSize: "0.8rem" }} />
-              {option.name}
-            </MenuItem>
-          ))}
-        </Select>
+    <div className="flex w-full rounded border border-white bg-indigo-950">
+      <Select
+        fullWidth
+        size="small"
+        variant="outlined"
+        className="text-white "
+        value={targetFocus.id}
+        onChange={handleSelect}
+      >
+        {systemList.map((option) => (
+          <MenuItem key={option.id} value={option.id}>
+            {option.label}
+          </MenuItem>
+        ))}
+        <ListSubheader className="text-white bg-blue-600 p-1 text-sm">
+          <ViewAgenda className="mr-2" />
+          Agenda
+        </ListSubheader>
+        {agendaList.map((option) => (
+          <MenuItem
+            key={option.id}
+            value={option.id}
+            className="bg-blue-50 flex items-center justify-start"
+          >
+            <ViewAgenda className="mr-2" sx={{ fontSize: "0.8rem" }} />
+            {option.title}
+          </MenuItem>
+        ))}
+        <ListSubheader className="text-white bg-orange-600 p-1 text-sm">
+          <Folder className="mr-2" />
+          Group
+        </ListSubheader>
+        {groupList.map((option) => (
+          <MenuItem key={option.id} value={option.id} className="bg-orange-50">
+            <Folder className="mr-2" sx={{ fontSize: "0.8rem" }} />
+            {option.name}
+          </MenuItem>
+        ))}
+      </Select>
 
-        <Button className="text-white min-w-0" onClick={handleFocus}>
-          <FilterCenterFocus />
-        </Button>
-      </div>
-    )
+      <Button className="text-white min-w-0" onClick={handleFocus}>
+        <FilterCenterFocus />
+      </Button>
+    </div>
   );
 };
 
 // == Focus function ==
-export function expandStage(reactFlow: ReturnType<typeof useReactFlow>) {
+const EXTEND_VIEWPORT = {
+  x: 0,
+  y: 0,
+  zoom: 0.01,
+};
+function expandStage(
+  reactFlow: ReturnType<typeof useReactFlow>
+): Promise<Viewport> {
   console.log("TargetFocuser: expandStage");
-  return reactFlow.setViewport({
-    x: 0,
-    y: 0,
-    zoom: 0.01,
-  });
+  const lastViewport = useVBReactflowStore.getState().lastViewport;
+  return reactFlow.setViewport(EXTEND_VIEWPORT).then(() => lastViewport);
 }
 
 export function focusAppendedSpecialNode(props: {
   reactFlow: ReturnType<typeof useReactFlow>;
   flowState: VBReactflowState & VBReactflowDispatchStore;
   windowSize: ReturnType<typeof useWindowSize>;
-}): Promise<boolean> {
-  const { reactFlow, flowState, windowSize } = props;
+  lastViewport: Viewport;
+}): void {
+  const { reactFlow, flowState, windowSize, lastViewport } = props;
   const targetNodes = flowState.lastAppendedNodes;
+
+  console.log("TargetFocuser: 0", targetNodes);
+
   if (targetNodes.length === 0) {
     console.log(`No last appended nodes found.`);
-    return Promise.resolve(false);
   }
+
+  //  if added type is content, do nothing
+  if (targetNodes.every((node) => isContentNode(node))) {
+    console.log("TargetFocuser: focusAppendedSpecialNode: content");
+    reactFlow.setViewport(lastViewport);
+    return;
+  }
+
   // 1. if included topic, focus last topic
   if (targetNodes.some((node) => isTopicNode(node))) {
-    return focusLastTopic(props);
+    console.log("TargetFocuser: focusAppendedSpecialNode: included topic");
+    focusLastTopic(props);
+    return;
   }
   // 2. if included AssistantMessage and no topic, focus last AssistantMessage and connected nodes
   const lastAssistantNode = targetNodes.findLast((node) =>
@@ -231,26 +253,37 @@ export function focusAppendedSpecialNode(props: {
         .getState()
         .nodes.filter((node) => message.connectedMessageIds.includes(node.id));
     }
-    return reactFlow.fitBounds(
+    console.log("TargetFocuser: focusAppendedSpecialNode: lastAssistantNode");
+    reactFlow.fitBounds(
       getNodesBounds([lastAssistantNode, ...connectedSource])
     );
+    return;
   }
 
-  // 3. if included TopicHeader and Discussion, focus first topic
   if (
-    targetNodes.length === 2 &&
-    targetNodes.every(
-      (node) => isDiscussionNode(node) || isTopicHeaderNode(node)
-    )
+    // 3. if included only TopicHeader and Discussion, focus first topic
+    // 4. if last viewport is EXTEND_VIEWPORT, focus first topic
+    (targetNodes.length === 2 &&
+      targetNodes.every(
+        (node) => isDiscussionNode(node) || isTopicHeaderNode(node)
+      )) ||
+    // 4. if last viewport is EXTEND_VIEWPORT, focus first topic
+    (lastViewport.x === EXTEND_VIEWPORT.x &&
+      lastViewport.y === EXTEND_VIEWPORT.y &&
+      lastViewport.zoom === EXTEND_VIEWPORT.zoom)
   ) {
-    console.log("TargetFocuser: focusAppendedSpecialNode: 3");
+    console.log(
+      "TargetFocuser: focusAppendedSpecialNode: header and discussion"
+    );
     // Hack:  FIXME: focusFirstTopic does not work without waiting 500ms. Why?
     setTimeout(() => {
-      return focusFirstTopic(reactFlow);
+      focusFirstTopic(reactFlow);
     }, 500);
+    return;
   }
 
-  return Promise.resolve(true);
+  // Hack:  FIXME: focusFirstTopic does not work without waiting 500ms. Why?
+  reactFlow.setViewport(lastViewport);
 }
 
 export function focusAllNodes(
