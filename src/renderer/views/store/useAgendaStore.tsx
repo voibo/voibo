@@ -98,46 +98,31 @@ export const useMinutesAgendaStore = (startTimestamp: number) => {
   return newStore;
 };
 
-type AgendaAction = () => void;
-const useAgendaStoreCore = (minutesStartTimestamp: number) => {
+const useAgendaStoreCore = (startTimestamp: number) => {
   //console.log("useMinutesContentStoreCore", minutesStartTimestamp);
-  // Hydration が完了するまでの操作を保存する Queue
-  const actionQueue: AgendaAction[] = [];
-
-  // Queue に操作を積むメソッド
-  const enqueueAction = (action: AgendaAction) => {
-    actionQueue.push(action);
-  };
-
-  // Hydration が完了したら Queue の操作を実行するメソッド
-  const flushQueue = () => {
-    while (actionQueue.length > 0) {
-      const action = actionQueue.shift();
-      if (action) {
-        action(); // 同期的に実行
-      }
-    }
-  };
 
   return create<AgendaStore>()(
     persist(
       subscribeWithSelector((set, get, api) => ({
         // action
         getDiscussingAgenda: () => {
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return;
           const agendaStore = get().agendas.get(
-            (useVBStore.getState().startTimestamp ?? 0).toString()
+            useVBStore.getState().startTimestamp.toString()
           );
           if (agendaStore) {
             return agendaStore.discussing;
           }
         },
+
         setDiscussingAgenda: (discussing) => {
-          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-          if (!minutesStartTimestamp) return;
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return;
           set(
             produce((state: AgendaStore) => {
               const currentAgendas = state.agendas.get(
-                minutesStartTimestamp.toString()
+                startTimestamp.toString()
               );
               if (!currentAgendas) return;
               currentAgendas.discussing = discussing;
@@ -248,24 +233,24 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
 
         // action
         setAgenda: (agenda) => {
-          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-          if (!minutesStartTimestamp) return;
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return;
           set(
             produce((state) => {
               const currentAgendas = state.agendas.get(
-                minutesStartTimestamp.toString()
+                startTimestamp.toString()
               );
               if (!currentAgendas) {
                 const newAgendas: MinutesAgenda = {
-                  minutesStartTimestamp: minutesStartTimestamp,
+                  minutesStartTimestamp: startTimestamp,
                   agendaMap: new Map<string, Agenda>(),
                   discussing: undefined,
                 };
                 newAgendas.agendaMap.set(agenda.id, agenda);
-                state.agendas.set(minutesStartTimestamp.toString(), newAgendas);
+                state.agendas.set(startTimestamp.toString(), newAgendas);
               } else {
                 state.agendas
-                  .get(minutesStartTimestamp.toString())
+                  .get(startTimestamp.toString())
                   .agendaMap.set(agenda.id, agenda);
               }
               //console.log("useAgendaStore: setAgenda", minutesStartTimestamp);
@@ -273,11 +258,9 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
           );
         },
         getAgenda: (agendaId) => {
-          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-          if (!minutesStartTimestamp) return undefined;
-          const currentAgendas = get().agendas.get(
-            minutesStartTimestamp.toString()
-          );
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return;
+          const currentAgendas = get().agendas.get(startTimestamp.toString());
           let target = currentAgendas?.agendaMap.get(agendaId);
           /*
         console.log(
@@ -289,21 +272,19 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
           return target;
         },
         getAllAgendas: () => {
-          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-          if (!minutesStartTimestamp) return [];
-          const currentAgendas = get().agendas.get(
-            minutesStartTimestamp.toString()
-          );
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return [];
+          const currentAgendas = get().agendas.get(startTimestamp.toString());
           if (!currentAgendas) return [];
           return Array.from(currentAgendas.agendaMap.values());
         },
         removeAgenda: (agendaId) => {
-          const minutesStartTimestamp = useVBStore.getState().startTimestamp;
-          if (!minutesStartTimestamp) return;
+          if (useVBStore.getState().isNoMinutesStartTimestamp(startTimestamp))
+            return;
           set(
             produce((state) => {
               const currentAgendas = state.agendas.get(
-                minutesStartTimestamp.toString()
+                startTimestamp.toString()
               );
               if (!currentAgendas) return;
               currentAgendas.agendaMap.delete(agendaId);
@@ -318,9 +299,6 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
           set({
             hasHydrated: state,
           });
-          if (state) {
-            flushQueue(); // Queue に積まれた操作を実行
-          }
         },
         waitForHydration: async () => {
           const store = get();
@@ -341,7 +319,7 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
         },
       })),
       {
-        name: minutesStartTimestamp.toString(),
+        name: startTimestamp.toString(),
         storage: createJSONStorage(
           () => AgendaPersistStorage,
           ExpandJSONOptions
@@ -351,7 +329,7 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
             if (error) {
               console.error(
                 "An error happened during hydration",
-                minutesStartTimestamp,
+                startTimestamp,
                 error
               );
             } else if (state) {
@@ -359,7 +337,7 @@ const useAgendaStoreCore = (minutesStartTimestamp: number) => {
               useVBStore.getState().setHydrated("agenda");
               console.log(
                 "useAgendaStoreCore: rehydrated",
-                minutesStartTimestamp,
+                startTimestamp,
                 state
               );
             }

@@ -50,6 +50,7 @@ export type VBState = {
 
 type VBDispatch = {
   isNoMinutes: () => boolean;
+  isNoMinutesStartTimestamp: (startTimestamp: number) => boolean;
   setHydrated: (name: IDB_NAMES) => void;
 };
 
@@ -79,6 +80,8 @@ export const useVBStore = create<VBState & VBDispatch>()(
 
     // utils
     isNoMinutes: () => get().startTimestamp === NO_MINUTES_START_TIMESTAMP,
+    isNoMinutesStartTimestamp: (startTimestamp: number) =>
+      startTimestamp === NO_MINUTES_START_TIMESTAMP,
     setHydrated: (name: IDB_NAMES) => {
       const hydrated = get().hydrated;
       hydrated.set(name, true);

@@ -150,56 +150,50 @@ export const TargetFocuser = () => {
   };
 
   return (
-    startTimestamp && (
-      <div className="flex w-full rounded border border-white bg-indigo-950">
-        <Select
-          fullWidth
-          size="small"
-          variant="outlined"
-          className="text-white "
-          value={targetFocus.id}
-          onChange={handleSelect}
-        >
-          {systemList.map((option) => (
-            <MenuItem key={option.id} value={option.id}>
-              {option.label}
-            </MenuItem>
-          ))}
-          <ListSubheader className="text-white bg-blue-600 p-1 text-sm">
-            <ViewAgenda className="mr-2" />
-            Agenda
-          </ListSubheader>
-          {agendaList.map((option) => (
-            <MenuItem
-              key={option.id}
-              value={option.id}
-              className="bg-blue-50 flex items-center justify-start"
-            >
-              <ViewAgenda className="mr-2" sx={{ fontSize: "0.8rem" }} />
-              {option.title}
-            </MenuItem>
-          ))}
-          <ListSubheader className="text-white bg-orange-600 p-1 text-sm">
-            <Folder className="mr-2" />
-            Group
-          </ListSubheader>
-          {groupList.map((option) => (
-            <MenuItem
-              key={option.id}
-              value={option.id}
-              className="bg-orange-50"
-            >
-              <Folder className="mr-2" sx={{ fontSize: "0.8rem" }} />
-              {option.name}
-            </MenuItem>
-          ))}
-        </Select>
+    <div className="flex w-full rounded border border-white bg-indigo-950">
+      <Select
+        fullWidth
+        size="small"
+        variant="outlined"
+        className="text-white "
+        value={targetFocus.id}
+        onChange={handleSelect}
+      >
+        {systemList.map((option) => (
+          <MenuItem key={option.id} value={option.id}>
+            {option.label}
+          </MenuItem>
+        ))}
+        <ListSubheader className="text-white bg-blue-600 p-1 text-sm">
+          <ViewAgenda className="mr-2" />
+          Agenda
+        </ListSubheader>
+        {agendaList.map((option) => (
+          <MenuItem
+            key={option.id}
+            value={option.id}
+            className="bg-blue-50 flex items-center justify-start"
+          >
+            <ViewAgenda className="mr-2" sx={{ fontSize: "0.8rem" }} />
+            {option.title}
+          </MenuItem>
+        ))}
+        <ListSubheader className="text-white bg-orange-600 p-1 text-sm">
+          <Folder className="mr-2" />
+          Group
+        </ListSubheader>
+        {groupList.map((option) => (
+          <MenuItem key={option.id} value={option.id} className="bg-orange-50">
+            <Folder className="mr-2" sx={{ fontSize: "0.8rem" }} />
+            {option.name}
+          </MenuItem>
+        ))}
+      </Select>
 
-        <Button className="text-white min-w-0" onClick={handleFocus}>
-          <FilterCenterFocus />
-        </Button>
-      </div>
-    )
+      <Button className="text-white min-w-0" onClick={handleFocus}>
+        <FilterCenterFocus />
+      </Button>
+    </div>
   );
 };
 
