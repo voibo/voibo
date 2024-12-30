@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "start": "npm run clean:webpack && run-p watch:webpack run:electron",
+    "react-devtools": "npx react-devtools",
     "run:electron": "wait-on ./dist/index.html ./dist/main.mjs && electronmon .",
     "build:webpack:dev": "cross-env NODE_ENV=\"development\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
     "build:webpack:release": "cross-env NODE_ENV=\"production\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",

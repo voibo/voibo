@@ -155,7 +155,7 @@ app.whenReady().then(() => {
           ...details.responseHeaders,
           "Content-Security-Policy": [
             `worker-src 'self' blob:`,
-            "script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net blob:", // for VAD wasm
+            "script-src 'self' 'unsafe-eval' http://localhost:8097/ https://cdn.jsdelivr.net blob:", // for VAD wasm
             `style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net`,
             "base-uri 'self'",
             "object-src 'self'",

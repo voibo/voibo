@@ -35,12 +35,8 @@ import { Message } from "../../../../common/content/assisatant.js";
 import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
-  isAssistantMessageNode,
 } from "../../flowComponent/node/AssistantMessageNode.jsx";
-import {
-  ContentNode,
-  isContentNode,
-} from "../../flowComponent/node/ContentNode.jsx";
+import { ContentNode } from "../../flowComponent/node/ContentNode.jsx";
 import { DiscussionNode } from "../../flowComponent/node/DisscussionNode.jsx";
 import { TopicHeaderNode } from "../../flowComponent/node/TopicHeaderNode.jsx";
 import {
@@ -63,7 +59,6 @@ import { processTopicAction } from "../../action/TopicAction.js";
 import { Agenda } from "../../../../common/content/agenda.js";
 import { processAssistantMessageAction } from "../../action/AssistantMessageAction.js";
 import { processContentAction } from "../../action/ContentAction.js";
-import { DummyNode } from "../../flowComponent/node/DummyNode.jsx";
 
 // ==== ReactFlow  ====
 type Bounds = {
@@ -143,7 +138,6 @@ export type VBReactflowState = {
   // # 実体
   // layout
   _layoutTopicsQueue: Array<TopicNode>;
-  _dummyNodes: DummyNode[];
   lastAppendedNodes: Node[];
   lastViewport: Viewport;
 
@@ -172,28 +166,6 @@ const DefaultVBReactflowState: VBReactflowState = {
   lastAppendedNodes: [],
   lastViewport: getLayoutParam().initialViewPort,
   _layoutTopicsQueue: [],
-  _dummyNodes: [
-    /*
-    {
-      id: "dummy_top_left",
-      type: "dummy",
-      position: { x: 0, y: 0 },
-      data: {},
-      deletable: false,
-      selectable: false,
-      draggable: false,
-    },
-    {
-      id: "dummy_bottom_right",
-      type: "dummy",
-      position: { x: 10000, y: 10000 },
-      data: {},
-      deletable: false,
-      selectable: false,
-      draggable: false,
-    },
-    */
-  ],
 
   // selected 表示管理
   selectedSequences: [],
@@ -296,10 +268,6 @@ export const useVBReactflowStore = create<
           changes,
           get().contentNodes
         ) as ContentNode[],
-        _dummyNodes: applyNodeChanges(
-          changes,
-          get()._dummyNodes
-        ) as DummyNode[],
       });
 
       // select sequences
@@ -818,8 +786,7 @@ useVBReactflowStore.subscribe((current, pre) => {
   if (
     current.topicNodes !== pre.topicNodes ||
     current.assistantNodes !== pre.assistantNodes ||
-    current.contentNodes !== pre.contentNodes ||
-    current._dummyNodes !== pre._dummyNodes
+    current.contentNodes !== pre.contentNodes
   ) {
     useVBReactflowStore.setState({
       nodes: [
@@ -829,7 +796,6 @@ useVBReactflowStore.subscribe((current, pre) => {
         }),
         ...useVBReactflowStore.getState().assistantNodes,
         ...useVBReactflowStore.getState().contentNodes,
-        ...useVBReactflowStore.getState()._dummyNodes,
       ],
       edges: [
         ...useVBReactflowStore.getState().topicEdges,
@@ -847,12 +813,11 @@ useVBReactflowStore.subscribe(
     const lastAppendedNodes = nodes.filter(
       (node) =>
         node.measured && // measured
-        !prevNodes.some(
-          (prevNode) => prevNode.id === node.id && prevNode.measured
-        ) // unmeasured at the previous state
+        !prevNodes.find((prevNode) => prevNode.id === node.id)?.measured // unmeasured at the previous state
     );
 
     if (lastAppendedNodes.length > 0) {
+      console.log("lastAppendedNodes", lastAppendedNodes, nodes, prevNodes);
       useVBReactflowStore.setState({
         lastAppendedNodes,
       });
