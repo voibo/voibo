@@ -36,7 +36,6 @@ export type VBState = {
   hydrated: Map<IDB_NAMES, boolean>;
 
   // gui
-  mainMenuOpen: boolean;
   vbSettingsDialogOpen: boolean;
   recording: boolean;
   playWavMute: boolean;

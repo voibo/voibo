@@ -1,0 +1,27 @@
+{
+  "name": "@voibo/voibo-plugin",
+  "version": "0.1.0",
+  "main": "dist/index.mjs",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:ts",
+    "build:ts": "tsc",
+    "test": "node --import tsx --import ./test/setup.mts --test './src/**/*.test.mts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/voibo/voibo"
+  },
+  "author": "(c) 2024 Voibo",
+  "license": "Apache-2.0",
+  "description": "Plugin package for Voibo",
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

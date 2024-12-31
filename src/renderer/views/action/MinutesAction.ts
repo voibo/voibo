@@ -91,7 +91,6 @@ export const processMinutesAction = async (action: MinutesAction) => {
 
 const renderStage = async (navigate: NavigateFunction) => {
   useVBStore.setState({
-    mainMenuOpen: false,
     recording: false,
     interimSegment: null,
   });
@@ -101,7 +100,6 @@ const renderStage = async (navigate: NavigateFunction) => {
 const renderHome = async (navigate: NavigateFunction) => {
   useVBStore.setState({
     recording: false,
-    mainMenuOpen: true,
     interimSegment: null,
   });
   await navigate("/");

@@ -1,0 +1,19 @@
+{
+  "name": "test-plugin",
+  "version": "1.0.0",
+  "description": "Test plugin",
+  "main": "./dist/index.mjs",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:ts",
+    "build:ts": "tsc"
+  },
+  "author": "(c) 2024 Voibo",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@voibo/voibo-plugin": "file:../../../plugin"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

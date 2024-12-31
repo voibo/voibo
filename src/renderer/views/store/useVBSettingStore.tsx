@@ -85,11 +85,23 @@ export const DecibelDividerSettingDefault: DecibelDividerSettingState = {
   minLength: 5, // sec
 };
 
+// == UserSettings ==
+export type UserSettingsState = {
+  email?: string; // used for unique identification. but currently not checked email so it can be empty.
+  name?: string;
+  avatarImage?: string;
+};
+
+export type UserSettingsAction = {
+  type: "setUserSettings";
+  payload: Partial<UserSettingsState>;
+};
+
 // === Store ==
 
 export type VBSettingsStoreAction = {
   settingDispatch: (
-    action: AudioDeviceSettingsAction | VADSettingsAction
+    action: AudioDeviceSettingsAction | VADSettingsAction | UserSettingsAction
   ) => void;
 };
 
@@ -97,6 +109,7 @@ export const useVBSettingsStore = create<
   AudioDeviceSettingsState &
     VADSettingsState &
     DecibelDividerSettingState &
+    UserSettingsState &
     VBSettingsStoreAction &
     HydrateState
 >()(
@@ -111,6 +124,7 @@ export const useVBSettingsStore = create<
       settingDispatch: (action) => {
         set((state) => {
           switch (action.type) {
+            case "setUserSettings":
             case "setVADSettings":
             case "setMicSettings":
               return { ...state, ...action.payload };
