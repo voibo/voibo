@@ -14,11 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { useEffect } from "react";
-import { IPCInvokeKeys } from "../../../common/constants.js";
-import { VBSettings } from "../component/setting/VBSettings.jsx";
-import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
-import { processVBAction } from "../action/VBAction.js";
-import { AddCircle, Settings } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { AddCircle } from "@mui/icons-material";
 import {
   Button,
   Table,
@@ -27,9 +24,14 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { processMinutesAction } from "../action/MinutesAction.js";
+import { IPCInvokeKeys } from "../../../common/constants.js";
+import { UserAvatar } from "../component/common/UserAvatar.jsx";
+import { VBSettings } from "../component/setting/VBSettings.jsx";
+import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
 import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
-import { useNavigate } from "react-router-dom";
+import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
+import { processVBAction } from "../action/VBAction.js";
+import { processMinutesAction } from "../action/MinutesAction.js";
 
 export const HomePage = () => {
   useVBMainStoreEffect();
@@ -59,11 +61,14 @@ export const HomePage = () => {
 };
 
 const HomeHeader = () => {
+  const name = useVBSettingsStore((state) => state.name);
+  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
   const handleSettings = (event: any) => {
     processVBAction({
       type: "changeVBSettingsDialogOpen",
     });
   };
+
   return (
     <div className="flex px-6 py-4">
       <div className="flex-grow flex items-center justify-start">
@@ -75,7 +80,7 @@ const HomeHeader = () => {
           className="text-zinc-600"
           onClick={handleSettings}
         >
-          <Settings />
+          <UserAvatar name={name} avatarImage={avatarImage} />
         </Button>
       </div>
     </div>
