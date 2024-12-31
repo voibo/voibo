@@ -13,6 +13,7 @@ export abstract class Plugin {
     return (this.supportedFunctions & functions) !== PluginFunctions.none;
   }
 
+  // Transcriber
   testA(): void {
     throw Error("function [testB] is not supported");
   }
@@ -20,4 +21,6 @@ export abstract class Plugin {
   testB(): void {
     throw Error("function [testA] is not supported");
   }
+
+  //
 }

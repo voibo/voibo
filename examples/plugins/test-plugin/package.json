@@ -8,7 +8,7 @@
     "build": "npm run build:ts",
     "build:ts": "tsc"
   },
-  "author": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+  "author": "(c) 2024 Voibo",
   "license": "Apache-2.0",
   "dependencies": {
     "@voibo/voibo-plugin": "file:../../../plugin"

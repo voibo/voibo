@@ -18,7 +18,7 @@
     "type": "git",
     "url": "github.com/voibo/voibo"
   },
-  "author": "(c) 2024 SpiralMind Co., Ltd. & Humanest Ltd. & Spiral Effect",
+  "author": "(c) 2024 Voibo",
   "license": "Apache-2.0",
   "description": "Plugin package for Voibo",
   "devDependencies": {

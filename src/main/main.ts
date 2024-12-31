@@ -39,13 +39,19 @@ import {
 import { ITranscribeManager } from "./transcriber/ITranscribeManager.js";
 import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeFromWav.js";
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
+
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
 
 async function loadPlugins() {
-  const pluginPath = path.resolve(process.cwd(), "./examples/plugins/test-plugin/dist/index.mjs");
+  const pluginPath = path.resolve(
+    process.cwd(),
+    "./examples/plugins/test-plugin/dist/index.mjs"
+  );
+
   await import(/* webpackIgnore: true */ pluginPath);
+
   for (const p of pluginManager.plugins()) {
-    console.debug('loaded plugin:', p.name);
+    console.debug("loaded plugin:", p.name);
     if (p.hasFunction(PluginFunctions.testA)) {
       pluginManager.callTestA(p.name);
     }
