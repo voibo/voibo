@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import CropperOrigin, { Area } from "react-easy-crop";
 import { AttachFile, DeleteOutline } from "@mui/icons-material";
-import { UserAvatar } from "../common/UserAvatar.jsx";
+import { VBAvatar } from "../common/VBAvatar.jsx";
 const Cropper = CropperOrigin as unknown as typeof CropperOrigin.default;
 
 export const UserSettings = () => {
@@ -115,7 +115,7 @@ const UserAvatarEditor = () => {
   return (
     <div className="flex justify-center">
       <div className="flex flex-col items-center">
-        <UserAvatar
+        <VBAvatar
           name={name}
           avatarImage={avatarImage}
           className={`w-20 h-20 ${avatarImage ? "cursor-pointer" : ""}`}

@@ -15,9 +15,11 @@ limitations under the License.
 */
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AddCircle } from "@mui/icons-material";
+import { AddCircle, Settings } from "@mui/icons-material";
 import {
   Button,
+  MenuItem,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -25,7 +27,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { IPCInvokeKeys } from "../../../common/constants.js";
-import { UserAvatar } from "../component/common/UserAvatar.jsx";
+import { VBAvatar } from "../component/common/VBAvatar.jsx";
 import { VBSettings } from "../component/setting/VBSettings.jsx";
 import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
 import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
@@ -72,25 +74,62 @@ const HomeHeader = () => {
   return (
     <div className="flex px-6 py-4">
       <div className="flex-grow flex items-center justify-start">
-        <img src="./asset/va_logo_black.svg" className="h-10" />
+        <img src="./asset/va_logo_black.svg" className="h-10 mr-8" />
+        <TeamSelector />
       </div>
+
       <div className="flex items-center justify-end">
         <Button
           variant="text"
           className="text-zinc-600"
           onClick={handleSettings}
         >
-          <div className="flex items-center">
-            <UserAvatar
-              name={name}
-              avatarImage={avatarImage}
-              className="mr-4"
-            />
-            <span className="normal-case">{name}</span>
-          </div>
+          <Settings />
         </Button>
       </div>
     </div>
+  );
+};
+
+const TeamSelector = () => {
+  const name = useVBSettingsStore((state) => state.name);
+  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
+  const teams = [];
+  return (
+    <Select
+      value={10}
+      onChange={() => {}}
+      size="small"
+      sx={{
+        ".MuiOutlinedInput-notchedOutline": {
+          borderColor: "rgba(0, 0, 0, 0.1)",
+        },
+        ".MuiSvgIcon-root ": {
+          fill: "rgba(0, 0, 0, 0.3) !important",
+        },
+      }}
+    >
+      <MenuItem value={10}>
+        <div className="flex items-center">
+          <VBAvatar
+            variant="rounded"
+            name={name}
+            avatarImage={avatarImage}
+            className="mr-4"
+          />
+          <span>kinisn's home</span>
+        </div>
+      </MenuItem>
+      <MenuItem value={20}>
+        <div className="flex items-center">
+          <VBAvatar name={name} avatarImage={avatarImage} className="mr-4" />
+          <span>kinisn's home</span>
+        </div>
+      </MenuItem>
+      <MenuItem value={30}>
+        <div className="flex items-center">Add Team</div>
+      </MenuItem>
+    </Select>
   );
 };
 
@@ -104,14 +143,21 @@ const VoiboBoardHeader = () => {
       },
     });
   };
+
+  const name = useVBSettingsStore((state) => state.name);
+  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
   return (
-    <div className="p-6 pb-0 flex items-center">
-      <div className="flex-auto text-2xl flex items-center">
-        <span>Your Voice Boards</span>
+    <div className="p-6 pb-4 flex items-center">
+      <div className="flex-auto flex items-center">
+        <div className="mr-12 text-2xl">Voice Boards</div>
+        <div className="flex items-center">
+          <VBAvatar name={name} avatarImage={avatarImage} className="mr-4" />
+          <span>{name}</span>
+        </div>
       </div>
       <Button onClick={handleAdd} variant="outlined">
         <AddCircle />
-        <span className="ml-2">Add new</span>
+        <span className="ml-2">Add</span>
       </Button>
     </div>
   );

@@ -49,7 +49,7 @@ import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
 import { useNavigate } from "react-router-dom";
-import { UserAvatar } from "../common/UserAvatar.jsx";
+import { VBAvatar } from "../common/VBAvatar.jsx";
 import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
 
 export const HeaderMainComponent = () => {
@@ -83,11 +83,13 @@ export const HeaderMainComponent = () => {
             src="./asset/va_logo_black.svg"
             className="mr-2 h-9 object-contain"
           />
-          <UserAvatar
+          <VBAvatar
             name={name}
             avatarImage={avatarImage}
+            variant="rounded"
             className="w-8 h-8"
           />
+          <VBAvatar name={name} avatarImage={avatarImage} className="w-8 h-8" />
         </IconButton>
       </div>
 
