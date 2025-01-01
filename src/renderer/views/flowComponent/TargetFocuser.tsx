@@ -64,11 +64,11 @@ export const TargetFocuser = () => {
     { type: "system", label: "Last topic", id: "last_topic" },
   ];
   const agendaList = useMinutesAgendaStore(startTimestamp)(
-    (state) => state.getAllAgendas
-  )();
-  const groupList = useMinutesGroupStore(startTimestamp)
-    .getState()
-    .getAllGroup();
+    (state) => state // 全てのアジェンダ監視
+  ).getAllAgendas();
+  const groupList = useMinutesGroupStore(startTimestamp)(
+    (state) => state // 全てのグループ監視
+  ).getAllGroup();
 
   const options: Array<TargetFocuserOption> = [
     ...systemList,
@@ -151,6 +151,9 @@ export const TargetFocuser = () => {
 
   return (
     <div className="flex w-full rounded border border-white bg-indigo-950">
+      <Button className="text-white min-w-0" onClick={handleFocus}>
+        <FilterCenterFocus />
+      </Button>
       <Select
         fullWidth
         size="small"
@@ -189,10 +192,6 @@ export const TargetFocuser = () => {
           </MenuItem>
         ))}
       </Select>
-
-      <Button className="text-white min-w-0" onClick={handleFocus}>
-        <FilterCenterFocus />
-      </Button>
     </div>
   );
 };

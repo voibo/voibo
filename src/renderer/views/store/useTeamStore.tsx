@@ -42,7 +42,7 @@ export type Team = {
       role: string;
     }>;
   };
-  overwriteSettingsJSON: string;
+  settingsJSON: string;
   minutesTitleMap: Map<string, MinutesTitle>;
 };
 

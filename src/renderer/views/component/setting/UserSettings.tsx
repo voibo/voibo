@@ -29,8 +29,12 @@ const Cropper = CropperOrigin as unknown as typeof CropperOrigin.default;
 
 export const UserSettings = () => {
   const dispatch = useVBSettingsStore((state) => state.settingDispatch);
-  const name = useVBSettingsStore((state) => state.name);
-  const email = useVBSettingsStore((state) => state.email);
+  const nameFromStore = useVBSettingsStore((state) => state.name);
+  const emailFromStore = useVBSettingsStore((state) => state.email);
+
+  // ローカル状態
+  const [name, setName] = useState(nameFromStore);
+  const [email, setEmail] = useState(emailFromStore);
 
   const handleBlur =
     (field: "name" | "email") =>
@@ -44,8 +48,18 @@ export const UserSettings = () => {
   return (
     <div className="w-full flex flex-col space-y-6">
       <UserAvatarEditor />
-      <TextField value={name} label={"Name"} onBlur={handleBlur("name")} />
-      <TextField value={email} label={"Email"} onBlur={handleBlur("email")} />
+      <TextField
+        value={name}
+        label={"Name"}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={handleBlur("name")}
+      />
+      <TextField
+        value={email}
+        label={"Email"}
+        onChange={(e) => setEmail(e.target.value)}
+        onBlur={handleBlur("email")}
+      />
     </div>
   );
 };

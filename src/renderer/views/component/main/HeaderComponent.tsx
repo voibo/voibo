@@ -23,6 +23,7 @@ import {
 } from "@mui/icons-material";
 import {
   Button,
+  Divider,
   FormControl,
   IconButton,
   ListItemIcon,
@@ -48,6 +49,8 @@ import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
 import { useNavigate } from "react-router-dom";
+import { UserAvatar } from "../common/UserAvatar.jsx";
+import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
 
 export const HeaderMainComponent = () => {
   const vbState = useVBStore((state) => state);
@@ -62,19 +65,33 @@ export const HeaderMainComponent = () => {
 
     navigate("/");
   };
+
+  const name = useVBSettingsStore((state) => state.name);
+  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
+
   return (
     <div className="border p-2 rounded flex items-center bg-indigo-950 h-16">
-      <IconButton
-        color="inherit"
-        aria-label="open drawer"
-        onClick={handleOpenHome}
-        edge="start"
-        className="mx-2"
-        disabled={vbState.recording}
-      >
-        <img src="./asset/va_logo_black.svg" className="h-8 object-contain " />
-      </IconButton>
-      <div className="flex flex-row">
+      <div onClick={handleOpenHome} className="mr-2">
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          edge="start"
+          disabled={vbState.recording}
+          className="flex items-center space-x-2 mx-1"
+        >
+          <img
+            src="./asset/va_logo_black.svg"
+            className="mr-2 h-9 object-contain"
+          />
+          <UserAvatar
+            name={name}
+            avatarImage={avatarImage}
+            className="w-8 h-8"
+          />
+        </IconButton>
+      </div>
+
+      <div className="flex flex-row mr-2">
         <MinutesTitle />
         <div className="ml-4 flex flex-row text-xs items-center text-white/50">
           <AccessTime className="h-4 w-4 mr-2" />
@@ -82,18 +99,16 @@ export const HeaderMainComponent = () => {
         </div>
       </div>
 
-      <div className="ml-16 mr-4 flex flew-row items-center justify-center">
-        <TranscribeButton />
-      </div>
-    </div>
-  );
-};
+      <Divider orientation="vertical" flexItem className="bg-white mx-2" />
 
-export const HeaderSubComponent = () => {
-  return (
-    <div className="flex items-center justify-center bg-indigo-950 border p-2 rounded h-16">
       <AssistantButton />
       <OthersMenuButton />
+
+      <Divider orientation="vertical" flexItem className="bg-white mx-2" />
+
+      <div className="ml-4 mr-4 flex flew-row items-center justify-center">
+        <TranscribeButton />
+      </div>
     </div>
   );
 };

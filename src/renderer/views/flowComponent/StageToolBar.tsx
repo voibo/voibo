@@ -24,14 +24,14 @@ import { useDnD } from "./DnDContext.jsx";
 export const StageToolBar = () => {
   const layout = useVBReactflowStore((state) => state.layout);
   return (
-    <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+    <>
       <div className="flex flex-col rounded border border-white bg-indigo-950 mb-4">
         <ContentsMakerButton />
       </div>
       <div className="flex flex-col rounded border border-white bg-indigo-950">
         <LayoutButton />
       </div>
-    </div>
+    </>
   );
 };
 

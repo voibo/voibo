@@ -80,7 +80,14 @@ const HomeHeader = () => {
           className="text-zinc-600"
           onClick={handleSettings}
         >
-          <UserAvatar name={name} avatarImage={avatarImage} />
+          <div className="flex items-center">
+            <UserAvatar
+              name={name}
+              avatarImage={avatarImage}
+              className="mr-4"
+            />
+            <span className="normal-case">{name}</span>
+          </div>
         </Button>
       </div>
     </div>
