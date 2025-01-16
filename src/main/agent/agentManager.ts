@@ -48,18 +48,19 @@ import { isBaseMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
 import { AgentLangGraph } from "./agentLangGraph.js";
 import { LLMAnalyzedTopics } from "../../common/content/topic.js";
+import { ElectronStore } from "../../common/electronStore.js";
 
 export class AgentManager {
   // environment
   private _ipcMain: Electron.IpcMain;
-  private _store: Store<StoreType>;
+  private _store: Store<ElectronStore>;
 
   constructor({
     ipcMain,
     store,
   }: {
     ipcMain: Electron.IpcMain;
-    store: Store<StoreType>;
+    store: Store<ElectronStore>;
   }) {
     this._ipcMain = ipcMain;
     this._store = store;

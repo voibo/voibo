@@ -18,7 +18,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { Segment } from "../../../common/discussion.js";
 
 // ==== VB Core ====
-
+export const NO_TEAM_ID = "NO_TEAM_ID";
 export const NO_MINUTES_START_TIMESTAMP = 0;
 
 export type IDB_NAMES =
@@ -29,6 +29,7 @@ export type IDB_NAMES =
   | "group";
 
 export type VBState = {
+  teamId: string;
   // current minutes start timestamp.
   // if no minutes, it is NO_MINUTES_START_TIMESTAMP
   startTimestamp: number;
@@ -55,6 +56,7 @@ type VBDispatch = {
 
 export const useVBStore = create<VBState & VBDispatch>()(
   subscribeWithSelector((set, get) => ({
+    teamId: NO_TEAM_ID, // FIXME ここは render側が始まる前に main 側で決定しているので、ないということが存在しないはず。
     startTimestamp: NO_MINUTES_START_TIMESTAMP,
     allReady: false,
     hydrated: new Map<IDB_NAMES, boolean>([

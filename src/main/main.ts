@@ -41,6 +41,8 @@ import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeF
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
+import { ElectronStore, VBMainConf } from "../common/electronStore.js";
+import { createVBTeam } from "../common/teams.js";
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -78,7 +80,7 @@ process.on("uncaughtException", (err) => {
 
 // ========= Store =========
 // ストアのインスタンスを作成する (TS の場合の型は StoreType)
-const store = new Store<StoreType>({
+const store = new Store<ElectronStore>({
   /**
    * 設定を保存するファイルのパーミッションを
    * -rw-r--r-- に設定する
@@ -104,6 +106,14 @@ const store = new Store<StoreType>({
       ANTHROPIC_API_KEY: "",
       GROQ_API_KEY: "",
       GOOGLE_API_KEY: "",
+    },
+
+    // Team Settings
+    teams: {
+      state: {
+        teams: [createVBTeam("Home")],
+      },
+      version: 0,
     },
   },
 });
@@ -219,6 +229,28 @@ app.whenReady().then(() => {
       deleteFolder(path.join(getMinutesFolderPath(), `${timestamp}`));
     } catch (err) {
       console.log(`[main] delete: unhandled error`, err);
+    }
+  });
+
+  // ========= VA Teams =========
+  ipcMain.removeAllListeners(IPCInvokeKeys.GET_TEAMS);
+  ipcMain.handle(IPCInvokeKeys.GET_TEAMS, (e) => {
+    try {
+      const data = store.get("teams");
+      console.log("get teams", data);
+      return data;
+    } catch (err) {
+      console.error("error: get teams");
+    }
+  });
+
+  ipcMain.removeAllListeners(IPCInvokeKeys.SET_TEAMS);
+  ipcMain.handle(IPCInvokeKeys.SET_TEAMS, (e, json: any) => {
+    console.log("update teams: 0:", json);
+    try {
+      store.set("teams", json);
+    } catch (err) {
+      console.error("error: update teams:", json);
     }
   });
 

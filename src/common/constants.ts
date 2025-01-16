@@ -57,5 +57,9 @@ export const IPCInvokeKeys = {
   LANGCHAIN_INITIALIZE_TARGET_MINUTES: "langchain_initialize_targetMinutes",
   LANGCHAIN_GET_DETAIL_ON_OPEN_AI: "langchain_retrieve_message",
   LANGCHAIN_RETRIEVE_FILE: "langchain_retrieve_file",
+
+  // team
+  SET_TEAMS: "setTeams",
+  GET_TEAMS: "getTeams",
 } as const;
 export type IPCInvokeKeys = (typeof IPCInvokeKeys)[keyof typeof IPCInvokeKeys];

@@ -26,12 +26,13 @@ import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
 import { AudioCapture } from "@voibo/desktop-audio-capture";
+import { ElectronStore } from "../../../common/electronStore.js";
 
 export type TranscribeFromStreamRequiredParams = Required<{
   webContents: Electron.WebContents;
   inputStream: Readable;
   getAudioFolderPath: () => string;
-  store: Store<StoreType>;
+  store: Store<ElectronStore>;
 }>;
 
 export type TranscribeFromStreamOptionalParams = Partial<{
@@ -46,7 +47,7 @@ export type TranscribeFromStreamOptionalParams = Partial<{
   frameSizeMs: number;
 }>;
 export class TranscribeFromStream {
-  private store: Store<StoreType>;
+  private store: Store<ElectronStore>;
   private lastElapsedMsec: number = 0;
   private lastSegmentElapsedMsec: number = 0;
   private currentStartMsec: number = 0;
@@ -358,7 +359,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
   private _ipcMain: Electron.IpcMain;
   private _webContents: Electron.WebContents;
   private _getAudioFolderPath: () => string;
-  private _store: Store<StoreType>;
+  private _store: Store<ElectronStore>;
   private _desktopAudioBuffer: number[] = new Array(0);
   private _capture: any;
   private _captureIteration = 0;
@@ -378,7 +379,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     ipcMain: Electron.IpcMain;
     webContents: Electron.WebContents;
     getAudioFolderPath: () => string;
-    store: Store<StoreType>;
+    store: Store<ElectronStore>;
   }) {
     this._ipcMain = ipcMain;
     this._webContents = webContents;

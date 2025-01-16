@@ -34,6 +34,7 @@ import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
 import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 import { processVBAction } from "../action/VBAction.js";
 import { processMinutesAction } from "../action/MinutesAction.js";
+import { useVBTeamStore } from "../store/useVBTeamStore.jsx";
 
 export const HomePage = () => {
   useVBMainStoreEffect();
@@ -63,8 +64,6 @@ export const HomePage = () => {
 };
 
 const HomeHeader = () => {
-  const name = useVBSettingsStore((state) => state.name);
-  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
   const handleSettings = (event: any) => {
     processVBAction({
       type: "changeVBSettingsDialogOpen",
@@ -92,12 +91,12 @@ const HomeHeader = () => {
 };
 
 const TeamSelector = () => {
-  const name = useVBSettingsStore((state) => state.name);
-  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
-  const teams = [];
+  // team
+  const teams = useVBTeamStore((state) => state).getAllTeamAccounts();
+
   return (
     <Select
-      value={10}
+      value={teams.length > 0 ? teams[0].id : "add"}
       onChange={() => {}}
       size="small"
       sx={{
@@ -109,24 +108,22 @@ const TeamSelector = () => {
         },
       }}
     >
-      <MenuItem value={10}>
-        <div className="flex items-center">
-          <VBAvatar
-            variant="rounded"
-            name={name}
-            avatarImage={avatarImage}
-            className="mr-4"
-          />
-          <span>kinisn's home</span>
-        </div>
-      </MenuItem>
-      <MenuItem value={20}>
-        <div className="flex items-center">
-          <VBAvatar name={name} avatarImage={avatarImage} className="mr-4" />
-          <span>kinisn's home</span>
-        </div>
-      </MenuItem>
-      <MenuItem value={30}>
+      {teams.map((team, index) => {
+        return (
+          <MenuItem value={team.id} key={index}>
+            <div className="flex items-center">
+              <VBAvatar
+                variant="rounded"
+                name={team.name}
+                avatarImage={team.avatarImage}
+                className="mr-4"
+              />
+              <span>{team.name}</span>
+            </div>
+          </MenuItem>
+        );
+      })}
+      <MenuItem value={"add"}>
         <div className="flex items-center">Add Team</div>
       </MenuItem>
     </Select>

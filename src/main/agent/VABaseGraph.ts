@@ -26,8 +26,9 @@ import Store from "electron-store";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { LangGraphInvokeParams } from "./agentLangGraph.js";
 import { ModelType } from "../../common/content/assisatant.js";
+import { ElectronStore } from "../../common/electronStore.js";
 
-export type VAGraphInitParams = { store: Store<StoreType> };
+export type VAGraphInitParams = { store: Store<ElectronStore> };
 export type VAGraphOutput = {
   messages: BaseMessage[];
 };

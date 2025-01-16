@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { VADSettings } from "./VADSettings.jsx";
 import { useVBMainStore } from "../../store/useVBMainStore.jsx";
+import { TranscriberType } from "../../../../common/electronStore.js";
 
 export const TranscriberSetting = () => {
   const vaConfStore = useVBMainStore();
@@ -117,27 +118,6 @@ export const TranscriberSetting = () => {
               });
             }}
           ></TextField>
-        </div>
-      )}
-
-      {vaConfStore.conf!.transcriber === "localWav" && (
-        <div className="flex flex-col items-start p-2 rounded border space-y-4 mt-2">
-          <div>whisper</div>
-          <TextField
-            fullWidth
-            size="small"
-            label={"whisper cpp command path"}
-            value={state_WHISPER_EXEC_PATH}
-            onChange={(event) => set_WHISPER_EXEC_PATH(event.target.value)}
-            onBlur={(event) => {
-              vaConfStore.update({
-                ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
-                WHISPER_EXEC_PATH: event.target.value,
-              });
-            }}
-          ></TextField>
-
-          <VADSettings />
         </div>
       )}
     </div>
