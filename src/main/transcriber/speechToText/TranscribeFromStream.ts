@@ -32,7 +32,6 @@ export type TranscribeFromStreamRequiredParams = Required<{
   webContents: Electron.WebContents;
   inputStream: Readable;
   getAudioFolderPath: () => string;
-  store: Store<ElectronStore>;
 }>;
 
 export type TranscribeFromStreamOptionalParams = Partial<{
@@ -46,8 +45,16 @@ export type TranscribeFromStreamOptionalParams = Partial<{
   model: string;
   frameSizeMs: number;
 }>;
+
+export type STTParams = {
+  projectID: string;
+  credentials: {
+    clientEmail: string;
+    privateKey: string;
+  };
+};
+
 export class TranscribeFromStream {
-  private store: Store<ElectronStore>;
   private lastElapsedMsec: number = 0;
   private lastSegmentElapsedMsec: number = 0;
   private currentStartMsec: number = 0;
@@ -81,9 +88,9 @@ export class TranscribeFromStream {
 
   constructor(
     params: TranscribeFromStreamRequiredParams &
-      TranscribeFromStreamOptionalParams
+      TranscribeFromStreamOptionalParams &
+      STTParams
   ) {
-    this.store = params.store;
     this.webContents = params.webContents;
     this.inputStream = params.inputStream;
     this.location = params.location ?? "global";
@@ -96,14 +103,8 @@ export class TranscribeFromStream {
     this.model = params.model ?? "long";
     this.frameSizeMs = params.frameSizeMs ?? 100;
 
-    this.projectID = this.store.get("conf").GOOGLE_TTS_PROJECT_ID ?? "";
-    const credentials = {
-      credentials: {
-        client_email: this.store.get("conf").GOOGLE_TTS_CLIENT_EMAIL ?? "",
-        private_key: this.store.get("conf").GOOGLE_TTS_PRIVATE_KEY ?? "",
-      },
-    };
-
+    this.projectID = params.projectID;
+    const credentials = params.credentials;
     console.log(
       "TranscribeFromStream: credentials",
       credentials,
@@ -359,7 +360,6 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
   private _ipcMain: Electron.IpcMain;
   private _webContents: Electron.WebContents;
   private _getAudioFolderPath: () => string;
-  private _store: Store<ElectronStore>;
   private _desktopAudioBuffer: number[] = new Array(0);
   private _capture: any;
   private _captureIteration = 0;
@@ -369,23 +369,24 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
   // current transcriber
   private _transcriber: TranscribeFromStream | null;
   private _inputStream: Readable;
+  private _sttParams: STTParams;
 
   constructor({
     ipcMain,
     webContents,
     getAudioFolderPath,
-    store,
+    sttParams,
   }: {
     ipcMain: Electron.IpcMain;
     webContents: Electron.WebContents;
     getAudioFolderPath: () => string;
-    store: Store<ElectronStore>;
+    sttParams: STTParams;
   }) {
     this._ipcMain = ipcMain;
     this._webContents = webContents;
     this._getAudioFolderPath = getAudioFolderPath;
     this._transcriber = null;
-    this._store = store;
+    this._sttParams = sttParams;
 
     this._capture = new AudioCapture();
     this._capture.on("error", (error: any) => {
@@ -518,7 +519,8 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
           webContents: this._webContents,
           inputStream: this._inputStream, // reuse inputStream instead of recreating it
           getAudioFolderPath: this._getAudioFolderPath,
-          store: this._store,
+          projectID: this._sttParams.projectID,
+          credentials: this._sttParams.credentials,
         });
         this._transcriber.start(timestamp);
       } catch (err) {

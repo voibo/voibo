@@ -27,7 +27,6 @@ import log from "electron-log/main.js";
 import * as os from "os";
 import * as process from "node:process";
 
-import Store from "electron-store";
 import path from "node:path";
 import { IPCInvokeKeys, IPCSenderKeys } from "../common/constants.js";
 import { AgentManager } from "./agent/agentManager.js";
@@ -41,8 +40,8 @@ import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeF
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
-import { ElectronStore, VBMainConf } from "../common/electronStore.js";
-import { createVBTeam } from "../common/teams.js";
+import { VBMainConf } from "../common/electronStore.js";
+import { MainStore } from "./store/mainStore.js";
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -78,56 +77,27 @@ process.on("uncaughtException", (err) => {
   app.quit();
 });
 
-// ========= Store =========
-// ストアのインスタンスを作成する (TS の場合の型は StoreType)
-const store = new Store<ElectronStore>({
-  /**
-   * 設定を保存するファイルのパーミッションを
-   * -rw-r--r-- に設定する
-   */
-  configFileMode: 0o644,
-  defaults: {
-    // ウィンドウのデフォルトサイズや座標
-    x: undefined,
-    y: undefined,
-    width: 800,
-    height: 640,
-
-    // VA Config
-    conf: {
-      transcriber: "localWav",
-      GOOGLE_TTS_PROJECT_ID: "",
-      GOOGLE_TTS_CLIENT_EMAIL: "",
-      GOOGLE_TTS_PRIVATE_KEY: "",
-      WHISPER_EXEC_PATH: "",
-
-      //  == LLM ==
-      OPENAI_API_KEY: "",
-      ANTHROPIC_API_KEY: "",
-      GROQ_API_KEY: "",
-      GOOGLE_API_KEY: "",
-    },
-
-    // Team Settings
-    teams: {
-      state: {
-        teams: [createVBTeam("Home")],
-      },
-      version: 0,
-    },
-  },
-});
-
 // ==== App ====
 
 app.whenReady().then(() => {
+  const store = new MainStore({
+    ipcMain,
+    handleChangeTranscriber: (config: VBMainConf) => {
+      console.log("change transcriber", config);
+      if (transcriber) {
+        transcriber.close();
+      }
+      transcriber = initTranscriber();
+    },
+  });
+
   // アプリの起動イベント発火で BrowserWindow インスタンスを作成
   const mainWindow = new BrowserWindow({
     title: "Voibo",
-    x: store.get("x"),
-    y: store.get("y"),
-    width: store.get("width"),
-    height: store.get("height"),
+    x: store.getWindowState().x,
+    y: store.getWindowState().y,
+    width: store.getWindowState().width,
+    height: store.getWindowState().height,
     minWidth: 640,
     minHeight: 400,
     webPreferences: {
@@ -146,7 +116,7 @@ app.whenReady().then(() => {
   console.log("minutes folder path", getMinutesFolderPath());
 
   const getWhisperPath = (): string => {
-    return store.get("conf").WHISPER_EXEC_PATH;
+    return store.getConfig().WHISPER_EXEC_PATH;
   };
 
   // ==== Device Permission ====
@@ -232,31 +202,9 @@ app.whenReady().then(() => {
     }
   });
 
-  // ========= VA Teams =========
-  ipcMain.removeAllListeners(IPCInvokeKeys.GET_TEAMS);
-  ipcMain.handle(IPCInvokeKeys.GET_TEAMS, (e) => {
-    try {
-      const data = store.get("teams");
-      console.log("get teams", data);
-      return data;
-    } catch (err) {
-      console.error("error: get teams");
-    }
-  });
-
-  ipcMain.removeAllListeners(IPCInvokeKeys.SET_TEAMS);
-  ipcMain.handle(IPCInvokeKeys.SET_TEAMS, (e, json: any) => {
-    console.log("update teams: 0:", json);
-    try {
-      store.set("teams", json);
-    } catch (err) {
-      console.error("error: update teams:", json);
-    }
-  });
-
   // ==== Whisper / Speech to text =====
   function initTranscriber(): ITranscribeManager {
-    const transcribeType = store.get("conf").transcriber;
+    const transcribeType = store.getConfig().transcriber;
     console.log("initTranscriber", transcribeType);
     switch (transcribeType) {
       case "localWav":
@@ -272,35 +220,23 @@ app.whenReady().then(() => {
           webContents: mainWindow.webContents,
           ipcMain,
           getAudioFolderPath: getMinutesFolderPath,
-          store,
+          sttParams: {
+            projectID: store.getConfig().GOOGLE_TTS_PROJECT_ID,
+            credentials: {
+              clientEmail: store.getConfig().GOOGLE_TTS_CLIENT_EMAIL,
+              privateKey: store.getConfig().GOOGLE_TTS_PRIVATE_KEY,
+            },
+          },
         });
     }
   }
   let transcriber = initTranscriber();
 
-  // ========= VA Config =========
-  ipcMain.removeAllListeners(IPCInvokeKeys.GET_VB_MAIN_STORE);
-  ipcMain.handle(IPCInvokeKeys.GET_VB_MAIN_STORE, (e) => {
-    const conf = store.get("conf");
-    //console.log("get VA config", conf);
-    return conf;
-  });
-
-  ipcMain.removeAllListeners(IPCInvokeKeys.UPDATE_VA_CONFIG);
-  ipcMain.handle(IPCInvokeKeys.UPDATE_VA_CONFIG, (e, conf: VBMainConf) => {
-    console.log("update VA config", conf);
-    store.set("conf", conf);
-    if (transcriber) {
-      transcriber.close();
-    }
-    transcriber = initTranscriber();
-  });
-
   // ========= LLM =========
 
   const llm = new AgentManager({
     ipcMain,
-    store,
+    store: store.getConfig(),
   });
 
   // レンダラープロセスをロード
@@ -336,7 +272,7 @@ app.whenReady().then(() => {
      * ウィンドウステータスを取得できないことに注意
      */
     const { x, y, width, height } = mainWindow.getBounds();
-    store.set({
+    store.setWindowState({
       x,
       y,
       width,

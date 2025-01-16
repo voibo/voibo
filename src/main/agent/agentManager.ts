@@ -28,7 +28,6 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI, ChatOpenAICallOptions } from "@langchain/openai";
 
 // Virtual Assistant
-import Store from "electron-store";
 import { AgentDify } from "./agentDify.js";
 import { AgentFlowise } from "./agentFlowise.js";
 import {
@@ -48,19 +47,19 @@ import { isBaseMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
 import { AgentLangGraph } from "./agentLangGraph.js";
 import { LLMAnalyzedTopics } from "../../common/content/topic.js";
-import { ElectronStore } from "../../common/electronStore.js";
+import { VBMainConf } from "../../common/electronStore.js";
 
 export class AgentManager {
   // environment
   private _ipcMain: Electron.IpcMain;
-  private _store: Store<ElectronStore>;
+  private _store: VBMainConf;
 
   constructor({
     ipcMain,
     store,
   }: {
     ipcMain: Electron.IpcMain;
-    store: Store<ElectronStore>;
+    store: VBMainConf;
   }) {
     this._ipcMain = ipcMain;
     this._store = store;
@@ -85,7 +84,7 @@ export class AgentManager {
     switch (modelType) {
       case "llama3":
         model = new ChatGroq({
-          apiKey: this._store.get("conf").GROQ_API_KEY,
+          apiKey: this._store.GROQ_API_KEY,
           temperature: temperature ?? 0,
           modelName: "llama3-70b-8192",
           maxRetries: 3,
@@ -93,7 +92,7 @@ export class AgentManager {
         break;
       case "claude-3-opus":
         model = new ChatAnthropic({
-          apiKey: this._store.get("conf").ANTHROPIC_API_KEY,
+          apiKey: this._store.ANTHROPIC_API_KEY,
           temperature: temperature ?? 0,
           modelName: "claude-3-opus-20240229",
           maxRetries: 3,
@@ -101,7 +100,7 @@ export class AgentManager {
         break;
       case "claude-3-sonnet":
         model = new ChatAnthropic({
-          apiKey: this._store.get("conf").ANTHROPIC_API_KEY,
+          apiKey: this._store.ANTHROPIC_API_KEY,
           temperature: temperature ?? 0,
           modelName: "claude-3-sonnet-20240229",
           maxRetries: 3,
@@ -109,7 +108,7 @@ export class AgentManager {
         break;
       case "gpt-4":
         model = new ChatOpenAI({
-          apiKey: this._store.get("conf").OPENAI_API_KEY,
+          apiKey: this._store.OPENAI_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gpt-4o",
           maxRetries: 3,
@@ -117,7 +116,7 @@ export class AgentManager {
         break;
       case "gpt-3.5":
         model = new ChatOpenAI({
-          apiKey: this._store.get("conf").OPENAI_API_KEY,
+          apiKey: this._store.OPENAI_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gpt-3.5-turbo-0125",
           maxRetries: 3,
@@ -125,7 +124,7 @@ export class AgentManager {
         break;
       case "gemini-1.5-pro":
         model = new ChatGoogleGenerativeAI({
-          apiKey: this._store.get("conf").GOOGLE_API_KEY,
+          apiKey: this._store.GOOGLE_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gemini-1.5-pro-latest",
           maxRetries: 3,
@@ -158,7 +157,7 @@ export class AgentManager {
       default:
       case "gemini-1.5-flash":
         model = new ChatGoogleGenerativeAI({
-          apiKey: this._store.get("conf").GOOGLE_API_KEY,
+          apiKey: this._store.GOOGLE_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gemini-1.5-flash-latest",
           maxRetries: 3,

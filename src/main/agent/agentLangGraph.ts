@@ -28,7 +28,7 @@ import { ChatResult } from "@langchain/core/outputs";
 import Store from "electron-store";
 import { AgendaSummarizerGraph } from "./graph/AgendaSummarizerGraph.js";
 import { SimpleResearcherGraph } from "./graph/SimpleResearcherGraph.js";
-import { ElectronStore } from "../../common/electronStore.js";
+import { ElectronStore, VBMainConf } from "../../common/electronStore.js";
 
 export type LangGraphInvokeParams = {
   context: string | undefined;
@@ -38,7 +38,7 @@ export type LangGraphInvokeParams = {
 
 export interface AgentLangGraphInput extends BaseChatModelParams {
   // unique params for VA
-  store: Store<ElectronStore>; // Client 側で LLM の設定情報を取得するための store。 Server で動作する場合は、別の方法で設定情報を取得する
+  store: VBMainConf; // Client 側で LLM の設定情報を取得するための store。 Server で動作する場合は、別の方法で設定情報を取得する
   langGraphID: string; // 呼び出すLangGraph Assistant の呼び分けのためのID
   invokeParams: LangGraphInvokeParams; // invoke 時に渡すパラメータ。 LangGraphの場合、通常のpromptを利用しないので、invokeParams だけで良い
 }

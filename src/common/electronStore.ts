@@ -31,16 +31,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 export type ElectronStore = {
-  // window position and size
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-
-  // va config settings
-  conf: VBMainConf;
-
+  windowState: Partial<WindowState>; // window position and size
+  conf: VBMainConf; // va config settings
   teams: VBTeamsElectronStore;
+};
+
+export type WindowState = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type TranscriberType = "localWav" | "stt";
