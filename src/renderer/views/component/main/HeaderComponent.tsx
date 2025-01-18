@@ -39,10 +39,6 @@ import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
-import {
-  makeDefaultTitle,
-  useMinutesTitleStore,
-} from "../../store/useMinutesTitleStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
@@ -51,6 +47,10 @@ import { processMinutesAction } from "../../action/MinutesAction.js";
 import { useNavigate } from "react-router-dom";
 import { VBAvatar } from "../common/VBAvatar.jsx";
 import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
+import {
+  makeDefaultTitle,
+  useVBTeamStore,
+} from "../../store/useVBTeamStore.jsx";
 
 export const HeaderMainComponent = () => {
   const vbState = useVBStore((state) => state);
@@ -66,6 +66,10 @@ export const HeaderMainComponent = () => {
     navigate("/");
   };
 
+  // team
+  const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+
+  // user
   const name = useVBSettingsStore((state) => state.name);
   const avatarImage = useVBSettingsStore((state) => state.avatarImage);
 
@@ -84,8 +88,8 @@ export const HeaderMainComponent = () => {
             className="mr-2 h-9 object-contain"
           />
           <VBAvatar
-            name={name}
-            avatarImage={avatarImage}
+            name={team.name}
+            avatarImage={team.avatarImage}
             variant="rounded"
             className="w-8 h-8"
           />
@@ -117,7 +121,7 @@ export const HeaderMainComponent = () => {
 
 const MinutesTitle = (props: {}) => {
   const vbState = useVBStore((state) => state);
-  const useMinutesTitle = useMinutesTitleStore((state) => state);
+  const useMinutesTitle = useVBTeamStore((state) => state);
   const defaultTitle = makeDefaultTitle(vbState.startTimestamp);
   let minutesTitle =
     useMinutesTitle.getMinutesTitle(vbState.startTimestamp ?? 0) ??
@@ -211,7 +215,7 @@ const OthersMenuButton = () => {
   // download minutes
   const downloadMinutes = (targetMinutes: number) => {
     // Following stores should be snapshoted to download, so call getState().
-    const minutesTitle = useMinutesTitleStore
+    const minutesTitle = useVBTeamStore
       .getState()
       .getMinutesTitle(targetMinutes);
     const minutesStore = useMinutesStore(targetMinutes).getState();

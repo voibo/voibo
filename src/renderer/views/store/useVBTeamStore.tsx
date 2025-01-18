@@ -13,18 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import {
   subscribeWithSelector,
   persist,
-  createJSONStorage,
-  StateStorage,
   PersistStorage,
   StorageValue,
 } from "zustand/middleware";
 import { produce } from "immer";
-import { ExpandJSONOptions, HydrateState } from "./IDBKeyValPersistStorage.jsx";
+import { HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { formatTimestamp } from "../../util.js";
 import {
   AudioDeviceSettings,
@@ -56,32 +53,27 @@ export type VBTeamsAction = {
   setTeamToLaunch: (teamId: string) => void; // set the team to launch
 
   createNewTeam: () => void;
+  getHydratedCurrentTeam: () => VBTeam;
   getTeam: (teamId: string) => VBTeam | undefined;
   getAllTeamAccounts: () => VBAccount[];
   removeTeam: (teamId: string) => void;
 
   // user
-  updateUserConf: (teamId: string, payload: Partial<VBUser>) => void;
+  updateUserConf: (payload: Partial<VBUser>) => void;
 
   // member
-  addTeamMember: (teamId: string, member: VBUser) => void;
-  removeTeamMember: (teamId: string, userId: string) => void;
+  addTeamMember: (member: VBUser) => void;
+  removeTeamMember: (userId: string) => void;
 
   // audio device settings
-  setAudioDeviceSettings: (
-    teamId: string,
-    payload: Partial<AudioDeviceSettings>
-  ) => void;
+  setAudioDeviceSettings: (payload: Partial<AudioDeviceSettings>) => void;
 
   // MinutesTitle
-  setMinutesTitle: (teamId: string, minutesTitle: MinutesTitle) => void;
-  setDefaultMinutesTitle: (teamId: string, startTimestamp: number) => void;
-  removeMinutesTitle: (teamId: string, startTimestamp: number) => void;
-  getMinutesTitle: (
-    teamId: string,
-    startTimestamp: number
-  ) => string | undefined;
-  getAllMinutesTitles: (teamId: string) => MinutesTitle[];
+  setMinutesTitle: (minutesTitle: MinutesTitle) => void;
+  setDefaultMinutesTitle: (startTimestamp: number) => void;
+  removeMinutesTitle: (startTimestamp: number) => void;
+  getMinutesTitle: (startTimestamp: number) => string | undefined;
+  getAllMinutesTitles: () => MinutesTitle[];
 };
 
 export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
@@ -152,6 +144,13 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
         if (!get().hasHydrated) return;
         return get().teams.find((team) => team.id === teamId);
       },
+      getHydratedCurrentTeam: () => {
+        // this function is required to be called after hydration
+        const team = get().teams.find((team) => team.isDefault === true);
+        if (team) return team;
+        // expect the first team to be the default team
+        return team ? team : get().teams[0];
+      },
       removeTeam: (teamId) => {
         if (!get().hasHydrated) return;
         set(
@@ -178,15 +177,21 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
       },
 
       // MinutesTitleAction
-      setMinutesTitle: (teamId, minutesTitle) => {
+      setMinutesTitle: (minutesTitle) => {
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             const index = team.minutesTitles.findIndex(
               (value) => value.startTimestamp === minutesTitle.startTimestamp
             );
             if (index !== -1) {
+              console.log(
+                "setMinutesTitle",
+                minutesTitle,
+                index,
+                team.minutesTitles
+              );
               team.minutesTitles[index] = minutesTitle;
             } else {
               team.minutesTitles.push(minutesTitle);
@@ -194,16 +199,16 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           })
         );
       },
-      setDefaultMinutesTitle: (teamId, startTimestamp) => {
-        get().setMinutesTitle(teamId, {
+      setDefaultMinutesTitle: (startTimestamp) => {
+        get().setMinutesTitle({
           startTimestamp,
           title: makeDefaultTitle(startTimestamp),
         });
       },
-      removeMinutesTitle: (teamId: string, startTimestamp: number) => {
+      removeMinutesTitle: (startTimestamp: number) => {
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             const index = team.minutesTitles.findIndex(
               (value) => value.startTimestamp === startTimestamp
@@ -214,22 +219,22 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           })
         );
       },
-      getMinutesTitle: (teamId, startTimestamp) => {
+      getMinutesTitle: (startTimestamp) => {
         return get()
-          .getTeam(teamId)
+          .getHydratedCurrentTeam()
           ?.minutesTitles.find(
             (value) => value.startTimestamp === startTimestamp
           )?.title;
       },
-      getAllMinutesTitles: (teamId) => {
-        return get().getTeam(teamId)?.minutesTitles ?? [];
+      getAllMinutesTitles: () => {
+        return get().getHydratedCurrentTeam()?.minutesTitles ?? [];
       },
 
-      setAudioDeviceSettings: (teamId, payload) => {
+      setAudioDeviceSettings: (payload) => {
         if (!get().hasHydrated) return;
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             team.audioDeviceSettings = {
               ...team.audioDeviceSettings,
@@ -239,11 +244,11 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
         );
       },
 
-      updateUserConf: (teamId, payload) => {
+      updateUserConf: (payload) => {
         if (!get().hasHydrated) return;
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             team.name = payload.name ?? team.name;
             team.avatarImage = payload.avatarImage ?? team.avatarImage;
@@ -251,22 +256,22 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
         );
       },
 
-      addTeamMember: (teamId, member) => {
+      addTeamMember: (member) => {
         if (!get().hasHydrated) return;
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             team.members.push(member);
           })
         );
       },
 
-      removeTeamMember: (teamId, userId) => {
+      removeTeamMember: (userId) => {
         if (!get().hasHydrated) return;
         set(
           produce((state: VBTeams & VBTeamsAction) => {
-            const team = state.getTeam(teamId);
+            const team = state.getHydratedCurrentTeam();
             if (!team) return;
             team.members = team.members.filter(
               (member) => member.id !== userId

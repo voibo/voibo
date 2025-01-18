@@ -30,7 +30,6 @@ import { IPCInvokeKeys } from "../../../common/constants.js";
 import { VBAvatar } from "../component/common/VBAvatar.jsx";
 import { VBSettings } from "../component/setting/VBSettings.jsx";
 import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
-import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
 import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 import { processVBAction } from "../action/VBAction.js";
 import { processMinutesAction } from "../action/MinutesAction.js";
@@ -38,6 +37,8 @@ import { useVBTeamStore } from "../store/useVBTeamStore.jsx";
 
 export const HomePage = () => {
   useVBMainStoreEffect();
+  const currentTeam = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+  console.log("currentTeam", currentTeam);
 
   // get audio folder path
   useEffect(() => {
@@ -162,9 +163,12 @@ const VoiboBoardHeader = () => {
 
 const VoiboBoard = () => {
   const navigate = useNavigate();
-  const storedMinutes = useMinutesTitleStore((state) => state)
-    .getAllMinutesTitles()
-    .sort((a, b) => b.startTimestamp - a.startTimestamp);
+  const storedMinutes = [
+    ...useVBTeamStore((state) => state).getAllMinutesTitles(),
+  ].sort((a, b) => {
+    console.log("sort", a, b);
+    return b.startTimestamp - a.startTimestamp;
+  });
 
   const handleLoad = (event: any) => {
     const startTimestamp =

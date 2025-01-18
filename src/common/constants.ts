@@ -59,6 +59,7 @@ export const IPCInvokeKeys = {
   LANGCHAIN_RETRIEVE_FILE: "langchain_retrieve_file",
 
   // team
+  GET_CURRENT_TEAM: "getCurrentTeam",
   SET_TEAMS: "setTeams",
   GET_TEAMS: "getTeams",
 } as const;

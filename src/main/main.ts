@@ -80,7 +80,8 @@ process.on("uncaughtException", (err) => {
 // ==== App ====
 
 app.whenReady().then(() => {
-  const store = new MainStore({
+  // load the main store
+  const mainStore = new MainStore({
     ipcMain,
     handleChangeTranscriber: (config: VBMainConf) => {
       console.log("change transcriber", config);
@@ -91,13 +92,15 @@ app.whenReady().then(() => {
     },
   });
 
+  const currentTeam = mainStore.getCurrentTeam();
+
   // アプリの起動イベント発火で BrowserWindow インスタンスを作成
   const mainWindow = new BrowserWindow({
     title: "Voibo",
-    x: store.getWindowState().x,
-    y: store.getWindowState().y,
-    width: store.getWindowState().width,
-    height: store.getWindowState().height,
+    x: mainStore.getWindowState().x,
+    y: mainStore.getWindowState().y,
+    width: mainStore.getWindowState().width,
+    height: mainStore.getWindowState().height,
     minWidth: 640,
     minHeight: 400,
     webPreferences: {
@@ -116,7 +119,7 @@ app.whenReady().then(() => {
   console.log("minutes folder path", getMinutesFolderPath());
 
   const getWhisperPath = (): string => {
-    return store.getConfig().WHISPER_EXEC_PATH;
+    return mainStore.getConfig().WHISPER_EXEC_PATH;
   };
 
   // ==== Device Permission ====
@@ -204,7 +207,7 @@ app.whenReady().then(() => {
 
   // ==== Whisper / Speech to text =====
   function initTranscriber(): ITranscribeManager {
-    const transcribeType = store.getConfig().transcriber;
+    const transcribeType = mainStore.getConfig().transcriber;
     console.log("initTranscriber", transcribeType);
     switch (transcribeType) {
       case "localWav":
@@ -221,10 +224,10 @@ app.whenReady().then(() => {
           ipcMain,
           getAudioFolderPath: getMinutesFolderPath,
           sttParams: {
-            projectID: store.getConfig().GOOGLE_TTS_PROJECT_ID,
+            projectID: mainStore.getConfig().GOOGLE_TTS_PROJECT_ID,
             credentials: {
-              clientEmail: store.getConfig().GOOGLE_TTS_CLIENT_EMAIL,
-              privateKey: store.getConfig().GOOGLE_TTS_PRIVATE_KEY,
+              clientEmail: mainStore.getConfig().GOOGLE_TTS_CLIENT_EMAIL,
+              privateKey: mainStore.getConfig().GOOGLE_TTS_PRIVATE_KEY,
             },
           },
         });
@@ -233,20 +236,17 @@ app.whenReady().then(() => {
   let transcriber = initTranscriber();
 
   // ========= LLM =========
-
   const llm = new AgentManager({
     ipcMain,
-    store: store.getConfig(),
+    store: mainStore.getConfig(),
   });
 
-  // レンダラープロセスをロード
+  // load the index.html of the app.
   mainWindow.loadFile("dist/index.html");
 
   // ==== Main Window Event ====
 
-  /**
-   * url が http または https で始まる場合はフォルトブラウザで開く
-   */
+  // if the url is http or https, open it in the default browser
   mainWindow.webContents.on("will-navigate", (event, url) => {
     event.preventDefault();
     if (url.startsWith("http") || url.startsWith("https")) {
@@ -262,17 +262,12 @@ app.whenReady().then(() => {
     return { action: "deny" };
   });
 
-  // アプリが閉じられるときの処理
+  // before close the window, set the current position and size to the store.
+  // Note that you can't get the window status after the window is closed,
+  // so you can't get the window status in the 'window-all-closed' event.
   mainWindow.once("close", () => {
-    /**
-     * ウィンドウが閉じられる（寸前の）段階で
-     * 現在の位置やサイズをストアにセットする
-     *
-     * 閉じられた**後**に発火する 'window-all-closed' イベントでは
-     * ウィンドウステータスを取得できないことに注意
-     */
     const { x, y, width, height } = mainWindow.getBounds();
-    store.setWindowState({
+    mainStore.setWindowState({
       x,
       y,
       width,
@@ -281,5 +276,5 @@ app.whenReady().then(() => {
   });
 });
 
-// すべてのウィンドウが閉じられたらアプリを終了する
+// Quit the app when all windows are closed
 app.once("window-all-closed", () => app.quit());

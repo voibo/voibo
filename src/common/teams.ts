@@ -41,9 +41,8 @@ export type MinutesTitle = {
 };
 
 export type VBTeam = VBAccount & {
-  isDefault: boolean;
   members: Array<VBUser>;
-
+  isDefault: boolean;
   audioDeviceSettings: AudioDeviceSettings;
   minutesTitles: Array<MinutesTitle>;
 };

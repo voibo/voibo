@@ -1,11 +1,17 @@
 import Store from "electron-store";
-import { createVBTeam } from "../../common/teams.js";
+import {
+  createVBTeam,
+  VBTeam,
+  VBTeams,
+  VBTeamsElectronStore,
+} from "../../common/teams.js";
 import {
   ElectronStore,
   VBMainConf,
   WindowState,
 } from "../../common/electronStore.js";
 import { IPCInvokeKeys } from "../../common/constants.js";
+import { StorageValue } from "zustand/middleware";
 
 // ========= Store =========
 export class MainStore {
@@ -21,7 +27,7 @@ export class MainStore {
     handleChangeTranscriber: (config: VBMainConf) => void | undefined;
   }) {
     this._store = new Store<ElectronStore>({
-      configFileMode: 0o644, // 設定を保存するファイルのパーミッションを -rw-r--r-- に設定する
+      configFileMode: 0o644, // set permission to -rw-r--r-- for the config file
       defaults: {
         // windowState
         windowState: {
@@ -49,7 +55,7 @@ export class MainStore {
         // Team Settings
         teams: {
           state: {
-            teams: [createVBTeam("Home")],
+            teams: [createVBTeam("Home", true)],
           },
           version: 0,
         },
@@ -63,26 +69,19 @@ export class MainStore {
 
   private _initialize() {
     // ========= VA Teams =========
+    this._ipcMain.removeAllListeners(IPCInvokeKeys.GET_CURRENT_TEAM);
+    this._ipcMain.handle(
+      IPCInvokeKeys.GET_CURRENT_TEAM,
+      this.getCurrentTeam.bind(this)
+    );
+
     this._ipcMain.removeAllListeners(IPCInvokeKeys.GET_TEAMS);
-    this._ipcMain.handle(IPCInvokeKeys.GET_TEAMS, (e) => {
-      try {
-        const data = this._store.get("teams");
-        console.log("get teams", data);
-        return data;
-      } catch (err) {
-        console.error("error: get teams");
-      }
-    });
+    this._ipcMain.handle(IPCInvokeKeys.GET_TEAMS, this.getTeams.bind(this));
 
     this._ipcMain.removeAllListeners(IPCInvokeKeys.SET_TEAMS);
-    this._ipcMain.handle(IPCInvokeKeys.SET_TEAMS, (e, json: any) => {
-      console.log("update teams: 0:", json);
-      try {
-        this._store.set("teams", json);
-      } catch (err) {
-        console.error("error: update teams:", json);
-      }
-    });
+    this._ipcMain.handle(IPCInvokeKeys.SET_TEAMS, (e, json: any) =>
+      this.setTeams(json)
+    );
 
     // ========= VA Config =========
     this._ipcMain.removeAllListeners(IPCInvokeKeys.GET_VB_MAIN_STORE);
@@ -103,6 +102,24 @@ export class MainStore {
         }
       }
     );
+  }
+
+  public getCurrentTeam(): VBTeam {
+    const team = this.getTeams().state.teams.find(
+      (team) => team.isDefault === true
+    );
+    if (team) return team;
+    // expect the first team to be the default team
+    return team ? team : this.getTeams().state.teams[0];
+  }
+
+  public getTeams(): StorageValue<VBTeams> {
+    return this._store.get("teams");
+  }
+
+  public setTeams(teams: StorageValue<VBTeams>) {
+    console.log("setTeams", teams);
+    this._store.set("teams", teams);
   }
 
   public getWindowState() {
