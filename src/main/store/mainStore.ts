@@ -13,7 +13,6 @@ import {
   getMinutesFolderPath,
   getPluginFolderPath,
 } from "../common/pathUtil.js";
-import { get } from "node:http";
 
 // ========= Store =========
 export class MainStore {
@@ -134,11 +133,10 @@ export class MainStore {
   }
 
   public setTeams(teams: StorageValue<VBTeams>) {
-    console.log("setTeams", teams);
     // check that team is added or removed. see useVBTeamStore.tsx
-
     switch (teams.state.lastSpecialAction) {
       case "addTeam":
+        console.log("setTeams: addTeam", teams);
         const addedTeam = teams.state.teams[teams.state.teams.length - 1]; // get the last team
         try {
           makeDir(path.join(getMinutesFolderPath(addedTeam.id)), true);
@@ -148,6 +146,7 @@ export class MainStore {
         }
         break;
       case "removeTeam":
+        console.log("setTeams: removeTeam", teams);
         const removedTeam = this.getTeams().state.teams.find(
           (currentTeam) =>
             teams.state.teams.findIndex((t) => t.id === currentTeam.id) === -1

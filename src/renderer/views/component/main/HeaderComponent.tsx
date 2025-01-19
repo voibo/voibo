@@ -50,6 +50,7 @@ import {
   makeDefaultTitle,
   useVBTeamStore,
 } from "../../store/useVBTeamStore.jsx";
+import { DiscussionSplitter } from "../topic/DiscussionSplitter.jsx";
 
 export const HeaderMainComponent = () => {
   const vbState = useVBStore((state) => state);
