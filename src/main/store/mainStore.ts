@@ -1,10 +1,6 @@
+import path from "node:path";
 import Store from "electron-store";
-import {
-  createVBTeam,
-  VBTeam,
-  VBTeams,
-  VBTeamsElectronStore,
-} from "../../common/teams.js";
+import { createVBTeam, VBTeam, VBTeams } from "../../common/teams.js";
 import {
   ElectronStore,
   VBMainConf,
@@ -12,6 +8,12 @@ import {
 } from "../../common/electronStore.js";
 import { IPCInvokeKeys } from "../../common/constants.js";
 import { StorageValue } from "zustand/middleware";
+import { deleteFolder, makeDir } from "../server-util.js";
+import {
+  getMinutesFolderPath,
+  getPluginFolderPath,
+} from "../common/pathUtil.js";
+import { get } from "node:http";
 
 // ========= Store =========
 export class MainStore {
@@ -39,7 +41,7 @@ export class MainStore {
 
         // VA Config
         conf: {
-          transcriber: "localWav",
+          transcriber: "stt",
           GOOGLE_TTS_PROJECT_ID: "",
           GOOGLE_TTS_CLIENT_EMAIL: "",
           GOOGLE_TTS_PRIVATE_KEY: "",
@@ -55,7 +57,7 @@ export class MainStore {
         // Team Settings
         teams: {
           state: {
-            teams: [createVBTeam("Home", true)],
+            teams: [],
             lastSpecialAction: undefined,
           },
           version: 0,
@@ -69,6 +71,18 @@ export class MainStore {
   }
 
   private _initialize() {
+    // If no team is set as default, set the first team as default
+    if (this._store.get("teams").state.teams.length === 0) {
+      this.setTeams({
+        state: {
+          teams: [createVBTeam("Home", true)],
+          lastSpecialAction: "addTeam",
+        },
+        version: 0,
+      });
+    }
+
+    //  Initialize IPCMain
     // ========= VA Teams =========
     this._ipcMain.removeAllListeners(IPCInvokeKeys.GET_CURRENT_TEAM);
     this._ipcMain.handle(
@@ -121,9 +135,31 @@ export class MainStore {
 
   public setTeams(teams: StorageValue<VBTeams>) {
     console.log("setTeams", teams);
-    // check that team is added or removed.
+    // check that team is added or removed. see useVBTeamStore.tsx
+
     switch (teams.state.lastSpecialAction) {
-      case "":
+      case "addTeam":
+        const addedTeam = teams.state.teams[teams.state.teams.length - 1]; // get the last team
+        try {
+          makeDir(path.join(getMinutesFolderPath(addedTeam.id)), true);
+          makeDir(path.join(getPluginFolderPath(addedTeam.id)), true);
+        } catch (err) {
+          console.log(`[main] create minutes folder: unhandled error`, err);
+        }
+        break;
+      case "removeTeam":
+        const removedTeam = this.getTeams().state.teams.find(
+          (currentTeam) =>
+            teams.state.teams.findIndex((t) => t.id === currentTeam.id) === -1
+        );
+        if (removedTeam) {
+          try {
+            deleteFolder(path.join(getMinutesFolderPath(removedTeam.id)));
+          } catch (err) {
+            console.log(`[main] delete: unhandled error`, err);
+          }
+        }
+        break;
     }
 
     this._store.set("teams", teams);

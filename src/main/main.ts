@@ -42,6 +42,7 @@ import { TranscribeFromStreamManager } from "./transcriber/speechToText/Transcri
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
 import { VBMainConf } from "../common/electronStore.js";
 import { MainStore } from "./store/mainStore.js";
+import { getMinutesFolderPath } from "./common/pathUtil.js";
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -110,17 +111,6 @@ app.whenReady().then(() => {
   });
 
   loadPlugins();
-
-  // === Util ===
-
-  const getTeamFolderPath = (): string => {
-    return path.join(app.getPath("userData"), "teams", "/");
-  };
-
-  const getMinutesFolderPath = (teamId: string): string => {
-    return path.join(getTeamFolderPath(), teamId, "minutes", "/");
-  };
-  //console.log("minutes folder path", getMinutesFolderPath());
 
   const getWhisperPath = (): string => {
     return mainStore.getConfig().WHISPER_EXEC_PATH;

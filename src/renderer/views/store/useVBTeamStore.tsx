@@ -54,7 +54,7 @@ export type VBTeamsAction = {
   // Team core
   setTeamToLaunch: (teamId: string) => void; // set the team to launch
 
-  createNewTeam: () => void;
+  addTeam: () => void;
   getHydratedCurrentTeam: () => VBTeam;
   getTeam: (teamId: string) => VBTeam | undefined;
   getAllTeamAccounts: () => VBAccount[];
@@ -122,11 +122,12 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
       },
 
       // TeamCoreAction
-      createNewTeam: () => {
+      addTeam: () => {
         set(
           produce((state: VBTeams) => {
             const newTeam = createVBTeam("New Team", false);
             state.teams.push(newTeam);
+            get().noticeSpecialActionToMain("addTeam");
           })
         );
       },
