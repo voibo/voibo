@@ -123,9 +123,11 @@ const TeamSelector = () => {
           </MenuItem>
         );
       })}
+      {/*
       <MenuItem value={"add"}>
         <div className="flex items-center">Add Team</div>
-      </MenuItem>
+      </MenuItem> 
+      */}
     </Select>
   );
 };

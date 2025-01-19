@@ -39,11 +39,7 @@ export const UserSettings = () => {
   const handleBlur =
     (field: "name" | "avatarImage") =>
     (event: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      dispatch({
-        id: user.id,
-        name: name,
-        [field]: event.target.value,
-      });
+      dispatch({ ...user, [field]: event.target.value });
     };
 
   return (
