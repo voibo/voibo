@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { TextField } from "@mui/material";
-import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
 
+/*
 export const VADSettings = () => {
   const state = useVBSettingsStore((state) => state);
   const dispatch = useVBSettingsStore((state) => state.settingDispatch);
@@ -145,3 +145,4 @@ export const VADSettings = () => {
     </div>
   );
 };
+*/

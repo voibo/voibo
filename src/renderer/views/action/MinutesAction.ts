@@ -52,6 +52,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
       startTimestamp = Date.now();
       // title
       useVBTeamStore.getState().setDefaultMinutesTitle(startTimestamp);
+      useVBTeamStore.getState().noticeSpecialActionToMain("createNewMinutes");
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
       // renderer
@@ -74,6 +75,7 @@ export const processMinutesAction = async (action: MinutesAction) => {
       useVBTeamStore
         .getState()
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
+      useVBTeamStore.getState().noticeSpecialActionToMain("deleteMinutes");
 
       useMinutesStore(startTimestamp).getState().delete();
       useMinutesAgendaStore(startTimestamp).getState().delete();

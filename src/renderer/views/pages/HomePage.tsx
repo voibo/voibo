@@ -30,7 +30,6 @@ import { IPCInvokeKeys } from "../../../common/constants.js";
 import { VBAvatar } from "../component/common/VBAvatar.jsx";
 import { VBSettings } from "../component/setting/VBSettings.jsx";
 import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
-import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 import { processVBAction } from "../action/VBAction.js";
 import { processMinutesAction } from "../action/MinutesAction.js";
 import { useVBTeamStore } from "../store/useVBTeamStore.jsx";
@@ -142,8 +141,14 @@ const VoiboBoardHeader = () => {
     });
   };
 
-  const name = useVBSettingsStore((state) => state.name);
-  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
+  // team
+  const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+
+  // user
+  const user = team.members[0];
+  const name = user.name;
+  const avatarImage = user.avatarImage;
+
   return (
     <div className="p-6 pb-4 flex items-center">
       <div className="flex-auto flex items-center">

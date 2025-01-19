@@ -25,6 +25,7 @@ import { HydrateState } from "./IDBKeyValPersistStorage.jsx";
 import { formatTimestamp } from "../../util.js";
 import {
   AudioDeviceSettings,
+  createVBTeam,
   MinutesTitle,
   VBAccount,
   VBTeam,
@@ -41,6 +42,7 @@ const VBTeamsPersistStorage: PersistStorage<VBTeams> = {
     name: string,
     value: StorageValue<VBTeams>
   ): Promise<void> => {
+    console.log("VBTeamsPersistStorage: setItem", value);
     await window.electron.invoke(IPCInvokeKeys.SET_TEAMS, value);
   },
   removeItem: async (name: string): Promise<void> => {
@@ -58,11 +60,12 @@ export type VBTeamsAction = {
   getAllTeamAccounts: () => VBAccount[];
   removeTeam: (teamId: string) => void;
 
-  // user
-  updateUserConf: (payload: Partial<VBUser>) => void;
+  // team
+  updateTeamConf: (payload: Partial<VBUser>) => void;
 
   // member
   addTeamMember: (member: VBUser) => void;
+  updateTeamMember: (member: VBUser) => void;
   removeTeamMember: (userId: string) => void;
 
   // audio device settings
@@ -74,12 +77,24 @@ export type VBTeamsAction = {
   removeMinutesTitle: (startTimestamp: number) => void;
   getMinutesTitle: (startTimestamp: number) => string | undefined;
   getAllMinutesTitles: () => MinutesTitle[];
+
+  // util
+  // this is used to notify the special action to update the store in the main process.
+  noticeSpecialActionToMain: (action?: string) => void;
 };
 
 export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
   persist(
     subscribeWithSelector((set, get, api) => ({
       teams: [],
+      lastSpecialAction: undefined,
+
+      // util
+      noticeSpecialActionToMain: (action) => {
+        if (get().lastSpecialAction !== action) {
+          set({ lastSpecialAction: action });
+        }
+      },
 
       // Hydration
       hasHydrated: false,
@@ -108,32 +123,17 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
 
       // TeamCoreAction
       createNewTeam: () => {
-        /*
         set(
           produce((state: VBTeams) => {
-            const newTeam: VBTeam = {
-              id: uuidv4(),
-              name: "New Team",
-              isDefault: false,
-              members: [
-                {
-                  id: uuidv4(),
-                  name: "User",
-                },
-              ],
-              audioDeviceSettings: AudioDeviceSettingsDefault,
-              minutesTitles: [],
-            };
+            const newTeam = createVBTeam("New Team", false);
             state.teams.push(newTeam);
           })
         );
-        */
-        // window.electron.invoke(IPCInvokeKeys.CREATE_TEAM);
       },
 
       getAllTeamAccounts: () => {
         if (!get().hasHydrated) return [];
-        console.log("getAllTeamAccounts", get().teams);
+        get().noticeSpecialActionToMain();
         return get().teams.map((team) => ({
           id: team.id,
           name: team.name,
@@ -142,6 +142,7 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
       },
       getTeam: (teamId) => {
         if (!get().hasHydrated) return;
+        get().noticeSpecialActionToMain();
         return get().teams.find((team) => team.id === teamId);
       },
       getHydratedCurrentTeam: () => {
@@ -149,6 +150,7 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
         const team = get().teams.find((team) => team.isDefault === true);
         if (team) return team;
         // expect the first team to be the default team
+        get().noticeSpecialActionToMain();
         return team ? team : get().teams[0];
       },
       removeTeam: (teamId) => {
@@ -160,6 +162,7 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
             const index = state.teams.findIndex((value) => value.id === teamId);
             if (index !== -1) {
               state.teams.splice(index, 1);
+              get().noticeSpecialActionToMain("removeTeam");
             }
           })
         );
@@ -172,6 +175,7 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
             state.teams.forEach((team) => {
               team.isDefault = team.id === teamId;
             });
+            get().noticeSpecialActionToMain("setTeamToLaunch");
           })
         );
       },
@@ -182,19 +186,26 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            const index = team.minutesTitles.findIndex(
+
+            const mutableTeam = {
+              ...team,
+              minutesTitles: [...team.minutesTitles],
+            };
+
+            const existingIndex = mutableTeam.minutesTitles.findIndex(
               (value) => value.startTimestamp === minutesTitle.startTimestamp
             );
-            if (index !== -1) {
-              console.log(
-                "setMinutesTitle",
-                minutesTitle,
-                index,
-                team.minutesTitles
-              );
-              team.minutesTitles[index] = minutesTitle;
+
+            if (existingIndex !== -1) {
+              mutableTeam.minutesTitles[existingIndex] = minutesTitle;
             } else {
-              team.minutesTitles.push(minutesTitle);
+              mutableTeam.minutesTitles.push(minutesTitle);
+            }
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("setMinutesTitle");
             }
           })
         );
@@ -204,22 +215,36 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           startTimestamp,
           title: makeDefaultTitle(startTimestamp),
         });
+        get().noticeSpecialActionToMain("setDefaultMinutesTitle");
       },
       removeMinutesTitle: (startTimestamp: number) => {
         set(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            const index = team.minutesTitles.findIndex(
+
+            const mutableTeam = {
+              ...team,
+              minutesTitles: [...team.minutesTitles],
+            };
+
+            const index = mutableTeam.minutesTitles.findIndex(
               (value) => value.startTimestamp === startTimestamp
             );
             if (index !== -1) {
-              team.minutesTitles.splice(index, 1);
+              mutableTeam.minutesTitles.splice(index, 1);
+            }
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("removeMinutesTitle");
             }
           })
         );
       },
       getMinutesTitle: (startTimestamp) => {
+        get().noticeSpecialActionToMain();
         return get()
           .getHydratedCurrentTeam()
           ?.minutesTitles.find(
@@ -227,6 +252,7 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           )?.title;
       },
       getAllMinutesTitles: () => {
+        get().noticeSpecialActionToMain();
         return get().getHydratedCurrentTeam()?.minutesTitles ?? [];
       },
 
@@ -236,25 +262,52 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            team.audioDeviceSettings = {
+
+            const mutableTeam = {
+              ...team,
+            };
+
+            mutableTeam.audioDeviceSettings = {
               ...team.audioDeviceSettings,
               ...payload,
             };
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("setAudioDeviceSettings");
+            }
           })
         );
       },
 
-      updateUserConf: (payload) => {
+      // team
+      updateTeamConf: (payload) => {
         if (!get().hasHydrated) return;
         set(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            team.name = payload.name ?? team.name;
-            team.avatarImage = payload.avatarImage ?? team.avatarImage;
+
+            const mutableTeam = {
+              ...team,
+              minutesTitles: [...team.minutesTitles],
+            };
+
+            // update the target member's user conf
+            mutableTeam.name = payload.name ?? team.name;
+            mutableTeam.avatarImage = payload.avatarImage ?? team.avatarImage;
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("updateTeamConf");
+            }
           })
         );
       },
+
+      // member
 
       addTeamMember: (member) => {
         if (!get().hasHydrated) return;
@@ -262,7 +315,44 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            team.members.push(member);
+
+            const mutableTeam = {
+              ...team,
+              members: [...team.members],
+            };
+
+            mutableTeam.members.push(member);
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("addTeamMember");
+            }
+          })
+        );
+      },
+
+      updateTeamMember: (member) => {
+        if (!get().hasHydrated) return;
+        set(
+          produce((state: VBTeams & VBTeamsAction) => {
+            const team = state.getHydratedCurrentTeam();
+            if (!team) return;
+
+            const mutableTeam = {
+              ...team,
+              members: [...team.members],
+            };
+
+            mutableTeam.members = team.members.map((m) =>
+              m.id === member.id ? member : m
+            );
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("updateTeamMember");
+            }
           })
         );
       },
@@ -273,9 +363,21 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
           produce((state: VBTeams & VBTeamsAction) => {
             const team = state.getHydratedCurrentTeam();
             if (!team) return;
-            team.members = team.members.filter(
+
+            const mutableTeam = {
+              ...team,
+              members: [...team.members],
+            };
+
+            mutableTeam.members = team.members.filter(
               (member) => member.id !== userId
             );
+
+            const teamIndex = state.teams.findIndex((t) => t.id === team.id);
+            if (teamIndex !== -1) {
+              state.teams[teamIndex] = mutableTeam;
+              get().noticeSpecialActionToMain("removeTeamMember");
+            }
           })
         );
       },
@@ -283,7 +385,10 @@ export const useVBTeamStore = create<VBTeams & VBTeamsAction & HydrateState>()(
     {
       name: "teams",
       storage: VBTeamsPersistStorage,
-      partialize: (state) => ({ teams: state.teams }),
+      partialize: (state) => ({
+        teams: state.teams,
+        lastSpecialAction: state.lastSpecialAction,
+      }),
       onRehydrateStorage: (state) => {
         return (state, error) => {
           if (error) {

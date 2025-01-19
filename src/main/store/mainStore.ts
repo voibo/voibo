@@ -56,6 +56,7 @@ export class MainStore {
         teams: {
           state: {
             teams: [createVBTeam("Home", true)],
+            lastSpecialAction: undefined,
           },
           version: 0,
         },
@@ -79,8 +80,9 @@ export class MainStore {
     this._ipcMain.handle(IPCInvokeKeys.GET_TEAMS, this.getTeams.bind(this));
 
     this._ipcMain.removeAllListeners(IPCInvokeKeys.SET_TEAMS);
-    this._ipcMain.handle(IPCInvokeKeys.SET_TEAMS, (e, json: any) =>
-      this.setTeams(json)
+    this._ipcMain.handle(
+      IPCInvokeKeys.SET_TEAMS,
+      (e, value: StorageValue<VBTeams>) => this.setTeams(value)
     );
 
     // ========= VA Config =========
@@ -119,6 +121,11 @@ export class MainStore {
 
   public setTeams(teams: StorageValue<VBTeams>) {
     console.log("setTeams", teams);
+    // check that team is added or removed.
+    switch (teams.state.lastSpecialAction) {
+      case "":
+    }
+
     this._store.set("teams", teams);
   }
 

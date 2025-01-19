@@ -49,6 +49,7 @@ export type VBTeam = VBAccount & {
 
 export type VBTeams = {
   teams: Array<VBTeam>;
+  lastSpecialAction: string | undefined;
 };
 
 export type VBTeamsElectronStore = {

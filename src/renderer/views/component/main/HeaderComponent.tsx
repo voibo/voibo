@@ -46,7 +46,6 @@ import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
 import { useNavigate } from "react-router-dom";
 import { VBAvatar } from "../common/VBAvatar.jsx";
-import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
 import {
   makeDefaultTitle,
   useVBTeamStore,
@@ -70,8 +69,9 @@ export const HeaderMainComponent = () => {
   const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
 
   // user
-  const name = useVBSettingsStore((state) => state.name);
-  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
+  const user = team.members[0];
+  const name = user.name;
+  const avatarImage = user.avatarImage;
 
   return (
     <div className="border p-2 rounded flex items-center bg-indigo-950 h-16">

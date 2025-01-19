@@ -113,10 +113,14 @@ app.whenReady().then(() => {
 
   // === Util ===
 
-  const getMinutesFolderPath = (): string => {
-    return path.join(app.getPath("userData"), "minutes", "/");
+  const getTeamFolderPath = (): string => {
+    return path.join(app.getPath("userData"), "teams", "/");
   };
-  console.log("minutes folder path", getMinutesFolderPath());
+
+  const getMinutesFolderPath = (teamId: string): string => {
+    return path.join(getTeamFolderPath(), teamId, "minutes", "/");
+  };
+  //console.log("minutes folder path", getMinutesFolderPath());
 
   const getWhisperPath = (): string => {
     return mainStore.getConfig().WHISPER_EXEC_PATH;
@@ -181,7 +185,7 @@ app.whenReady().then(() => {
   ipcMain.handle(
     IPCInvokeKeys.GET_AUDIO_FOLDER_PATH,
     async (): Promise<string> => {
-      return getMinutesFolderPath();
+      return getMinutesFolderPath(currentTeam.id);
     }
   );
 
@@ -189,7 +193,10 @@ app.whenReady().then(() => {
   ipcMain.on(IPCSenderKeys.CREATE_MINUTES, (e, timestamp: number) => {
     console.log("[main] create minutes folder", timestamp);
     try {
-      makeDir(path.join(getMinutesFolderPath(), `${timestamp}`), true);
+      makeDir(
+        path.join(getMinutesFolderPath(currentTeam.id), `${timestamp}`),
+        true
+      );
     } catch (err) {
       console.log(`[main] create minutes folder: unhandled error`, err);
     }
@@ -199,7 +206,9 @@ app.whenReady().then(() => {
   ipcMain.on(IPCSenderKeys.DELETE_MINUTES, (e, timestamp: number) => {
     console.log("[main] delete minutes", timestamp);
     try {
-      deleteFolder(path.join(getMinutesFolderPath(), `${timestamp}`));
+      deleteFolder(
+        path.join(getMinutesFolderPath(currentTeam.id), `${timestamp}`)
+      );
     } catch (err) {
       console.log(`[main] delete: unhandled error`, err);
     }
@@ -214,7 +223,7 @@ app.whenReady().then(() => {
         return new TranscribeFromWavManager({
           webContents: mainWindow.webContents,
           ipcMain,
-          getAudioFolderPath: getMinutesFolderPath,
+          getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
           getWhisperPath,
         });
       case "stt":
@@ -222,7 +231,7 @@ app.whenReady().then(() => {
         return new TranscribeFromStreamManager({
           webContents: mainWindow.webContents,
           ipcMain,
-          getAudioFolderPath: getMinutesFolderPath,
+          getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
           sttParams: {
             projectID: mainStore.getConfig().GOOGLE_TTS_PROJECT_ID,
             credentials: {

@@ -105,7 +105,7 @@ export type VBSettingsStoreAction = {
   ) => void;
 };
 
-export const useVBSettingsStore = create<
+const useVBSettingsStore = create<
   AudioDeviceSettingsState &
     VADSettingsState &
     DecibelDividerSettingState &

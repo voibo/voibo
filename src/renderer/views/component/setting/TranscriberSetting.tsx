@@ -22,7 +22,7 @@ import {
   SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import { VADSettings } from "./VADSettings.jsx";
+//import { VADSettings } from "./VADSettings.jsx";
 import { useVBMainStore } from "../../store/useVBMainStore.jsx";
 import { TranscriberType } from "../../../../common/electronStore.js";
 
