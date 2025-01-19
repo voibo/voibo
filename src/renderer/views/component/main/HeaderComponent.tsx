@@ -23,6 +23,7 @@ import {
 } from "@mui/icons-material";
 import {
   Button,
+  Divider,
   FormControl,
   IconButton,
   ListItemIcon,
@@ -38,16 +39,18 @@ import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { TranscribeButton } from "./TranscribeButton.jsx";
-import {
-  makeDefaultTitle,
-  useMinutesTitleStore,
-} from "../../store/useMinutesTitleStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { processMinutesAction } from "../../action/MinutesAction.js";
 import { useNavigate } from "react-router-dom";
+import { VBAvatar } from "../common/VBAvatar.jsx";
+import {
+  makeDefaultTitle,
+  useVBTeamStore,
+} from "../../store/useVBTeamStore.jsx";
+import { DiscussionSplitter } from "../topic/DiscussionSplitter.jsx";
 
 export const HeaderMainComponent = () => {
   const vbState = useVBStore((state) => state);
@@ -62,19 +65,40 @@ export const HeaderMainComponent = () => {
 
     navigate("/");
   };
+
+  // team
+  const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+
+  // user
+  const user = team.members[0];
+  const name = user.name;
+  const avatarImage = user.avatarImage;
+
   return (
     <div className="border p-2 rounded flex items-center bg-indigo-950 h-16">
-      <IconButton
-        color="inherit"
-        aria-label="open drawer"
-        onClick={handleOpenHome}
-        edge="start"
-        className="mx-2"
-        disabled={vbState.recording}
-      >
-        <img src="./asset/va_logo_black.svg" className="h-8 object-contain " />
-      </IconButton>
-      <div className="flex flex-row">
+      <div onClick={handleOpenHome} className="mr-2">
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          edge="start"
+          disabled={vbState.recording}
+          className="flex items-center space-x-2 mx-1"
+        >
+          <img
+            src="./asset/va_logo_black.svg"
+            className="mr-2 h-9 object-contain"
+          />
+          <VBAvatar
+            name={team.name}
+            avatarImage={team.avatarImage}
+            variant="rounded"
+            className="w-8 h-8"
+          />
+          <VBAvatar name={name} avatarImage={avatarImage} className="w-8 h-8" />
+        </IconButton>
+      </div>
+
+      <div className="flex flex-row mr-2">
         <MinutesTitle />
         <div className="ml-4 flex flex-row text-xs items-center text-white/50">
           <AccessTime className="h-4 w-4 mr-2" />
@@ -82,25 +106,23 @@ export const HeaderMainComponent = () => {
         </div>
       </div>
 
-      <div className="ml-16 mr-4 flex flew-row items-center justify-center">
+      <Divider orientation="vertical" flexItem className="bg-white mx-2" />
+
+      <AssistantButton />
+      <OthersMenuButton />
+
+      <Divider orientation="vertical" flexItem className="bg-white mx-2" />
+
+      <div className="ml-4 mr-4 flex flew-row items-center justify-center">
         <TranscribeButton />
       </div>
     </div>
   );
 };
 
-export const HeaderSubComponent = () => {
-  return (
-    <div className="flex items-center justify-center bg-indigo-950 border p-2 rounded h-16">
-      <AssistantButton />
-      <OthersMenuButton />
-    </div>
-  );
-};
-
 const MinutesTitle = (props: {}) => {
   const vbState = useVBStore((state) => state);
-  const useMinutesTitle = useMinutesTitleStore((state) => state);
+  const useMinutesTitle = useVBTeamStore((state) => state);
   const defaultTitle = makeDefaultTitle(vbState.startTimestamp);
   let minutesTitle =
     useMinutesTitle.getMinutesTitle(vbState.startTimestamp ?? 0) ??
@@ -194,7 +216,7 @@ const OthersMenuButton = () => {
   // download minutes
   const downloadMinutes = (targetMinutes: number) => {
     // Following stores should be snapshoted to download, so call getState().
-    const minutesTitle = useMinutesTitleStore
+    const minutesTitle = useVBTeamStore
       .getState()
       .getMinutesTitle(targetMinutes);
     const minutesStore = useMinutesStore(targetMinutes).getState();

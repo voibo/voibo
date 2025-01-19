@@ -22,12 +22,12 @@ import {
 import { Runnable } from "@langchain/core/runnables";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenAI, ChatOpenAICallOptions } from "@langchain/openai";
-import Store from "electron-store";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { LangGraphInvokeParams } from "./agentLangGraph.js";
 import { ModelType } from "../../common/content/assisatant.js";
+import { VBMainConf } from "../../common/electronStore.js";
 
-export type VAGraphInitParams = { store: Store<StoreType> };
+export type VAGraphInitParams = { store: VBMainConf };
 export type VAGraphOutput = {
   messages: BaseMessage[];
 };
@@ -57,7 +57,7 @@ export abstract class VABaseGraph {
     switch (modelType) {
       case "claude-3-opus":
         model = new ChatAnthropic({
-          apiKey: this.initParam.store.get("conf").ANTHROPIC_API_KEY,
+          apiKey: this.initParam.store.ANTHROPIC_API_KEY,
           temperature: temperature ?? 0,
           modelName: "claude-3-opus-20240229",
           maxRetries: 3,
@@ -65,7 +65,7 @@ export abstract class VABaseGraph {
         break;
       case "gpt-4":
         model = new ChatOpenAI({
-          apiKey: this.initParam.store.get("conf").OPENAI_API_KEY,
+          apiKey: this.initParam.store.OPENAI_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gpt-4o",
           maxRetries: 3,
@@ -73,7 +73,7 @@ export abstract class VABaseGraph {
         break;
       case "gemini-1.5-pro":
         model = new ChatGoogleGenerativeAI({
-          apiKey: this.initParam.store.get("conf").GOOGLE_API_KEY,
+          apiKey: this.initParam.store.GOOGLE_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gemini-1.5-pro-latest",
           maxRetries: 3,
@@ -82,7 +82,7 @@ export abstract class VABaseGraph {
       default:
       case "gemini-1.5-flash":
         model = new ChatGoogleGenerativeAI({
-          apiKey: this.initParam.store.get("conf").GOOGLE_API_KEY,
+          apiKey: this.initParam.store.GOOGLE_API_KEY,
           temperature: temperature ?? 0,
           modelName: "gemini-1.5-flash-latest",
           maxRetries: 3,

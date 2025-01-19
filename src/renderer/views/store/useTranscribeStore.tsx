@@ -23,11 +23,11 @@ import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import { appendMinutesList } from "../../../common/discussion.js";
 import { DiscussionSegment } from "../../../common/discussion.js";
 import { useVBMainStore } from "./useVBMainStore.jsx";
-import { useVBSettingsStore } from "./useVBSettingStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 import { processDiscussionAction } from "../action/DiscussionAction.js";
 import { processVBAction } from "../action/VBAction.js";
+import { useVBTeamStore } from "./useVBTeamStore.jsx";
 
 export type TranscribeState = {
   // vad
@@ -60,9 +60,10 @@ export const useTranscribeStore = create<TranscribeStore>()(
       if (useVBStore.getState().isNoMinutes()) return;
       try {
         const startTimestamp = useVBStore.getState().startTimestamp;
-        const settingsData = useVBSettingsStore.getState();
+        const team = useVBTeamStore.getState().getHydratedCurrentTeam();
+        const settingsData = team.audioDeviceSettings;
 
-        if (settingsData && settingsData.hasHydrated) {
+        if (settingsData) {
           // closeAudio
           get().vad?.destroy();
           get()
@@ -90,6 +91,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
           switch (useVBMainStore.getState().conf!.transcriber) {
             case "localWav":
+              /*
               vad = await MicVAD.new({
                 stream: unmixedOwnMicStream,
                 frameSamples: 1536,
@@ -106,6 +108,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
                   );
                 },
               });
+              */
               break;
             case "stt":
             default:
@@ -124,14 +127,16 @@ export const useTranscribeStore = create<TranscribeStore>()(
           }
 
           window.electron.send(IPCSenderKeys.START_TRANSCRIBE, startTimestamp, {
+            /*
             silenceLevel: settingsData.silenceLevel,
             silenceLength: settingsData.silenceLength,
             maxLength: settingsData.maxLength,
             minLength: settingsData.minLength,
+            */
           });
 
           if (vad) {
-            vad.start();
+            //vad.start();
           }
 
           console.log("start Recording", startTimestamp, settingsData);

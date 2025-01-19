@@ -27,19 +27,18 @@ import { VBAvatar } from "../common/VBAvatar.jsx";
 import { useVBTeamStore } from "../../store/useVBTeamStore.jsx";
 const Cropper = CropperOrigin as unknown as typeof CropperOrigin.default;
 
-export const UserSettings = () => {
+export const TeamProfile = () => {
   // team
-  const dispatch = useVBTeamStore((state) => state.updateTeamMember);
   const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
-  const user = team.members[0];
+  const dispatch = useVBTeamStore((state) => state.updateTeamConf);
 
   // ローカル状態
-  const [name, setName] = useState(user.name);
+  const [name, setName] = useState(team.name);
 
   const handleBlur =
     (field: "name" | "avatarImage") =>
     (event: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      dispatch({ ...user, [field]: event.target.value });
+      dispatch({ [field]: event.target.value });
     };
 
   return (
@@ -47,7 +46,7 @@ export const UserSettings = () => {
       <AvatarEditor />
       <TextField
         value={name}
-        label={"Name"}
+        label={"Team name"}
         onChange={(e) => setName(e.target.value)}
         onBlur={handleBlur("name")}
       />
@@ -57,10 +56,9 @@ export const UserSettings = () => {
 
 const AvatarEditor = () => {
   const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
-  const dispatch = useVBTeamStore((state) => state.updateTeamMember);
-  const user = team.members[0];
-  const name = user.name;
-  const avatarImage = user.avatarImage;
+  const dispatch = useVBTeamStore((state) => state.updateTeamConf);
+  const name = team.name;
+  const avatarImage = team.avatarImage;
 
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -97,7 +95,7 @@ const AvatarEditor = () => {
   const handleSaveCroppedImage = async () => {
     if (imageSrc && croppedAreaPixels) {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      dispatch({ ...user, avatarImage: croppedImage });
+      dispatch({ avatarImage: croppedImage });
       setIsCropperOpen(false);
     }
   };
@@ -116,7 +114,7 @@ const AvatarEditor = () => {
           <Button
             variant="text"
             className="text-zinc-600"
-            onClick={() => dispatch({ ...user, avatarImage: undefined })}
+            onClick={() => dispatch({ avatarImage: undefined })}
           >
             <DeleteOutline fontSize="small" />
           </Button>

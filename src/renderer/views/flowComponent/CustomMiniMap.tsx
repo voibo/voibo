@@ -31,34 +31,32 @@ export const CustomMiniMap = () => {
   const { zoom } = useViewport();
 
   return (
-    <div className="absolute bottom-16 right-2 z-10 flex flex-col items-end space-y-1">
-      <div className="flex flex-col items-center border border-white bg-indigo-950 rounded">
-        <div className="w-full flex items-center justify-between">
-          <Button
-            className="text-white grow-0"
-            onClick={() => {
-              reactFlow.zoomOut(StageTransitionOption);
-            }}
-          >
-            <ZoomOut />
-          </Button>
-          <div className="text-white grow-0 flex items-center justify-center">
-            <div>{Math.floor(zoom * 100)}%</div>
-          </div>
-          <Button
-            className="text-white grow-0"
-            onClick={() => {
-              reactFlow.zoomIn(StageTransitionOption);
-            }}
-          >
-            <ZoomIn />
-          </Button>
+    <div className="flex flex-col items-center border border-white bg-indigo-950 rounded">
+      <MiniMap
+        pannable={true}
+        zoomable={true}
+        className="relative bg-indigo-950 m-0 p-0"
+      />
+      <div className="w-full flex items-center justify-between">
+        <Button
+          className="text-white grow-0"
+          onClick={() => {
+            reactFlow.zoomOut(StageTransitionOption);
+          }}
+        >
+          <ZoomOut />
+        </Button>
+        <div className="text-white grow-0 flex items-center justify-center">
+          <div>{Math.floor(zoom * 100)}%</div>
         </div>
-        <MiniMap
-          pannable={true}
-          zoomable={true}
-          className="relative bg-indigo-950 m-0 p-0"
-        />
+        <Button
+          className="text-white grow-0"
+          onClick={() => {
+            reactFlow.zoomIn(StageTransitionOption);
+          }}
+        >
+          <ZoomIn />
+        </Button>
       </div>
     </div>
   );

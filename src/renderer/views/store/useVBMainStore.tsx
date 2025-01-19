@@ -16,6 +16,7 @@ limitations under the License.
 import { useEffect } from "react";
 import { create } from "zustand";
 import { IPCInvokeKeys } from "../../../common/constants.js";
+import { VBMainConf } from "../../../common/electronStore.js";
 
 /***
  * Manage the configuration file stored in the electron main process

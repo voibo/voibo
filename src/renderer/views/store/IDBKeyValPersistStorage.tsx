@@ -35,7 +35,6 @@ export const IDBKeyValPersistStorage: StateStorage = {
 
 // Key of IDBKeyVal
 export const IDBKeyValKeys = {
-  AGENDAS_STORE: "agendas",
   SETTINGS_STORE: "settings",
   MINUTES_TITLE_STORE: "minutesTitle",
 };

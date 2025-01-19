@@ -27,7 +27,6 @@ import log from "electron-log/main.js";
 import * as os from "os";
 import * as process from "node:process";
 
-import Store from "electron-store";
 import path from "node:path";
 import { IPCInvokeKeys, IPCSenderKeys } from "../common/constants.js";
 import { AgentManager } from "./agent/agentManager.js";
@@ -41,6 +40,9 @@ import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeF
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
+import { VBMainConf } from "../common/electronStore.js";
+import { MainStore } from "./store/mainStore.js";
+import { getMinutesFolderPath } from "./common/pathUtil.js";
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -76,48 +78,30 @@ process.on("uncaughtException", (err) => {
   app.quit();
 });
 
-// ========= Store =========
-// ストアのインスタンスを作成する (TS の場合の型は StoreType)
-const store = new Store<StoreType>({
-  /**
-   * 設定を保存するファイルのパーミッションを
-   * -rw-r--r-- に設定する
-   */
-  configFileMode: 0o644,
-  defaults: {
-    // ウィンドウのデフォルトサイズや座標
-    x: undefined,
-    y: undefined,
-    width: 800,
-    height: 640,
-
-    // VA Config
-    conf: {
-      transcriber: "localWav",
-      GOOGLE_TTS_PROJECT_ID: "",
-      GOOGLE_TTS_CLIENT_EMAIL: "",
-      GOOGLE_TTS_PRIVATE_KEY: "",
-      WHISPER_EXEC_PATH: "",
-
-      //  == LLM ==
-      OPENAI_API_KEY: "",
-      ANTHROPIC_API_KEY: "",
-      GROQ_API_KEY: "",
-      GOOGLE_API_KEY: "",
-    },
-  },
-});
-
 // ==== App ====
 
 app.whenReady().then(() => {
+  // load the main store
+  const mainStore = new MainStore({
+    ipcMain,
+    handleChangeTranscriber: (config: VBMainConf) => {
+      console.log("change transcriber", config);
+      if (transcriber) {
+        transcriber.close();
+      }
+      transcriber = initTranscriber();
+    },
+  });
+
+  const currentTeam = mainStore.getCurrentTeam();
+
   // アプリの起動イベント発火で BrowserWindow インスタンスを作成
   const mainWindow = new BrowserWindow({
     title: "Voibo",
-    x: store.get("x"),
-    y: store.get("y"),
-    width: store.get("width"),
-    height: store.get("height"),
+    x: mainStore.getWindowState().x,
+    y: mainStore.getWindowState().y,
+    width: mainStore.getWindowState().width,
+    height: mainStore.getWindowState().height,
     minWidth: 640,
     minHeight: 400,
     webPreferences: {
@@ -128,15 +112,8 @@ app.whenReady().then(() => {
 
   loadPlugins();
 
-  // === Util ===
-
-  const getMinutesFolderPath = (): string => {
-    return path.join(app.getPath("userData"), "minutes", "/");
-  };
-  console.log("minutes folder path", getMinutesFolderPath());
-
   const getWhisperPath = (): string => {
-    return store.get("conf").WHISPER_EXEC_PATH;
+    return mainStore.getConfig().WHISPER_EXEC_PATH;
   };
 
   // ==== Device Permission ====
@@ -198,7 +175,7 @@ app.whenReady().then(() => {
   ipcMain.handle(
     IPCInvokeKeys.GET_AUDIO_FOLDER_PATH,
     async (): Promise<string> => {
-      return getMinutesFolderPath();
+      return getMinutesFolderPath(currentTeam.id);
     }
   );
 
@@ -206,7 +183,10 @@ app.whenReady().then(() => {
   ipcMain.on(IPCSenderKeys.CREATE_MINUTES, (e, timestamp: number) => {
     console.log("[main] create minutes folder", timestamp);
     try {
-      makeDir(path.join(getMinutesFolderPath(), `${timestamp}`), true);
+      makeDir(
+        path.join(getMinutesFolderPath(currentTeam.id), `${timestamp}`),
+        true
+      );
     } catch (err) {
       console.log(`[main] create minutes folder: unhandled error`, err);
     }
@@ -216,7 +196,9 @@ app.whenReady().then(() => {
   ipcMain.on(IPCSenderKeys.DELETE_MINUTES, (e, timestamp: number) => {
     console.log("[main] delete minutes", timestamp);
     try {
-      deleteFolder(path.join(getMinutesFolderPath(), `${timestamp}`));
+      deleteFolder(
+        path.join(getMinutesFolderPath(currentTeam.id), `${timestamp}`)
+      );
     } catch (err) {
       console.log(`[main] delete: unhandled error`, err);
     }
@@ -224,14 +206,14 @@ app.whenReady().then(() => {
 
   // ==== Whisper / Speech to text =====
   function initTranscriber(): ITranscribeManager {
-    const transcribeType = store.get("conf").transcriber;
+    const transcribeType = mainStore.getConfig().transcriber;
     console.log("initTranscriber", transcribeType);
     switch (transcribeType) {
       case "localWav":
         return new TranscribeFromWavManager({
           webContents: mainWindow.webContents,
           ipcMain,
-          getAudioFolderPath: getMinutesFolderPath,
+          getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
           getWhisperPath,
         });
       case "stt":
@@ -239,46 +221,31 @@ app.whenReady().then(() => {
         return new TranscribeFromStreamManager({
           webContents: mainWindow.webContents,
           ipcMain,
-          getAudioFolderPath: getMinutesFolderPath,
-          store,
+          getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
+          sttParams: {
+            projectID: mainStore.getConfig().GOOGLE_TTS_PROJECT_ID,
+            credentials: {
+              clientEmail: mainStore.getConfig().GOOGLE_TTS_CLIENT_EMAIL,
+              privateKey: mainStore.getConfig().GOOGLE_TTS_PRIVATE_KEY,
+            },
+          },
         });
     }
   }
   let transcriber = initTranscriber();
 
-  // ========= VA Config =========
-  ipcMain.removeAllListeners(IPCInvokeKeys.GET_VB_MAIN_STORE);
-  ipcMain.handle(IPCInvokeKeys.GET_VB_MAIN_STORE, (e) => {
-    const conf = store.get("conf");
-    //console.log("get VA config", conf);
-    return conf;
-  });
-
-  ipcMain.removeAllListeners(IPCInvokeKeys.UPDATE_VA_CONFIG);
-  ipcMain.handle(IPCInvokeKeys.UPDATE_VA_CONFIG, (e, conf: VBMainConf) => {
-    console.log("update VA config", conf);
-    store.set("conf", conf);
-    if (transcriber) {
-      transcriber.close();
-    }
-    transcriber = initTranscriber();
-  });
-
   // ========= LLM =========
-
   const llm = new AgentManager({
     ipcMain,
-    store,
+    store: mainStore.getConfig(),
   });
 
-  // レンダラープロセスをロード
+  // load the index.html of the app.
   mainWindow.loadFile("dist/index.html");
 
   // ==== Main Window Event ====
 
-  /**
-   * url が http または https で始まる場合はフォルトブラウザで開く
-   */
+  // if the url is http or https, open it in the default browser
   mainWindow.webContents.on("will-navigate", (event, url) => {
     event.preventDefault();
     if (url.startsWith("http") || url.startsWith("https")) {
@@ -294,17 +261,12 @@ app.whenReady().then(() => {
     return { action: "deny" };
   });
 
-  // アプリが閉じられるときの処理
+  // before close the window, set the current position and size to the store.
+  // Note that you can't get the window status after the window is closed,
+  // so you can't get the window status in the 'window-all-closed' event.
   mainWindow.once("close", () => {
-    /**
-     * ウィンドウが閉じられる（寸前の）段階で
-     * 現在の位置やサイズをストアにセットする
-     *
-     * 閉じられた**後**に発火する 'window-all-closed' イベントでは
-     * ウィンドウステータスを取得できないことに注意
-     */
     const { x, y, width, height } = mainWindow.getBounds();
-    store.set({
+    mainStore.setWindowState({
       x,
       y,
       width,
@@ -313,5 +275,5 @@ app.whenReady().then(() => {
   });
 });
 
-// すべてのウィンドウが閉じられたらアプリを終了する
+// Quit the app when all windows are closed
 app.once("window-all-closed", () => app.quit());

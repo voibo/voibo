@@ -26,6 +26,7 @@ import { UserSettings } from "./UserSettings.jsx";
 import { TranscriberSetting } from "./TranscriberSetting.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { processVBAction } from "../../action/VBAction.js";
+import { TeamProfile } from "./TeamProfile.jsx";
 
 const TabContext = TabContext_ as unknown as typeof TabContext_.default;
 const TabList = TabList_ as unknown as typeof TabList_.default;
@@ -48,7 +49,7 @@ export const VBSettings = () => {
       <div className="p-4 text-zinc-600">
         <div className="flex items-center justify-start text-lg">
           <Settings className="mr-2" />
-          Settings
+          Team Settings
         </div>
 
         <TabContext value={selectedTab}>
@@ -60,7 +61,8 @@ export const VBSettings = () => {
               <Tab label="Audio Devices" value="1" className="normal-case" />
               <Tab label="Transcriber" value="2" className="normal-case" />
               <Tab label="Keys" value="3" className="normal-case" />
-              <Tab label="User" value="4" className="normal-case" />
+              <Tab label="User Profile" value="4" className="normal-case" />
+              <Tab label="Team Profile" value="5" className="normal-case" />
             </TabList>
           </div>
 
@@ -75,6 +77,9 @@ export const VBSettings = () => {
           </TabPanel>
           <TabPanel value="4">
             <UserSettings />
+          </TabPanel>
+          <TabPanel value="5">
+            <TeamProfile />
           </TabPanel>
         </TabContext>
       </div>

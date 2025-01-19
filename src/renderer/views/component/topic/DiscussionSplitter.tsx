@@ -165,6 +165,7 @@ const DiscussionSplitterDialog = (props: {
               </FormControl>
             </div>
           </div>
+          {/*
           <div className="border rounded my-4 p-4">
             <div className="w-full mb-2 text-sm">
               Enforce splitting current discussion with the setting.
@@ -178,6 +179,7 @@ const DiscussionSplitterDialog = (props: {
               Split
             </Button>
           </div>
+           */}
         </div>
       </DialogContent>
     </Dialog>

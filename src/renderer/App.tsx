@@ -21,8 +21,15 @@ import {
 } from "react-router-dom";
 import { MainPage } from "./views/pages/MainPage.jsx";
 import { HomePage } from "./views/pages/HomePage.jsx";
+import { useVBTeamStore } from "./views/store/useVBTeamStore.jsx";
 
 export const App = () => {
+  const hasHydrated = useVBTeamStore((state) => state.hasHydrated);
+
+  if (!hasHydrated) {
+    return <div>Loading...</div>;
+  }
+
   // router
   const router = createHashRouter(
     createRoutesFromElements(

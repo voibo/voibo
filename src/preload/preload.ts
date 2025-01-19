@@ -14,7 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { IpcRendererEvent, contextBridge, ipcRenderer } from "electron";
-import { IPCInvokeKeys, IPCReceiverKeys, IPCSenderKeys } from "../common/constants.js";
+import {
+  IPCInvokeKeys,
+  IPCReceiverKeys,
+  IPCSenderKeys,
+} from "../common/constants.js";
 
 export interface IElectronAPI {
   // renderer -> main
@@ -32,7 +36,7 @@ export interface IElectronAPI {
 }
 
 /**
- * window.electron でアクセスできる
+ * access from window.electron
  */
 contextBridge.exposeInMainWorld("electron", {
   // renderer -> main

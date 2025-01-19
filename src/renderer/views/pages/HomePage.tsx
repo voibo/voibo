@@ -15,9 +15,11 @@ limitations under the License.
 */
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AddCircle } from "@mui/icons-material";
+import { AddCircle, Settings } from "@mui/icons-material";
 import {
   Button,
+  MenuItem,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -25,16 +27,17 @@ import {
   TableRow,
 } from "@mui/material";
 import { IPCInvokeKeys } from "../../../common/constants.js";
-import { UserAvatar } from "../component/common/UserAvatar.jsx";
+import { VBAvatar } from "../component/common/VBAvatar.jsx";
 import { VBSettings } from "../component/setting/VBSettings.jsx";
 import { useVBMainStoreEffect } from "../store/useVBMainStore.jsx";
-import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
-import { useVBSettingsStore } from "../store/useVBSettingStore.jsx";
 import { processVBAction } from "../action/VBAction.js";
 import { processMinutesAction } from "../action/MinutesAction.js";
+import { useVBTeamStore } from "../store/useVBTeamStore.jsx";
 
 export const HomePage = () => {
   useVBMainStoreEffect();
+  const currentTeam = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+  console.log("currentTeam", currentTeam);
 
   // get audio folder path
   useEffect(() => {
@@ -61,8 +64,6 @@ export const HomePage = () => {
 };
 
 const HomeHeader = () => {
-  const name = useVBSettingsStore((state) => state.name);
-  const avatarImage = useVBSettingsStore((state) => state.avatarImage);
   const handleSettings = (event: any) => {
     processVBAction({
       type: "changeVBSettingsDialogOpen",
@@ -72,18 +73,62 @@ const HomeHeader = () => {
   return (
     <div className="flex px-6 py-4">
       <div className="flex-grow flex items-center justify-start">
-        <img src="./asset/va_logo_black.svg" className="h-10" />
+        <img src="./asset/va_logo_black.svg" className="h-10 mr-8" />
+        <TeamSelector />
       </div>
+
       <div className="flex items-center justify-end">
         <Button
           variant="text"
           className="text-zinc-600"
           onClick={handleSettings}
         >
-          <UserAvatar name={name} avatarImage={avatarImage} />
+          <Settings />
         </Button>
       </div>
     </div>
+  );
+};
+
+const TeamSelector = () => {
+  // team
+  const teams = useVBTeamStore((state) => state).getAllTeamAccounts();
+
+  return (
+    <Select
+      value={teams.length > 0 ? teams[0].id : "add"}
+      onChange={() => {}}
+      size="small"
+      sx={{
+        ".MuiOutlinedInput-notchedOutline": {
+          borderColor: "rgba(0, 0, 0, 0.1)",
+        },
+        ".MuiSvgIcon-root ": {
+          fill: "rgba(0, 0, 0, 0.3) !important",
+        },
+      }}
+    >
+      {teams.map((team, index) => {
+        return (
+          <MenuItem value={team.id} key={index}>
+            <div className="flex items-center">
+              <VBAvatar
+                variant="rounded"
+                name={team.name}
+                avatarImage={team.avatarImage}
+                className="mr-4"
+              />
+              <span>{team.name}</span>
+            </div>
+          </MenuItem>
+        );
+      })}
+      {/*
+      <MenuItem value={"add"}>
+        <div className="flex items-center">Add Team</div>
+      </MenuItem> 
+      */}
+    </Select>
   );
 };
 
@@ -97,14 +142,27 @@ const VoiboBoardHeader = () => {
       },
     });
   };
+
+  // team
+  const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+
+  // user
+  const user = team.members[0];
+  const name = user.name;
+  const avatarImage = user.avatarImage;
+
   return (
-    <div className="p-6 pb-0 flex items-center">
-      <div className="flex-auto text-2xl flex items-center">
-        <span>Your Voice Boards</span>
+    <div className="p-6 pb-4 flex items-center">
+      <div className="flex-auto flex items-center">
+        <div className="mr-12 text-2xl">Voice Boards</div>
+        <div className="flex items-center">
+          <VBAvatar name={name} avatarImage={avatarImage} className="mr-4" />
+          <span>{name}</span>
+        </div>
       </div>
       <Button onClick={handleAdd} variant="outlined">
         <AddCircle />
-        <span className="ml-2">Add new</span>
+        <span className="ml-2">Add</span>
       </Button>
     </div>
   );
@@ -112,9 +170,12 @@ const VoiboBoardHeader = () => {
 
 const VoiboBoard = () => {
   const navigate = useNavigate();
-  const storedMinutes = useMinutesTitleStore((state) => state)
-    .getAllMinutesTitles()
-    .sort((a, b) => b.startTimestamp - a.startTimestamp);
+  const storedMinutes = [
+    ...useVBTeamStore((state) => state).getAllMinutesTitles(),
+  ].sort((a, b) => {
+    console.log("sort", a, b);
+    return b.startTimestamp - a.startTimestamp;
+  });
 
   const handleLoad = (event: any) => {
     const startTimestamp =

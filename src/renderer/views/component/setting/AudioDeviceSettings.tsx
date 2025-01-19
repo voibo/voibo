@@ -22,11 +22,14 @@ import {
   MenuItem,
   Select,
 } from "@mui/material";
-import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
+import { useVBTeamStore } from "../../store/useVBTeamStore.jsx";
+//import { useVBSettingsStore } from "../../store/useVBSettingStore.jsx";
 
 export const MicSettings = () => {
-  const state = useVBSettingsStore((state) => state);
-  const dispatch = useVBSettingsStore((state) => state.settingDispatch);
+  const team = useVBTeamStore((state) => state).getHydratedCurrentTeam();
+  const state = team.audioDeviceSettings;
+  //const state = useVBSettingsStore((state) => state);
+  const dispatch = useVBTeamStore((state) => state.setAudioDeviceSettings);
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex flex-row items-center">
@@ -39,10 +42,7 @@ export const MicSettings = () => {
             if (id != state.selectedOwnDeviceId) {
               //MediaSelectorの初回起動時にも呼ばれるので、ここでのstate.selectedDeviceIdのチェックは必須
               dispatch({
-                type: "setMicSettings",
-                payload: {
-                  selectedOwnDeviceId: id,
-                },
+                selectedOwnDeviceId: id,
               });
             }
           }}
@@ -59,10 +59,7 @@ export const MicSettings = () => {
             if (id != state.selectedOutputDeviceId) {
               //MediaSelectorの初回起動時にも呼ばれるので、ここでのstate.selectedDeviceIdのチェックは必須
               dispatch({
-                type: "setMicSettings",
-                payload: {
-                  selectedOutputDeviceId: id,
-                },
+                selectedOutputDeviceId: id,
               });
             }
           }}

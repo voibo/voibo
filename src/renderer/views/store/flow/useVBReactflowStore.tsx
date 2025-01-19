@@ -108,7 +108,7 @@ export const getLayoutParam = (): LayoutParam => {
     assistant: {
       width: 400,
       offset: {
-        x: 200,
+        x: 100,
         y: offsetY,
       },
     },

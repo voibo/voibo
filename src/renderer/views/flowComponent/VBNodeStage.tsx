@@ -45,10 +45,7 @@ import TopicNode from "./node/TopicNode.jsx";
 import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
-import {
-  HeaderMainComponent,
-  HeaderSubComponent,
-} from "../component/main/HeaderComponent.jsx";
+import { HeaderMainComponent } from "../component/main/HeaderComponent.jsx";
 
 const ZOOM_MIN = 0.001;
 
@@ -164,19 +161,21 @@ const VANodeStageCore = (props: {}) => {
         selectionMode={SelectionMode.Partial}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-        <CustomMiniMap />
+        <div className="absolute bottom-2 right-2 z-10">
+          <CustomMiniMap />
+        </div>
       </ReactFlow>
       <div className="absolute top-2 left-2 z-10">
         <HeaderMainComponent />
       </div>
       <div className="absolute top-2 right-2 z-10">
-        <HeaderSubComponent />
-      </div>
-      <div className="absolute top-20 right-2 z-10">
         <AgendaPanel />
       </div>
-      <StageToolBar />
-      <div className="absolute bottom-2 right-2 z-10">
+
+      <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+        <StageToolBar />
+      </div>
+      <div className="absolute bottom-2 left-2 z-10">
         <TargetFocuser />
       </div>
     </div>

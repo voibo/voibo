@@ -19,7 +19,6 @@ import { useMinutesAssistantStore } from "../store/useAssistantsStore.jsx";
 import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import { useMinutesGroupStore } from "../store/useGroupStore.jsx";
 import { useMinutesStore } from "../store/useMinutesStore.jsx";
-import { useMinutesTitleStore } from "../store/useMinutesTitleStore.jsx";
 import {
   prepareAssistantNodeTo,
   prepareContentsNodeTo,
@@ -31,6 +30,7 @@ import {
 } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
 import { NavigateFunction } from "react-router-dom";
+import { useVBTeamStore } from "../store/useVBTeamStore.jsx";
 
 export type MinutesAction =
   | ActionBase<"createNewMinutes", { navigate: NavigateFunction }>
@@ -51,7 +51,8 @@ export const processMinutesAction = async (action: MinutesAction) => {
     case "createNewMinutes":
       startTimestamp = Date.now();
       // title
-      useMinutesTitleStore.getState().setDefaultMinutesTitle(startTimestamp);
+      useVBTeamStore.getState().setDefaultMinutesTitle(startTimestamp);
+      useVBTeamStore.getState().noticeSpecialActionToMain("createNewMinutes");
       // main
       window.electron.send(IPCSenderKeys.CREATE_MINUTES, startTimestamp);
       // renderer
@@ -71,9 +72,10 @@ export const processMinutesAction = async (action: MinutesAction) => {
     case "deleteMinutes":
       // delete the minutes from all stores
       startTimestamp = action.payload.startTimestamp;
-      useMinutesTitleStore
+      useVBTeamStore
         .getState()
         .removeMinutesTitle(useVBStore.getState().startTimestamp);
+      useVBTeamStore.getState().noticeSpecialActionToMain("deleteMinutes");
 
       useMinutesStore(startTimestamp).getState().delete();
       useMinutesAgendaStore(startTimestamp).getState().delete();
