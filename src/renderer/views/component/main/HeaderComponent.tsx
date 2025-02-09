@@ -108,6 +108,7 @@ export const HeaderMainComponent = () => {
 
       <Divider orientation="vertical" flexItem className="bg-white mx-2" />
 
+      <DiscussionSplitter />
       <AssistantButton />
       <OthersMenuButton />
 

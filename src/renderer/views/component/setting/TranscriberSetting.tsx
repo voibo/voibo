@@ -44,15 +44,8 @@ export const TranscriberSetting = () => {
   const [state_WHISPER_EXEC_PATH, set_WHISPER_EXEC_PATH] = useState(
     vaConfStore.conf!.WHISPER_EXEC_PATH
   );
-
-  const [state_STT_PROJECT_ID, set_STT_PROJECT_ID] = useState(
-    vaConfStore.conf!.GOOGLE_TTS_PROJECT_ID
-  );
-  const [state_STT_CLIENT_EMAIL, set_STT_CLIENT_EMAIL] = useState(
-    vaConfStore.conf!.GOOGLE_TTS_CLIENT_EMAIL
-  );
-  const [state_STT_PRIVATE_KEY, set_STT_PRIVATE_KEY] = useState(
-    vaConfStore.conf!.GOOGLE_TTS_PRIVATE_KEY
+  const [state_STT_KEY_PATH, set_STT_KEY_PATH] = useState(
+    vaConfStore.conf!.GOOGLE_STT_KEY_PATH
   );
   return (
     <div className="flex flex-col">
@@ -80,41 +73,13 @@ export const TranscriberSetting = () => {
           <div>Google Speech-to-Text</div>
           <TextField
             fullWidth
-            label={"Project ID"}
-            value={state_STT_PROJECT_ID}
-            onChange={(event) => set_STT_PROJECT_ID(event.target.value)}
+            label={"Credential JSON Path"}
+            value={state_STT_KEY_PATH}
+            onChange={(event) => set_STT_KEY_PATH(event.target.value)}
             onBlur={(event) => {
               vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
-                GOOGLE_TTS_PROJECT_ID: event.target.value,
-              });
-            }}
-          ></TextField>
-
-          <TextField
-            fullWidth
-            label={"Client Email"}
-            value={state_STT_CLIENT_EMAIL}
-            onChange={(event) => set_STT_CLIENT_EMAIL(event.target.value)}
-            onBlur={(event) => {
-              vaConfStore.update({
-                ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
-                GOOGLE_TTS_CLIENT_EMAIL: event.target.value,
-              });
-            }}
-          ></TextField>
-
-          <TextField
-            label={"Private Key"}
-            value={state_STT_PRIVATE_KEY}
-            multiline
-            role="10"
-            className="w-96"
-            onChange={(event) => set_STT_PRIVATE_KEY(event.target.value)}
-            onBlur={(event) => {
-              vaConfStore.update({
-                ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
-                GOOGLE_TTS_PRIVATE_KEY: event.target.value,
+                GOOGLE_STT_KEY_PATH: event.target.value,
               });
             }}
           ></TextField>

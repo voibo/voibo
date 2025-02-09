@@ -42,7 +42,7 @@ const VBTeamsPersistStorage: PersistStorage<VBTeams> = {
     name: string,
     value: StorageValue<VBTeams>
   ): Promise<void> => {
-    console.log("VBTeamsPersistStorage: setItem", value);
+    //console.log("VBTeamsPersistStorage: setItem", value);
     await window.electron.invoke(IPCInvokeKeys.SET_TEAMS, value);
   },
   removeItem: async (name: string): Promise<void> => {

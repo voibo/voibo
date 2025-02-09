@@ -15,7 +15,6 @@ limitations under the License.
 */
 import { protos, v2 } from "@google-cloud/speech";
 import { SpeechClient } from "@google-cloud/speech/build/src/v2";
-import Store from "electron-store";
 import path from "path";
 import { Readable } from "stream";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
@@ -26,7 +25,6 @@ import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
 import { AudioCapture } from "@voibo/desktop-audio-capture";
-import { ElectronStore } from "../../../common/electronStore.js";
 
 export type TranscribeFromStreamRequiredParams = Required<{
   webContents: Electron.WebContents;
@@ -47,11 +45,7 @@ export type TranscribeFromStreamOptionalParams = Partial<{
 }>;
 
 export type STTParams = {
-  projectID: string;
-  credentials: {
-    clientEmail: string;
-    privateKey: string;
-  };
+  keyFile: string;
 };
 
 export class TranscribeFromStream {
@@ -74,7 +68,6 @@ export class TranscribeFromStream {
   private model: string;
   private frameSizeMs: number;
 
-  private projectID: string;
   private client: SpeechClient;
   private sttStream: RecognizeStream | null;
 
@@ -103,15 +96,9 @@ export class TranscribeFromStream {
     this.model = params.model ?? "long";
     this.frameSizeMs = params.frameSizeMs ?? 100;
 
-    this.projectID = params.projectID;
-    const credentials = params.credentials;
-    console.log(
-      "TranscribeFromStream: credentials",
-      credentials,
-      this.projectID
-    );
+    const keyFile = params.keyFile;
+    this.client = new v2.SpeechClient({ keyFile });
 
-    this.client = new v2.SpeechClient(credentials);
     this.sttStream = null;
 
     this.currentTimestampMsec = 0;
@@ -187,7 +174,6 @@ export class TranscribeFromStream {
     transcript: string,
     currentEndMsec: number
   ) {
-    /*
     console.log(
       "_transcribedFinal",
       currentEndMsec,
@@ -195,7 +181,7 @@ export class TranscribeFromStream {
       lengthMsec,
       transcript
     );
-    */
+
     this.webContents.send(IPCReceiverKeys.ON_TRANSCRIBED, [
       this._makeSegment({
         timestampMsec: timestamp,
@@ -242,10 +228,11 @@ export class TranscribeFromStream {
     this.lastElapsedMsec = currentEndMsec;
   }
 
-  private startStream() {
+  private async startStream() {
+    const projectId = await this.client.getProjectId();
     this.sttStream = new RecognizeStream({
       speechClient: this.client,
-      projectID: this.projectID,
+      projectID: projectId,
       location: this.location,
       recognizer: this.recognizer,
       streamingConfig: {
@@ -519,8 +506,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
           webContents: this._webContents,
           inputStream: this._inputStream, // reuse inputStream instead of recreating it
           getAudioFolderPath: this._getAudioFolderPath,
-          projectID: this._sttParams.projectID,
-          credentials: this._sttParams.credentials,
+          keyFile: this._sttParams.keyFile,
         });
         this._transcriber.start(timestamp);
       } catch (err) {

@@ -41,9 +41,7 @@ export class MainStore {
         // VA Config
         conf: {
           transcriber: "stt",
-          GOOGLE_TTS_PROJECT_ID: "",
-          GOOGLE_TTS_CLIENT_EMAIL: "",
-          GOOGLE_TTS_PRIVATE_KEY: "",
+          GOOGLE_STT_KEY_PATH: "",
           WHISPER_EXEC_PATH: "",
 
           //  == LLM ==

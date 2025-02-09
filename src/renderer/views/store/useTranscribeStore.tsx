@@ -219,6 +219,7 @@ export function splitMinutes(
   minutes: DiscussionSegment[];
   hasNewStartPoint: boolean;
 } {
+  console.log("splitMinutes", duration);
   let hasNewStartPoint = false;
   if (duration === 0) return { minutes, hasNewStartPoint };
   // メインケース

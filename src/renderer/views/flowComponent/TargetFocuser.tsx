@@ -205,7 +205,7 @@ const EXTEND_VIEWPORT = {
 function expandStage(
   reactFlow: ReturnType<typeof useReactFlow>
 ): Promise<Viewport> {
-  console.log("TargetFocuser: expandStage");
+  //console.log("TargetFocuser: expandStage");
   const lastViewport = useVBReactflowStore.getState().lastViewport;
   return reactFlow.setViewport(EXTEND_VIEWPORT).then(() => lastViewport);
 }
@@ -219,7 +219,7 @@ export function focusAppendedSpecialNode(props: {
   const { reactFlow, flowState, windowSize, lastViewport } = props;
   const targetNodes = flowState.lastAppendedNodes;
 
-  console.log("TargetFocuser: 0", targetNodes);
+  //console.log("TargetFocuser: 0", targetNodes);
 
   if (targetNodes.length === 0) {
     console.log(`No last appended nodes found.`);
@@ -227,14 +227,14 @@ export function focusAppendedSpecialNode(props: {
 
   //  if added type is content, do nothing
   if (targetNodes.every((node) => isContentNode(node))) {
-    console.log("TargetFocuser: focusAppendedSpecialNode: content");
+    //console.log("TargetFocuser: focusAppendedSpecialNode: content");
     reactFlow.setViewport(lastViewport);
     return;
   }
 
   // 1. if included topic, focus last topic
   if (targetNodes.some((node) => isTopicNode(node))) {
-    console.log("TargetFocuser: focusAppendedSpecialNode: included topic");
+    //console.log("TargetFocuser: focusAppendedSpecialNode: included topic");
     focusLastTopic(props);
     return;
   }
@@ -252,7 +252,7 @@ export function focusAppendedSpecialNode(props: {
         .getState()
         .nodes.filter((node) => message.connectedMessageIds.includes(node.id));
     }
-    console.log("TargetFocuser: focusAppendedSpecialNode: lastAssistantNode");
+    //console.log("TargetFocuser: focusAppendedSpecialNode: lastAssistantNode");
     reactFlow.fitBounds(
       getNodesBounds([lastAssistantNode, ...connectedSource])
     );
@@ -288,14 +288,14 @@ export function focusAppendedSpecialNode(props: {
 export function focusAllNodes(
   reactFlow: ReturnType<typeof useReactFlow>
 ): Promise<boolean> {
-  console.log("TargetFocuser: focusAllNodes");
+  //console.log("TargetFocuser: focusAllNodes");
   return reactFlow.fitView();
 }
 
 export function focusFirstTopic(
   reactFlow: ReturnType<typeof useReactFlow>
 ): Promise<boolean> {
-  console.log("TargetFocuser: focusFirstTopic");
+  //console.log("TargetFocuser: focusFirstTopic");
   return reactFlow.setViewport(getLayoutParam().initialViewPort);
 }
 
@@ -317,7 +317,7 @@ export function focusLastTopic(props: {
     y: Math.min(newY * layoutRoot.zoom, layoutRoot.y),
     zoom: layoutRoot.zoom,
   };
-  console.log("TargetFocuser: focusLastTopic:", newViewPort);
+  //console.log("TargetFocuser: focusLastTopic:", newViewPort);
   return reactFlow.setViewport(newViewPort);
 }
 
@@ -337,7 +337,7 @@ export function focusGroup(props: {
       ).includes(targetId)
     );
   if (targetNodes.length === 0) {
-    console.log(`No nodes found in the ${targetType}.`);
+    //console.log(`No nodes found in the ${targetType}.`);
   }
   return reactFlow.fitBounds(getNodesBounds(targetNodes));
 }
