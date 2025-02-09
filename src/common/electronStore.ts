@@ -47,9 +47,7 @@ export type TranscriberType = "localWav" | "stt";
 export type VBMainConf = {
   // == Transcriber ==
   transcriber: TranscriberType;
-  GOOGLE_TTS_PROJECT_ID: string;
-  GOOGLE_TTS_CLIENT_EMAIL: string;
-  GOOGLE_TTS_PRIVATE_KEY: string;
+  GOOGLE_STT_KEY_PATH: string;
   WHISPER_EXEC_PATH: string;
 
   //  == LLM ==

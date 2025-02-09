@@ -175,7 +175,9 @@ app.whenReady().then(() => {
   ipcMain.handle(
     IPCInvokeKeys.GET_AUDIO_FOLDER_PATH,
     async (): Promise<string> => {
-      return getMinutesFolderPath(currentTeam.id);
+      const folderPath = getMinutesFolderPath(currentTeam.id);
+      console.log("[main] get audio folder path", folderPath);
+      return folderPath;
     }
   );
 
@@ -223,11 +225,7 @@ app.whenReady().then(() => {
           ipcMain,
           getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
           sttParams: {
-            projectID: mainStore.getConfig().GOOGLE_TTS_PROJECT_ID,
-            credentials: {
-              clientEmail: mainStore.getConfig().GOOGLE_TTS_CLIENT_EMAIL,
-              privateKey: mainStore.getConfig().GOOGLE_TTS_PRIVATE_KEY,
-            },
+            keyFile: mainStore.getConfig().GOOGLE_STT_KEY_PATH,
           },
         });
     }
