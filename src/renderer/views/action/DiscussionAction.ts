@@ -19,7 +19,10 @@ import { useVBStore } from "../store/useVBStore.jsx";
 import { ActionBase } from "./ActionBase.js";
 
 export type DiscussionAction =
-  | ActionBase<"setMinutesLines", { minutes: DiscussionSegment[] }>
+  | ActionBase<
+      "setMinutesLines",
+      { minutes: DiscussionSegment[]; isStopped: boolean }
+    >
   | ActionBase<"changeTopicStartedPoint", { segmentIndex: number }>
   | ActionBase<
       "updateMinutesText",
@@ -71,7 +74,10 @@ export const processDiscussionAction = async (action: DiscussionAction) => {
       );
       break;
     case "setMinutesLines":
-      minutesState.setMinutesLines(action.payload.minutes);
+      minutesState.setMinutesLines(
+        action.payload.minutes,
+        action.payload.isStopped
+      );
       useVBStore.setState({
         interimSegment: null,
       });

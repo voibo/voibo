@@ -117,29 +117,6 @@ const DiscussionSplitterDialog = (props: {
     setOpen(false);
   };
 
-  const handleSplit = () => {
-    const duration = discussionSplitter.duration;
-    if (duration === 0) return;
-
-    let lastStartTimestamp = 0;
-    processDiscussionAction({
-      type: "setMinutesLines",
-      payload: {
-        minutes: discussion.map((v, index) => {
-          if (index === 0) {
-            lastStartTimestamp = Number(v.timestamp);
-            return { ...v, topicStartedPoint: true };
-          } else if (Number(v.timestamp) - lastStartTimestamp > duration) {
-            lastStartTimestamp = Number(v.timestamp);
-            return { ...v, topicStartedPoint: true };
-          } else {
-            return { ...v, topicStartedPoint: false };
-          }
-        }),
-      },
-    });
-  };
-
   return (
     <Dialog open={open} onClose={() => setOpen(false)}>
       <DialogContent>

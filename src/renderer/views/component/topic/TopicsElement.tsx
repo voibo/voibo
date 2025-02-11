@@ -157,7 +157,10 @@ export const TopicsHeader = () => {
 
   const handleClick = () => {
     processTopicAction({ type: "deleteAllTopic" });
-    updateTopicSeeds(true);
+    updateTopicSeeds({
+      enforceUpdateAll: true,
+      includeLastSeed: true,
+    });
   };
 
   return (
