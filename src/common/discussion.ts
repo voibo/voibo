@@ -72,7 +72,7 @@ function _appendMinutes(
   minutes: DiscussionSegment[],
   limitSec: number
 ): DiscussionSegment[] {
-  console.log("_appendMinutes: 0", minutes);
+  //console.log("_appendMinutes: 0", minutes, limitSec);
   let result: DiscussionSegment[] = minutes;
   if (newSegment.timestamp != undefined && newSegment.texts != undefined) {
     result = [...minutes];
@@ -149,7 +149,7 @@ function _appendMinutes(
       result.push(..._splitEndedTextsToSegment(target));
     }
   }
-  console.log("_appendMinutes", result);
+  //console.log("_appendMinutes", result);
   return result;
 }
 

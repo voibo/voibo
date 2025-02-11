@@ -180,7 +180,7 @@ export const useTranscribeStore = create<TranscribeStore>()(
       });
 
       if (interimSegment) {
-        setMinutesLines([interimSegment]);
+        setAppendedMinutesLines([interimSegment], true);
       }
     },
 
@@ -195,36 +195,35 @@ export const useTranscribeStore = create<TranscribeStore>()(
   }))
 );
 
-function setMinutesLines(segments: Segment[]) {
-  const minutesStore = useMinutesStore(
-    useVBStore.getState().startTimestamp
-  ).getState();
-  const newMinutes = splitMinutes(
-    appendMinutesList(segments, 5),
-    minutesStore.discussionSplitter.duration
-  );
-  console.log("setMinutesLines", newMinutes, segments);
+function setAppendedMinutesLines(
+  segments: Segment[],
+  isStopped: boolean = false
+) {
+  const newMinutes = splitMinutes(appendMinutesList(segments, 5));
   processDiscussionAction({
     type: "setMinutesLines",
     payload: {
-      minutes: newMinutes.minutes,
+      minutes: newMinutes.appendedMinutes,
+      isStopped: isStopped,
     },
   });
 }
 
-export function splitMinutes(
-  minutes: DiscussionSegment[],
-  duration: number
-): {
-  minutes: DiscussionSegment[];
+function splitMinutes(appendedMinutes: DiscussionSegment[]): {
+  appendedMinutes: DiscussionSegment[];
   hasNewStartPoint: boolean;
 } {
-  console.log("splitMinutes", duration);
+  const minutesStore = useMinutesStore(
+    useVBStore.getState().startTimestamp
+  ).getState();
+  const existedMinutes = minutesStore.discussion;
+  const duration: number = minutesStore.discussionSplitter.duration;
+
   let hasNewStartPoint = false;
-  if (duration === 0) return { minutes, hasNewStartPoint };
+  if (duration === 0) return { appendedMinutes, hasNewStartPoint };
   // メインケース
   let lastStartTimestamp = 0;
-  const newMinutes = minutes.map((v, index) => {
+  const newMinutes = [...existedMinutes, ...appendedMinutes].map((v, index) => {
     if (index === 0) {
       // 強制的に最初のトピックは開始点にする
       // この場合は新しく開始点が設定されたとはみなさない
@@ -243,7 +242,12 @@ export function splitMinutes(
       return { ...v, topicStartedPoint: false };
     }
   });
-  return { minutes: newMinutes, hasNewStartPoint };
+  const newAppendedMinutes = newMinutes.slice(existedMinutes.length);
+  //console.log("splitMinutes", duration, newAppendedMinutes);
+  return {
+    appendedMinutes: newAppendedMinutes,
+    hasNewStartPoint,
+  };
 }
 
 // == ON Transcribe ==
@@ -261,7 +265,7 @@ window.electron.on(
     responses.map((res) => {
       segments.push(...res.segments);
     });
-    setMinutesLines(segments);
+    setAppendedMinutesLines(segments);
   }
 );
 

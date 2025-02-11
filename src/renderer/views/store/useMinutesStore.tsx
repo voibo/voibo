@@ -136,7 +136,10 @@ export type MinutesDispatchStore = TopicManagerDispatch &
   MinutesDispatch;
 
 type TopicManagerDispatch = {
-  updateTopicSeeds: (enforceUpdateAll: boolean) => void;
+  updateTopicSeeds: (props: {
+    enforceUpdateAll: boolean;
+    includeLastSeed: boolean;
+  }) => void;
   startTopicProcess: () => void;
   processTopic: () => Promise<void>;
   resTopicError: (props: {
@@ -173,7 +176,7 @@ type TopicDispatch = {
 };
 
 type DiscussionDispatch = {
-  setMinutesLines: (minutes: DiscussionSegment[]) => void;
+  setMinutesLines: (minutes: DiscussionSegment[], isStopped: boolean) => void;
   changeTopicStartedPoint: (segmentIndex: number) => void;
   updateMinutesText: (
     segmentIndex: number,
@@ -375,10 +378,13 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
         },
 
         // == DiscussionDispatch ==
-        setMinutesLines: (minutes) => {
+        setMinutesLines: (minutes, isStopped) => {
           const action = () => {
             set((state) => ({ discussion: [...state.discussion, ...minutes] }));
-            get().updateTopicSeeds(false);
+            get().updateTopicSeeds({
+              enforceUpdateAll: false,
+              includeLastSeed: isStopped,
+            });
           };
           if (!get().hasHydrated) {
             enqueueAction(action);
@@ -614,12 +620,17 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             });
         },
 
-        updateTopicSeeds: (enforceUpdateAll: boolean) => {
+        updateTopicSeeds: (props: {
+          enforceUpdateAll: boolean;
+          includeLastSeed: boolean;
+        }) => {
+          const { enforceUpdateAll, includeLastSeed } = props;
           if (!useVBStore.getState().allReady) return;
           // 現在の全discussionから、全topicSeedを再構築する
           const topicSeeds: TopicSeed[] = [];
           const startTimestamp = useVBStore.getState().startTimestamp;
           const minutesStore = useMinutesStore(startTimestamp).getState();
+          const duration: number = minutesStore.discussionSplitter.duration;
           minutesStore.discussion.forEach((segment) => {
             const currentStartTimestamp = Number(segment.timestamp);
             const currentEndTimestamp = segment.texts.reduce(
@@ -631,7 +642,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
               ""
             );
             if (segment.topicStartedPoint) {
-              topicSeeds.push({
+              const newTopicSeed: TopicSeed = {
                 startTimestamp: currentStartTimestamp,
                 endTimestamp: currentEndTimestamp,
                 text,
@@ -645,7 +656,18 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
                     })
                     .map((agenda) => agenda.id),
                 ],
-              });
+              };
+
+              const currentSeed = get().topicSeeds.find(
+                (currentSeed) =>
+                  currentSeed.startTimestamp == newTopicSeed.startTimestamp &&
+                  currentSeed.endTimestamp == newTopicSeed.endTimestamp &&
+                  currentSeed.text == newTopicSeed.text
+              );
+              newTopicSeed.requireUpdate =
+                currentSeed?.requireUpdate || enforceUpdateAll;
+
+              topicSeeds.push(newTopicSeed);
               //console.log("updateTopicSeeds: topicStartedPoint", topicSeeds);
             } else if (topicSeeds.length > 0) {
               topicSeeds[topicSeeds.length - 1].endTimestamp =
@@ -654,12 +676,21 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             }
           });
 
+          // 完全に完了したTopicSeedだけにする
+          // そのため一番最後のTopicSeedは duration 以下なら強制的に更新対象から外す
+          if (!includeLastSeed && topicSeeds.length > 0) {
+            const lastSeed = topicSeeds[topicSeeds.length - 1];
+            if (lastSeed.endTimestamp - lastSeed.startTimestamp < duration) {
+              topicSeeds.pop();
+            }
+          }
+
           // 現在のtopicSeedsと比較して、変更があれば更新対象にする
           let updatedTopicSeed: TopicSeed[] = [];
           if (enforceUpdateAll) {
             updatedTopicSeed = topicSeeds;
           } else {
-            topicSeeds.forEach((seed) => {
+            topicSeeds.forEach((seed, index) => {
               const currentSeed = get().topicSeeds.find(
                 (currentSeed) =>
                   currentSeed.startTimestamp == seed.startTimestamp &&
@@ -684,6 +715,12 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
                 isRequested: false,
               };
             });
+
+          console.log(
+            "updateTopicSeeds",
+            targetTopicSeedRequests,
+            updatedTopicSeed
+          );
 
           set({
             topicPrompts: targetTopicSeedRequests,
@@ -759,3 +796,4 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
     )
   );
 };
+//
