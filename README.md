@@ -5,8 +5,50 @@
 - **Real-Time Audio Analysis**: Analyzes meeting audio in real time to extract and visualize key topics.
 - **Node-Based Visualization**: Extracted topics, as well as information created by users or AI assistants, are organized in a **node and edge format**, providing an intuitive interface to understand relationships.
 - **Utilization of AI Assistants**: Based on extracted topics, AI assistants automatically perform actions such as summarization, idea generation, information retrieval, and cross-checking with internal data.
+- **Agenda Support:** By registering an agenda and recording the meeting progress, the AI assistant can be utilized at each stage of the agenda.
 - **User-Centric Interaction**: Users can select any node to call an AI assistant, promoting seamless collaboration with AI.
 - **Extensibility**: Supports a wide range of assistants, from simple prompt-based AI to integrations with external services.
+
+https://github.com/user-attachments/assets/c12b1b09-1bb4-4b3b-8417-6b5fa735fd7e
+
+## Basic Usage
+
+1. Add a new VoiceBoard.
+1. Register the meeting agenda.
+1. Add an AI assistant.
+1. Start recording in line with the meeting.
+1. Specify agenda items sequentially as the meeting progresses.
+1. Nodes summarizing topics from the conversation are automatically generated in real time.
+1. With each new topic or agenda progression, the AI assistant activates and generates assistant nodes.
+1. Additionally, users can create nodes from their own input text and leverage the AI assistant alongside existing nodes.
+1. Stop recording at the end of the meeting.
+
+## Binary Installation
+
+Download and install the binary data for both macOS and Windows.
+
+## Building from Source
+
+For macOS environments, build following the steps below.
+
+### Preparation
+
+Ensure you have the latest versions of Xcode and Homebrew installed, then install the following dependencies:
+
+```bash
+$ brew install cmake ninja
+```
+
+### Build
+
+Set up the development environment by executing the following commands in the terminal:
+
+```bash
+$ git clone https://github.com/voibo/voibo.git
+$ cd voibo
+$ npm install
+$ npm start
+```
 
 ## Vision
 
