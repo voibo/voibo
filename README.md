@@ -50,6 +50,15 @@ $ npm install
 $ npm start
 ```
 
+## Contribution
+
+For those who'd like to contribute code, see our CONTRIBUTING.md.
+At the same time, please consider supporting Voibo by sharing it on social media and at events and conferences.
+
+## Community
+
+[Discord](https://discord.gg/b3pSPxEunM)
+
 ## Vision
 
 Voibo aims to be a next-generation meeting platform that integrates knowledge and creates new value through interaction between humans and AI. Beyond a simple meeting efficiency tool, its goal is to transform individual thoughts and insights into organizational knowledge.

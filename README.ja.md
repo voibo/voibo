@@ -50,6 +50,15 @@ $ npm install
 $ npm start
 ```
 
+## Contribution
+
+コードを提供したい方は、CONTRIBUTING.md をご覧ください。
+また、ソーシャルメディアやイベント、カンファレンス等で Voibo をシェアすることで、Voibo をサポートして頂けると嬉しいです！
+
+## Community
+
+[Discord](https://discord.gg/b3pSPxEunM)
+
 ## ビジョン
 
 Voibo は、人間と AI の対話を通じて、知識を統合し、新しい価値を創造する次世代の会議プラットフォームを目指します。単なる会議効率化ツールを超え、個々の思考や洞察を組織全体の知見へと昇華させることを目的としています。
