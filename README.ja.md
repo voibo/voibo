@@ -57,7 +57,7 @@ $ npm start
 
 ## Community
 
-[Discord](https://discord.gg/b3pSPxEunM)
+[Discord](https://discord.gg/h7W8jrtk)
 
 ## ビジョン
 
