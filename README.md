@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/c12b1b09-1bb4-4b3b-8417-6b5fa735fd7e
 
 ## Binary Installation
 
-Download and install the binary data for both macOS and Windows.
+Download and install the binary data for macOS(Apple silicon).
 
 ## Building from Source
 
