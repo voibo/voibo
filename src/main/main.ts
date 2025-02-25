@@ -43,6 +43,7 @@ import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
 import { VBMainConf } from "../common/electronStore.js";
 import { MainStore } from "./store/mainStore.js";
 import { getMinutesFolderPath } from "./common/pathUtil.js";
+import { WhisperTranscribeFromStreamManager } from "./transcriber/localWhisper/WhisperTranscribeFromStream.js";
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -212,11 +213,11 @@ app.whenReady().then(() => {
     console.log("initTranscriber", transcribeType);
     switch (transcribeType) {
       case "localWav":
-        return new TranscribeFromWavManager({
+        return new WhisperTranscribeFromStreamManager({
           webContents: mainWindow.webContents,
           ipcMain,
           getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
-          getWhisperPath,
+          params: new Map([["pythonScriptPath", getWhisperPath()]]),
         });
       case "stt":
       default:

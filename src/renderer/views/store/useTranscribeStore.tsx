@@ -109,6 +109,17 @@ export const useTranscribeStore = create<TranscribeStore>()(
                 },
               });
               */
+              newClient = new CaptureClientBinary({
+                track: unmixedOwnMicStream.getAudioTracks()[0],
+                modulePath: "post-pcm-worklet-processor-binary.js",
+                handleMessage: (...data) => {
+                  window.electron.send(
+                    IPCSenderKeys.SEND_SOUND_BUFFER,
+                    ...data
+                  );
+                },
+              });
+              await newClient.start();
               break;
             case "stt":
             default:

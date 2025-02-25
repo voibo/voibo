@@ -29,7 +29,7 @@ export class MixingAudioDataStream extends Readable {
   private _requestDesktopBufferCallback: RequestDesktopBufferCallback | null =
     null;
   private _debug = false;
-  private _debugRawFile = false;
+  private _debugRawFile = true;
 
   constructor(
     ipcMain: Electron.IpcMain,
@@ -39,7 +39,9 @@ export class MixingAudioDataStream extends Readable {
     let ws: fs.WriteStream | undefined = undefined;
     if (this._debugRawFile) {
       const path = app.getPath("userData") + "/test.raw";
-      console.log(`writing debug raw PCM file to ${path}/test.raw`);
+      console.log(
+        `writing debug raw PCM file to ${path}/test.raw. Check: ffplay -f f32le -ar 16000 -i ${path}/test.raw`
+      );
       ws = fs.createWriteStream(path);
     }
     this._ipcMain = ipcMain;
@@ -50,8 +52,8 @@ export class MixingAudioDataStream extends Readable {
         if (sampleRate != 16000) {
           console.log(
             `WARNING: MixingAudioDataStream received microphone data at sample rate of ${sampleRate}` +
-            ` but desktop audio uses sample rate of 16000. Audio mixing of microphone data and desktop data` +
-            ` will fail.`
+              ` but desktop audio uses sample rate of 16000. Audio mixing of microphone data and desktop data` +
+              ` will fail.`
           );
         }
         if (this._ready && this._requestDesktopBufferCallback != null) {
@@ -109,10 +111,10 @@ export class MixingAudioDataStream extends Readable {
 
                     // mix web(mic) and desktop audio by adding, and zero-padding shorterArray
                     longerArrayElement +
-                    (i < shorterArray.length ? shorterArray[i] : 0)
+                      (i < shorterArray.length ? shorterArray[i] : 0)
                   )
                 ) *
-                2 ** 15 -
+                  2 ** 15 -
                 1 // convert to signed int16
             )
           );
@@ -122,7 +124,7 @@ export class MixingAudioDataStream extends Readable {
               mergedAudioInt16,
               (e) => e / 2 ** 15
             );
-            ws!.write(Buffer.from(mergedAudioFloat.buffer)); // write merged audio to debug raw PCM file
+            ws!.write(Buffer.from(mergedAudioInt16.buffer)); // write merged audio to debug raw PCM file
             //ws.write(Buffer.from(desktopAudioFloat32.buffer)); // write captured desktop audio to debug raw PCM file
             //ws.write(Buffer.from(webAudioFloat32.buffer)); // write captured web mic audio to debug raw PCM file
           }
