@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { MicVAD, utils } from "@ricky0123/vad-web";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
@@ -22,7 +21,6 @@ import { CaptureClient } from "../../lib/capture.js";
 import { CaptureClientBinary } from "../../lib/captureBinary.js";
 import { appendMinutesList } from "../../../common/discussion.js";
 import { DiscussionSegment } from "../../../common/discussion.js";
-import { useVBMainStore } from "./useVBMainStore.jsx";
 import { useVBStore } from "./useVBStore.jsx";
 import { useMinutesStore } from "./useMinutesStore.jsx";
 import { processDiscussionAction } from "../action/DiscussionAction.js";
@@ -30,9 +28,6 @@ import { processVBAction } from "../action/VBAction.js";
 import { useVBTeamStore } from "./useVBTeamStore.jsx";
 
 export type TranscribeState = {
-  // vad
-  vad: MicVAD | null;
-
   // media steam
   client: CaptureClient | CaptureClientBinary | null;
   stream: MediaStream | null;
@@ -49,7 +44,6 @@ export type TranscribeStore = TranscribeState & TranscribeAction;
 export const useTranscribeStore = create<TranscribeStore>()(
   subscribeWithSelector((set, get) => ({
     // state
-    vad: null,
     client: null,
     stream: null,
     mixer: null,
@@ -65,7 +59,6 @@ export const useTranscribeStore = create<TranscribeStore>()(
 
         if (settingsData) {
           // closeAudio
-          get().vad?.destroy();
           get()
             .stream?.getTracks()
             .forEach((track) => track.stop());
@@ -86,69 +79,20 @@ export const useTranscribeStore = create<TranscribeStore>()(
             }
           );
 
-          let newClient = null;
-          let vad = null;
-
-          switch (useVBMainStore.getState().conf!.transcriber) {
-            case "localWav":
-              /*
-              vad = await MicVAD.new({
-                stream: unmixedOwnMicStream,
-                frameSamples: 1536,
-                positiveSpeechThreshold: settingsData.positiveSpeechThreshold,
-                negativeSpeechThreshold: settingsData.negativeSpeechThreshold,
-                preSpeechPadFrames: settingsData.preSpeechPadFrames,
-                minSpeechFrames: settingsData.minSpeechFrames,
-                redemptionFrames: settingsData.redemptionFrames,
-                onSpeechEnd: (audio: any) => {
-                  console.log("Send wav to server");
-                  window.electron.send(
-                    IPCSenderKeys.PUSH_WAV,
-                    utils.encodeWAV(audio, 1, 16000, 1, 16)
-                  );
-                },
-              });
-              */
-              newClient = new CaptureClientBinary({
-                track: unmixedOwnMicStream.getAudioTracks()[0],
-                modulePath: "post-pcm-worklet-processor-binary.js",
-                handleMessage: (...data) => {
-                  window.electron.send(
-                    IPCSenderKeys.SEND_SOUND_BUFFER,
-                    ...data
-                  );
-                },
-              });
-              await newClient.start();
-              break;
-            case "stt":
-            default:
-              newClient = new CaptureClientBinary({
-                track: unmixedOwnMicStream.getAudioTracks()[0],
-                modulePath: "post-pcm-worklet-processor-binary.js",
-                handleMessage: (...data) => {
-                  window.electron.send(
-                    IPCSenderKeys.SEND_SOUND_BUFFER,
-                    ...data
-                  );
-                },
-              });
-              await newClient.start();
-              break;
-          }
-
-          window.electron.send(IPCSenderKeys.START_TRANSCRIBE, startTimestamp, {
-            /*
-            silenceLevel: settingsData.silenceLevel,
-            silenceLength: settingsData.silenceLength,
-            maxLength: settingsData.maxLength,
-            minLength: settingsData.minLength,
-            */
+          let newClient = new CaptureClientBinary({
+            track: unmixedOwnMicStream.getAudioTracks()[0],
+            modulePath: "post-pcm-worklet-processor-binary.js",
+            handleMessage: (...data) => {
+              window.electron.send(IPCSenderKeys.SEND_SOUND_BUFFER, ...data);
+            },
           });
+          await newClient.start();
 
-          if (vad) {
-            //vad.start();
-          }
+          window.electron.send(
+            IPCSenderKeys.START_TRANSCRIBE,
+            startTimestamp,
+            {}
+          );
 
           console.log("start Recording", startTimestamp, settingsData);
           useVBStore.setState({
@@ -158,7 +102,6 @@ export const useTranscribeStore = create<TranscribeStore>()(
           set({
             client: newClient,
             stream: unmixedOwnMicStream,
-            vad: vad,
           });
         }
       } catch (err) {
@@ -174,7 +117,6 @@ export const useTranscribeStore = create<TranscribeStore>()(
         .stream?.getTracks()
         .forEach((track) => track.stop());
       get().client?.close();
-      // get().vad?.destroy(); // TODO: VAD は再利用のために敢えて残す。本来はアプリ終了時に破棄すべし。
 
       // stopAudio on main process
       window.electron.send(IPCSenderKeys.END_TRANSCRIBE);
@@ -187,7 +129,6 @@ export const useTranscribeStore = create<TranscribeStore>()(
       set({
         client: null,
         stream: null,
-        //vad: null, // TODO: VAD は再利用のために敢えて残す。本来はアプリ終了時に破棄すべし。
       });
 
       if (interimSegment) {

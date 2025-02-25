@@ -119,6 +119,7 @@ export class WhisperTranscribeFromStream {
       const lines = data.toString().split("\n");
       for (const line of lines) {
         if (line.trim()) {
+          console.log("Python output:", line);
           try {
             const result = JSON.parse(line);
             const currentEndMsec = Number(result.end || 0) * 1_000;

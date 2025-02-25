@@ -112,17 +112,6 @@ const renderer: Configuration = {
           from: "./asset/*.{png,svg}",
           to: "./asset/[name][ext]",
         },
-
-        // wasm file of VAD
-        {
-          from: "node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js",
-          to: "[name][ext]",
-        },
-        {
-          from: "node_modules/@ricky0123/vad-web/dist/*.onnx",
-          to: "[name][ext]",
-        },
-        { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
       ],
     }),
   ],
