@@ -23,27 +23,56 @@ export type RequestDesktopBufferCallback = (
   webMicSampleCount: number
 ) => Float32Array;
 
+export enum AudioOutputFormat {
+  INT16_MONO = "int16_mono", // 現在のデフォルト
+  FLOAT32_MONO = "float32_mono", // 新しいモード
+  FLOAT32_STEREO = "float32_stereo", // マイク・デスクトップ分離モード
+}
+
 export class MixingAudioDataStream extends Readable {
   private _ipcMain: Electron.IpcMain;
   private _ready: boolean = false;
   private _requestDesktopBufferCallback: RequestDesktopBufferCallback | null =
     null;
   private _debug = false;
-  private _debugRawFile = true;
+  private _debugRawFile = false;
+  private _outputFormat: AudioOutputFormat = AudioOutputFormat.INT16_MONO; // デフォルト
 
   constructor(
     ipcMain: Electron.IpcMain,
-    requestDesktopBuffercallback: RequestDesktopBufferCallback
+    requestDesktopBuffercallback: RequestDesktopBufferCallback,
+    options?: {
+      debug?: boolean;
+      debugRawFile?: boolean;
+      outputFormat?: AudioOutputFormat;
+    }
   ) {
     super();
+
+    // オプション設定
+    if (options) {
+      if (options.debug !== undefined) this._debug = options.debug;
+      if (options.debugRawFile !== undefined)
+        this._debugRawFile = options.debugRawFile;
+      if (options.outputFormat) this._outputFormat = options.outputFormat;
+    }
+
     let ws: fs.WriteStream | undefined = undefined;
     if (this._debugRawFile) {
       const path = app.getPath("userData") + "/test.raw";
+      const formatDesc =
+        this._outputFormat === AudioOutputFormat.INT16_MONO
+          ? "s16le"
+          : this._outputFormat === AudioOutputFormat.FLOAT32_MONO
+          ? "f32le"
+          : "f32le -ac 2"; // ステレオの場合
+
       console.log(
-        `writing debug raw PCM file to ${path}/test.raw. Check: ffplay -f f32le -ar 16000 -i ${path}/test.raw`
+        `writing debug raw PCM file to ${path}. Check: ffplay -f ${formatDesc} -ar 16000 -i ${path}`
       );
       ws = fs.createWriteStream(path);
     }
+
     this._ipcMain = ipcMain;
     this._requestDesktopBufferCallback = requestDesktopBuffercallback;
     this._ipcMain.on(
@@ -101,36 +130,76 @@ export class MixingAudioDataStream extends Readable {
           // WARNING: the below code assumes that both the mic audio and the desktop audio
           // use the same sampling rate (16000) and the same number of channels (1).
 
-          let mergedAudioInt16 = Int16Array.from(
-            longerArray.map(
-              (longerArrayElement, i) =>
-                Math.max(
-                  -1, // clamp value such that it is not smaller than -1
-                  Math.min(
-                    1, // clamp value such that it is not larger than +1
+          // 出力フォーマットに応じた処理
+          switch (this._outputFormat) {
+            case AudioOutputFormat.INT16_MONO:
+              // 既存の処理を維持
+              let mergedAudioInt16 = Int16Array.from(
+                longerArray.map(
+                  (longerArrayElement, i) =>
+                    Math.max(
+                      -1,
+                      Math.min(
+                        1,
+                        longerArrayElement +
+                          (i < shorterArray.length ? shorterArray[i] : 0)
+                      )
+                    ) *
+                      2 ** 15 -
+                    1
+                )
+              );
 
-                    // mix web(mic) and desktop audio by adding, and zero-padding shorterArray
-                    longerArrayElement +
-                      (i < shorterArray.length ? shorterArray[i] : 0)
+              if (this._debugRawFile) {
+                ws!.write(Buffer.from(mergedAudioInt16.buffer));
+              }
+
+              this.push(Buffer.from(mergedAudioInt16.buffer));
+              break;
+
+            case AudioOutputFormat.FLOAT32_MONO:
+              // Float32のまま出力
+              let mergedAudioFloat32 = Float32Array.from(
+                longerArray.map((longerArrayElement, i) =>
+                  Math.max(
+                    -1,
+                    Math.min(
+                      1,
+                      longerArrayElement +
+                        (i < shorterArray.length ? shorterArray[i] : 0)
+                    )
                   )
-                ) *
-                  2 ** 15 -
-                1 // convert to signed int16
-            )
-          );
+                )
+              );
 
-          if (this._debugRawFile) {
-            let mergedAudioFloat = Float32Array.from(
-              mergedAudioInt16,
-              (e) => e / 2 ** 15
-            );
-            ws!.write(Buffer.from(mergedAudioInt16.buffer)); // write merged audio to debug raw PCM file
-            //ws.write(Buffer.from(desktopAudioFloat32.buffer)); // write captured desktop audio to debug raw PCM file
-            //ws.write(Buffer.from(webAudioFloat32.buffer)); // write captured web mic audio to debug raw PCM file
+              if (this._debugRawFile) {
+                ws!.write(Buffer.from(mergedAudioFloat32.buffer));
+              }
+
+              this.push(Buffer.from(mergedAudioFloat32.buffer));
+              break;
+
+            case AudioOutputFormat.FLOAT32_STEREO:
+              // ステレオ（チャンネル分離）で出力
+              // マイクとデスクトップを別チャンネルに配置
+              let stereoAudioFloat32 = new Float32Array(longerArray.length * 2);
+              for (let i = 0; i < longerArray.length; i++) {
+                // チャンネル1（左）：マイク（または対応する配列）
+                stereoAudioFloat32[i * 2] =
+                  i < webAudioFloat32.length ? webAudioFloat32[i] : 0;
+
+                // チャンネル2（右）：デスクトップ（または対応する配列）
+                stereoAudioFloat32[i * 2 + 1] =
+                  i < desktopAudioFloat32.length ? desktopAudioFloat32[i] : 0;
+              }
+
+              if (this._debugRawFile) {
+                ws!.write(Buffer.from(stereoAudioFloat32.buffer));
+              }
+
+              this.push(Buffer.from(stereoAudioFloat32.buffer));
+              break;
           }
-
-          let mergedAudioBuffer = Buffer.from(mergedAudioInt16.buffer);
-          this.push(mergedAudioBuffer);
         }
       }
     );
@@ -138,5 +207,15 @@ export class MixingAudioDataStream extends Readable {
 
   override _read(size: number) {
     this._ready = true;
+  }
+
+  // 出力フォーマットを取得・設定するメソッド
+  getOutputFormat() {
+    return this._outputFormat;
+  }
+
+  setOutputFormat(format: AudioOutputFormat) {
+    this._outputFormat = format;
+    return this;
   }
 }

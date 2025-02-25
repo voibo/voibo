@@ -5,7 +5,10 @@ import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
 import { AudioCapture } from "@voibo/desktop-audio-capture";
-import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
+import {
+  AudioOutputFormat,
+  MixingAudioDataStream,
+} from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 
 export type WhisperTranscribeFromStreamParams = {
@@ -215,7 +218,11 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     // each time on START_TRANSCRIBE.
     this._inputStream = new MixingAudioDataStream(
       this._ipcMain,
-      this._requestDesktopBufferCallback.bind(this)
+      this._requestDesktopBufferCallback.bind(this),
+      {
+        debugRawFile: true,
+        outputFormat: AudioOutputFormat.FLOAT32_MONO,
+      }
     );
 
     let asyncInitialization = async () => {
