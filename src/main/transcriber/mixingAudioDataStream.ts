@@ -65,10 +65,10 @@ export class MixingAudioDataStream extends Readable {
           ? "s16le"
           : this._outputFormat === AudioOutputFormat.FLOAT32_MONO
           ? "f32le"
-          : "f32le -ac 2"; // ステレオの場合
+          : "f32le -ch_layout stereo"; // ステレオの場合
 
       console.log(
-        `writing debug raw PCM file to ${path}. Check: ffplay -f ${formatDesc} -ar 16000 -i ${path}`
+        `writing debug raw PCM file to ${path}. Check: ffplay -f ${formatDesc} -ar 16000 -i "${path}"`
       );
       ws = fs.createWriteStream(path);
     }

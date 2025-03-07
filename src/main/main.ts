@@ -22,6 +22,7 @@ import {
   session,
   shell,
   systemPreferences,
+  crashReporter,
 } from "electron";
 import log from "electron-log/main.js";
 import * as os from "os";
@@ -44,6 +45,18 @@ import { VBMainConf } from "../common/electronStore.js";
 import { MainStore } from "./store/mainStore.js";
 import { getMinutesFolderPath } from "./common/pathUtil.js";
 import { WhisperTranscribeFromStreamManager } from "./transcriber/localWhisper/WhisperTranscribeFromStream.js";
+
+// crashReporter
+crashReporter.start({
+  productName: "Voibo",
+  submitURL: "file://./crashes",
+  uploadToServer: false,
+  rateLimit: false,
+  compress: false,
+});
+console.log("Crash damp is here:", app.getPath("crashDumps"));
+
+// load plugins
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
