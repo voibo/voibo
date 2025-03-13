@@ -37,7 +37,6 @@ import {
   makeDir,
 } from "./server-util.js";
 import { ITranscribeManager } from "./transcriber/ITranscribeManager.js";
-import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeFromWav.js";
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";

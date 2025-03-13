@@ -2,7 +2,6 @@ import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import { Readable } from "stream";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
@@ -12,12 +11,14 @@ import {
   MediaCaptureQuality,
   MediaCaptureTargetType,
   MediaCaptureVideoFrame,
+  isMediaCaptureSupported,
 } from "@voibo/desktop-audio-capture";
 import {
   AudioOutputFormat,
   MixingAudioDataStream,
 } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
+import { MediaCaptureManager } from "../MediaCaptureManager.js";
 
 export type WhisperTranscribeFromStreamParams = {
   webContents: Electron.WebContents;
@@ -186,13 +187,10 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
   private _webContents: Electron.WebContents;
   private _getAudioFolderPath: () => string;
   private _desktopAudioBuffer: number[] = new Array(0);
-  private _useMediaCapture: boolean = false; // Apple Silicon Macかどうか
-  private _capture: MediaCapture | AudioCapture;
+  private _capture: MediaCaptureManager;
   private _captureIteration = 0;
   private _captureDisplayId = 1;
   private _debug = false;
-  private _debugAudioCapture = false; // デバッグ用フラグ
-  private _rawCaptureFileStream: fs.WriteStream | null = null;
   private _currentTimestamp: number = 0;
 
   // current transcriber
@@ -217,72 +215,10 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     this._transcriber = null;
     this._params = params;
 
-    // デバッグモードを設定
-    this._debugAudioCapture = params.get("debugAudioCapture") === true;
-
-    // 環境を確認（MacのApple Siliconかどうか）
-    const platform = os.platform();
-    const arch = os.arch();
-    this._useMediaCapture =
-      platform === "darwin" && (arch === "arm64" || arch === "arm");
-
-    console.log(`Platform: ${platform}, Architecture: ${arch}`);
-    console.log(
-      `Using ${
-        this._useMediaCapture ? "MediaCapture" : "AudioCapture"
-      } for audio capture`
-    );
-
-    if (this._useMediaCapture) {
-      // Apple Silicon Macの場合、MediaCaptureを使用
-      this._capture = new MediaCapture();
-      this._capture.on("error", (error: any) => {
-        console.error(error);
-      });
-      this._capture.on("audio-data", (data: any) => {
-        const float32Array = new Float32Array(data);
-        this._desktopAudioBuffer.push(...float32Array);
-
-        // デバッグモードが有効な場合、キャプチャーデータを保存
-        if (this._debugAudioCapture && this._rawCaptureFileStream) {
-          this._saveRawCaptureData(float32Array);
-        }
-      });
-      this._capture.on("video-frame", (frame: MediaCaptureVideoFrame) => {
-        if (this._debugAudioCapture) {
-          if (frame.isJpeg) {
-            const folderPath = path.join(
-              this._getAudioFolderPath(),
-              this._currentTimestamp.toString()
-            );
-            // フォルダが存在しない場合は作成
-            if (!fs.existsSync(folderPath)) {
-              fs.mkdirSync(folderPath, { recursive: true });
-            }
-            const filePath = path.join(
-              folderPath,
-              `frame_${frame.timestamp}.jpg`
-            );
-            fs.writeFileSync(filePath, Buffer.from(frame.data));
-          }
-        }
-      });
-    } else {
-      // それ以外の環境ではAudioCaptureを使用
-      this._capture = new AudioCapture();
-      this._capture.on("error", (error: any) => {
-        console.error(error);
-      });
-      this._capture.on("data", (data: any) => {
-        const float32Array = new Float32Array(data.audioData);
-        this._desktopAudioBuffer.push(...float32Array);
-
-        // デバッグモードが有効な場合、キャプチャーデータを保存
-        if (this._debugAudioCapture && this._rawCaptureFileStream) {
-          this._saveRawCaptureData(float32Array);
-        }
-      });
-    }
+    this._capture = new MediaCaptureManager({
+      desktopAudioBuffer: this._desktopAudioBuffer,
+      minutesFolderPath: this._getAudioFolderPath(),
+    });
 
     // create an inputStream here and re-use it, instead of recreating it
     // each time on START_TRANSCRIBE.
@@ -297,19 +233,17 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
 
     // 初期化処理
     let asyncInitialization = async () => {
-      // MediaCaptureの場合のみ、画面キャプチャ対象のディスプレイ情報を取得
-      if (this._useMediaCapture) {
-        try {
-          const displays = await MediaCapture.enumerateMediaCaptureTargets(
-            MediaCaptureTargetType.Screen
-          );
-          if (displays.length > 0) {
-            this._captureDisplayId = displays[0].displayId; // use the first display
-            console.log(`Using display ID: ${this._captureDisplayId}`);
-          }
-        } catch (error) {
-          console.error("Failed to enumerate media capture targets:", error);
+      // 画面キャプチャ対象のディスプレイ情報を取得
+      try {
+        const displays = await MediaCapture.enumerateMediaCaptureTargets(
+          MediaCaptureTargetType.Screen
+        );
+        if (displays.length > 0) {
+          this._captureDisplayId = displays[0].displayId; // use the first display
+          console.log(`Using display ID: ${this._captureDisplayId}`);
         }
+      } catch (error) {
+        console.error("Failed to enumerate media capture targets:", error);
       }
 
       this._initialize();
@@ -350,62 +284,6 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     return desktopAudioFloatData;
   }
 
-  /**
-   * MediaCaptureから取得した生の音声データをファイルに保存する
-   * @param float32Array MediaCaptureから取得したFLOAT32のオーディオデータ
-   */
-  private _saveRawCaptureData(float32Array: Float32Array) {
-    if (this._rawCaptureFileStream) {
-      // Float32Arrayをバッファに変換して書き込み
-      this._rawCaptureFileStream.write(Buffer.from(float32Array.buffer));
-    }
-  }
-
-  /**
-   * デバッグ用の音声データ保存ファイルを初期化する
-   * @param timestamp 録音開始時のタイムスタンプ
-   */
-  private _initRawCaptureFile(timestamp: number) {
-    if (this._debugAudioCapture) {
-      try {
-        const folderPath = path.join(
-          this._getAudioFolderPath(),
-          timestamp.toString()
-        );
-
-        // フォルダが存在しない場合は作成
-        if (!fs.existsSync(folderPath)) {
-          fs.mkdirSync(folderPath, { recursive: true });
-        }
-
-        const filePath = path.join(folderPath, "raw_media_capture.f32");
-        console.log(`保存先: ${filePath}`);
-
-        this._rawCaptureFileStream = fs.createWriteStream(filePath);
-        console.log(
-          `デバッグ用: MediaCaptureの生音声を保存します。ファイル形式: 32bit float, 16kHz, モノラル`
-        );
-        console.log(
-          `再生方法: ffplay -f f32le -ar 16000 -ch_layout mono -i "${filePath}"`
-        );
-      } catch (error) {
-        console.error("デバッグ用ファイル作成エラー:", error);
-        this._rawCaptureFileStream = null;
-      }
-    }
-  }
-
-  /**
-   * デバッグ用の音声データ保存ファイルをクローズする
-   */
-  private _closeRawCaptureFile() {
-    if (this._rawCaptureFileStream) {
-      this._rawCaptureFileStream.end();
-      this._rawCaptureFileStream = null;
-      console.log("デバッグ用: MediaCaptureの生音声ファイルを保存しました");
-    }
-  }
-
   private _initialize() {
     this._ipcMain.removeAllListeners(IPCSenderKeys.START_TRANSCRIBE);
     // timestamp: number for folder name
@@ -415,30 +293,10 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
         this._currentTimestamp = timestamp;
         this._desktopAudioBuffer.length = 0;
 
-        // デバッグ用ファイルの準備
-        if (this._debugAudioCapture) {
-          this._initRawCaptureFile(timestamp);
-        }
-
-        if (this._useMediaCapture) {
-          // MediaCaptureの場合
-          (this._capture as MediaCapture).startCapture({
-            displayId: this._captureDisplayId,
-            // audio channels is 1 for mono
-            audioChannels: 1,
-            audioSampleRate: 16000,
-            // video frame rate is 1 frame per second
-            frameRate: this._debugAudioCapture ? 0.5 : 0.1, // デバッグ時は少し高いフレームレート
-            quality: MediaCaptureQuality.High,
-          });
-        } else {
-          // AudioCaptureの場合
-          (this._capture as AudioCapture).startCapture({
-            displayId: this._captureDisplayId,
-            channels: 1,
-            sampleRate: 16000,
-          });
-        }
+        this._capture.startCapture({
+          currentTimestamp: timestamp,
+          displayId: this._captureDisplayId,
+        });
 
         this._transcriber = new WhisperTranscribeFromStream({
           webContents: this._webContents,
@@ -458,18 +316,7 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
         console.log("[main] transcribe end", timestamp);
         try {
           if (this._transcriber) this._transcriber.stop();
-
-          // 環境に応じたstopCaptureの呼び出し
-          if (this._useMediaCapture) {
-            await (this._capture as MediaCapture).stopCapture();
-          } else {
-            await (this._capture as AudioCapture).stopCapture();
-          }
-
-          // デバッグ用ファイルを閉じる
-          if (this._debugAudioCapture) {
-            this._closeRawCaptureFile();
-          }
+          await this._capture.stopCapture();
         } catch (err) {
           console.log(`[main] transcribe end: unhandled error`, err);
         }

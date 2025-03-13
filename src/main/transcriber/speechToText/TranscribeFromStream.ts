@@ -24,7 +24,11 @@ import { ChunkSplitter } from "../audio/chunkSplitter.js";
 import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
-import { AudioCapture } from "@voibo/desktop-audio-capture";
+import {
+  MediaCapture,
+  MediaCaptureTargetType,
+} from "@voibo/desktop-audio-capture";
+import { MediaCaptureManager } from "../MediaCaptureManager.js";
 
 export type TranscribeFromStreamRequiredParams = Required<{
   webContents: Electron.WebContents;
@@ -348,7 +352,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
   private _webContents: Electron.WebContents;
   private _getAudioFolderPath: () => string;
   private _desktopAudioBuffer: number[] = new Array(0);
-  private _capture: any;
+  private _capture: MediaCaptureManager;
   private _captureIteration = 0;
   private _captureDisplayId = 1;
   private _debug = false;
@@ -375,14 +379,19 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     this._transcriber = null;
     this._sttParams = sttParams;
 
-    this._capture = new AudioCapture();
+    this._capture = new MediaCaptureManager({
+      desktopAudioBuffer: this._desktopAudioBuffer,
+      minutesFolderPath: getAudioFolderPath(),
+    });
+    /*
     this._capture.on("error", (error: any) => {
       console.error(error);
     });
-    this._capture.on("data", (data: any) => {
+    this._capture.on("audio-data", (data: any) => {
       const float32Array = new Float32Array(data);
       this._desktopAudioBuffer.push(...float32Array);
     });
+    */
 
     // create an inputStream here and re-use it, instead of recreating it
     // each time on START_TRANSCRIBE.
@@ -392,7 +401,9 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     );
 
     let asyncInitialization = async () => {
-      const [displays, windows] = await AudioCapture.enumerateDesktopWindows();
+      const displays = await MediaCapture.enumerateMediaCaptureTargets(
+        MediaCaptureTargetType.Screen
+      );
       if (displays.length > 0) {
         this._captureDisplayId = displays[0].displayId;
       }
@@ -497,8 +508,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
       try {
         this._desktopAudioBuffer.length = 0;
         this._capture.startCapture({
-          channels: 1,
-          sampleRate: 16000,
+          currentTimestamp: timestamp,
           displayId: this._captureDisplayId,
         });
 
