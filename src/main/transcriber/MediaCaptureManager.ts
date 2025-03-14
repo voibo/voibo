@@ -112,6 +112,7 @@ export class MediaCaptureManager {
       audioSampleRate: 16000, // 16kHz
       frameRate: 0.5, // 0.5 frame per second
       quality: MediaCaptureQuality.High,
+      isElectron: true,
     };
     this._capture.startCapture(config);
   }
