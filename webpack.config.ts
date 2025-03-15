@@ -1,7 +1,7 @@
 import CopyFilePlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
-import { Configuration } from "webpack";
+import type { Configuration } from "webpack";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -73,7 +73,8 @@ const main: Configuration = {
   ],
   externals: {
     "@protobufjs/inquire": "node-commonjs @protobufjs/inquire",
-    "@voibo/desktop-audio-capture": "module @voibo/desktop-audio-capture",
+    "@voibo/desktop-media-capture":
+      "node-commonjs @voibo/desktop-media-capture",
     "@voibo/voibo-plugin": "module @voibo/voibo-plugin",
   },
   experiments: {
@@ -112,17 +113,6 @@ const renderer: Configuration = {
           from: "./asset/*.{png,svg}",
           to: "./asset/[name][ext]",
         },
-
-        // wasm file of VAD
-        {
-          from: "node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js",
-          to: "[name][ext]",
-        },
-        {
-          from: "node_modules/@ricky0123/vad-web/dist/*.onnx",
-          to: "[name][ext]",
-        },
-        { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
       ],
     }),
   ],

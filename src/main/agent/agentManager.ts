@@ -110,7 +110,7 @@ export class AgentManager {
         model = new ChatOpenAI({
           apiKey: this._store.OPENAI_API_KEY,
           temperature: temperature ?? 0,
-          modelName: "gpt-4o",
+          modelName: "gpt-4o-mini",
           maxRetries: 3,
         });
         break;

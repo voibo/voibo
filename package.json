@@ -19,7 +19,9 @@
     "clean": "run-p clean:webpack clean:electron",
     "clean:webpack": "rimraf dist",
     "clean:electron": "rimraf built",
-    "add-license": "node scripts/add-license.cjs"
+    "add-license": "node scripts/add-license.cjs",
+    "dev:debug": "ELECTRON_ENABLE_LOGGING=true ELECTRON_ENABLE_STACK_DUMPING=true npm run clean:webpack && run-p watch:webpack run:electron:debug",
+    "run:electron:debug": "wait-on ./dist/index.html ./dist/main.mjs && electronmon --inspect=9229 ."
   },
   "keywords": [],
   "electronmon": {
@@ -72,13 +74,11 @@
     "@mui/lab": "^6.0.0-beta.17",
     "@mui/material": "^6.1.9",
     "@mui/x-date-pickers": "^7.23.0",
-    "@ricky0123/vad-react": "^0.0.25",
-    "@ricky0123/vad-web": "^0.0.19",
     "@types/file-saver": "^2.0.7",
     "@types/wav": "^1.0.4",
-    "@voibo/desktop-audio-capture": "^1.0.0",
+    "@voibo/desktop-media-capture": "^2.1.0",
     "@voibo/voibo-plugin": "file:plugin",
-    "@xyflow/react": "^12.3.6",
+    "@xyflow/react": "^12.4.4",
     "copy-webpack-plugin": "^12.0.2",
     "dayjs": "^1.11.13",
     "dify-client": "^2.3.2",
@@ -107,6 +107,7 @@
     "react-markdown": "^9.0.1",
     "react-router-dom": "^7.0.1",
     "remark-gfm": "^4.0.0",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.15",
     "uuid": "^11.0.3",
     "wav": "^1.0.2",
@@ -139,13 +140,18 @@
       },
       "icon": "resources/icon.png",
       "asarUnpack": [
-        "./node_modules/@voibo/desktop-audio-capture/build/Release/addon.node"
+        "./node_modules/@voibo/desktop-media-capture/build/Release/addon.node"
       ]
     },
     "win": {
       "target": [
         "nsis"
       ]
+    }
+  },
+  "imports": {
+    "@voibo/desktop-media-capture": {
+      "default": "@voibo/desktop-media-capture"
     }
   }
 }

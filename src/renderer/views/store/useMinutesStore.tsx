@@ -502,6 +502,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
           if (!useVBStore.getState().allReady) return;
           set({ topicProcessing: true, topicError: null, topicRes: null });
         },
+
         processTopic: async () => {
           if (
             !useVBStore.getState().allReady ||
@@ -515,6 +516,21 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
 
           // start process
           get().startTopicProcess();
+
+          // 非同期処理前に必要なデータを保存
+          const currentPrompt = get().topicPrompts[targetIndex];
+          if (!currentPrompt || !currentPrompt.seedData) {
+            console.error("Invalid topic prompt or missing seedData");
+            get().resTopicError({
+              error: new Error("Invalid topic prompt data"),
+              prompts: get().topicPrompts,
+              topicSeed: get().topicSeeds,
+            });
+            return;
+          }
+
+          // 必要なデータを非同期処理の前に取得しておく
+          const currentSeedData = currentPrompt.seedData;
 
           const startTimestamp = useVBStore.getState().startTimestamp;
           const getAgenda =
@@ -546,15 +562,6 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             }
           }
 
-          // agenda
-          /*
-          if (currentTopic.seedData.agendaIdList) {
-            currentTopic.seedData.agendaIdList.forEach((agendaId) => {
-              const relatedAgenda = getAgenda(agendaId);
-            });
-          }
-            */
-
           const prompt = `"""Immediate Previous Content\n${lastResult}\n"""\n\n"""Content\n${currentTopic.text}\n"""\n`;
           const updatePrompts = [...get().topicPrompts];
           updatePrompts[targetIndex].isRequested = true;
@@ -573,12 +580,12 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
               if (isLLMAnalyzedTopics(resJSON)) {
                 resJSON.topics.forEach((topic) => {
                   topic.id = uuidv4();
-                  topic.seedData = currentTopic.seedData;
-                  topic.agendaIds = currentTopic.seedData.agendaIdList ?? [];
+                  topic.seedData = currentSeedData;
+                  topic.agendaIds = currentSeedData.agendaIdList ?? [];
                 });
-                const responsePrompt = get().topicPrompts[targetIndex];
+
                 get().topicSeeds.forEach((seed) => {
-                  if (seed == responsePrompt.seedData) {
+                  if (seed == currentSeedData) {
                     seed.requireUpdate = false;
                   }
                 });
@@ -591,9 +598,8 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
                 });
               } else {
                 console.error("resError: Invalid JSON data", resJSON);
-                const responsePrompt = get().topicPrompts[targetIndex];
                 get().topicSeeds.forEach((seed) => {
-                  if (seed == responsePrompt.seedData) {
+                  if (seed == currentSeedData) {
                     seed.requireUpdate = false;
                   }
                 });
@@ -606,9 +612,8 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             })
             .catch((e) => {
               console.error("resError :general error", e);
-              const responsePrompt = get().topicPrompts[targetIndex];
               get().topicSeeds.forEach((seed) => {
-                if (seed == responsePrompt.seedData) {
+                if (seed == currentSeedData) {
                   seed.requireUpdate = false;
                 }
               });

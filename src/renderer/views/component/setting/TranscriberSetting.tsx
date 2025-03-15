@@ -39,7 +39,7 @@ export const TranscriberSetting = () => {
   };
   const transcribers = [
     { label: "Google Speech-to-Text", value: "stt" },
-    //{ label: "whisper v3 with local Wav file", value: "localWav" },
+    { label: "mlx whisper large v3 turbo", value: "localWav" },
   ];
   const [state_WHISPER_EXEC_PATH, set_WHISPER_EXEC_PATH] = useState(
     vaConfStore.conf!.WHISPER_EXEC_PATH
@@ -80,6 +80,24 @@ export const TranscriberSetting = () => {
               vaConfStore.update({
                 ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
                 GOOGLE_STT_KEY_PATH: event.target.value,
+              });
+            }}
+          ></TextField>
+        </div>
+      )}
+
+      {vaConfStore.conf!.transcriber === "localWav" && (
+        <div className="flex flex-col items-start p-2 rounded border space-y-4 mt-2">
+          <div>Local whisper</div>
+          <TextField
+            fullWidth
+            label={"Whisper Exec Path"}
+            value={state_WHISPER_EXEC_PATH}
+            onChange={(event) => set_WHISPER_EXEC_PATH(event.target.value)}
+            onBlur={(event) => {
+              vaConfStore.update({
+                ...vaConfStore.conf!, // loadされたあとなので必ず存在するはず
+                WHISPER_EXEC_PATH: event.target.value,
               });
             }}
           ></TextField>

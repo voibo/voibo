@@ -22,6 +22,7 @@ import {
   session,
   shell,
   systemPreferences,
+  crashReporter,
 } from "electron";
 import log from "electron-log/main.js";
 import * as os from "os";
@@ -36,13 +37,25 @@ import {
   makeDir,
 } from "./server-util.js";
 import { ITranscribeManager } from "./transcriber/ITranscribeManager.js";
-import { TranscribeFromWavManager } from "./transcriber/localWhisper/TranscribeFromWav.js";
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
 import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
 import { VBMainConf } from "../common/electronStore.js";
 import { MainStore } from "./store/mainStore.js";
 import { getMinutesFolderPath } from "./common/pathUtil.js";
+import { WhisperTranscribeFromStreamManager } from "./transcriber/localWhisper/WhisperTranscribeFromStream.js";
+
+// crashReporter
+crashReporter.start({
+  productName: "Voibo",
+  submitURL: "file://./crashes",
+  uploadToServer: false,
+  rateLimit: false,
+  compress: false,
+});
+console.log("Crash damp is here:", app.getPath("crashDumps"));
+
+// load plugins
 
 async function loadPlugins() {
   const pluginPath = path.resolve(
@@ -212,11 +225,11 @@ app.whenReady().then(() => {
     console.log("initTranscriber", transcribeType);
     switch (transcribeType) {
       case "localWav":
-        return new TranscribeFromWavManager({
+        return new WhisperTranscribeFromStreamManager({
           webContents: mainWindow.webContents,
           ipcMain,
           getAudioFolderPath: getMinutesFolderPath.bind(null, currentTeam.id),
-          getWhisperPath,
+          params: new Map([["pythonScriptPath", getWhisperPath()]]),
         });
       case "stt":
       default:
