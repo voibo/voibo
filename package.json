@@ -76,7 +76,7 @@
     "@mui/x-date-pickers": "^7.23.0",
     "@types/file-saver": "^2.0.7",
     "@types/wav": "^1.0.4",
-    "@voibo/desktop-audio-capture": "^2.0.0",
+    "@voibo/desktop-media-capture": "^2.1.0",
     "@voibo/voibo-plugin": "file:plugin",
     "@xyflow/react": "^12.4.4",
     "copy-webpack-plugin": "^12.0.2",
@@ -140,13 +140,18 @@
       },
       "icon": "resources/icon.png",
       "asarUnpack": [
-        "./node_modules/@voibo/desktop-audio-capture/build/Release/addon.node"
+        "./node_modules/@voibo/desktop-media-capture/build/Release/addon.node"
       ]
     },
     "win": {
       "target": [
         "nsis"
       ]
+    }
+  },
+  "imports": {
+    "@voibo/desktop-media-capture": {
+      "default": "@voibo/desktop-media-capture"
     }
   }
 }

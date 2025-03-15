@@ -4,10 +4,21 @@ import {
   MediaCapture,
   MediaCaptureConfig,
   MediaCaptureQuality,
+  MediaCaptureTarget,
+  MediaCaptureTargetType,
   MediaCaptureVideoFrame,
-} from "@voibo/desktop-audio-capture";
+} from "@voibo/desktop-media-capture";
 
 export class MediaCaptureManager {
+  static async enumerateMediaCaptureTargets(
+    type?: MediaCaptureTargetType
+  ): Promise<MediaCaptureTarget[]> {
+    if (!type) {
+      type = MediaCaptureTargetType.Screen;
+    }
+    return MediaCapture.enumerateMediaCaptureTargets(type);
+  }
+
   private _capture: MediaCapture;
 
   private _desktopAudioBuffer: number[] = new Array(0);

@@ -1,24 +1,16 @@
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import { Readable } from "stream";
 import path from "path";
-import fs from "fs";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
-import {
-  AudioCapture,
-  MediaCapture,
-  MediaCaptureQuality,
-  MediaCaptureTargetType,
-  MediaCaptureVideoFrame,
-  isMediaCaptureSupported,
-} from "@voibo/desktop-audio-capture";
 import {
   AudioOutputFormat,
   MixingAudioDataStream,
 } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { MediaCaptureManager } from "../MediaCaptureManager.js";
+import { MediaCaptureTargetType } from "@voibo/desktop-media-capture";
 
 export type WhisperTranscribeFromStreamParams = {
   webContents: Electron.WebContents;
@@ -235,7 +227,7 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     let asyncInitialization = async () => {
       // 画面キャプチャ対象のディスプレイ情報を取得
       try {
-        const displays = await MediaCapture.enumerateMediaCaptureTargets(
+        const displays = await MediaCaptureManager.enumerateMediaCaptureTargets(
           MediaCaptureTargetType.Screen
         );
         if (displays.length > 0) {

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { protos, v2 } from "@google-cloud/speech";
-import { SpeechClient } from "@google-cloud/speech/build/src/v2";
 import path from "path";
 import { Readable } from "stream";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
@@ -24,10 +23,7 @@ import { ChunkSplitter } from "../audio/chunkSplitter.js";
 import { MixingAudioDataStream } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { RecognizeStream, getErrorCode } from "./RecognizeStream.js";
-import {
-  MediaCapture,
-  MediaCaptureTargetType,
-} from "@voibo/desktop-audio-capture";
+import { MediaCaptureTargetType } from "@voibo/desktop-media-capture";
 import { MediaCaptureManager } from "../MediaCaptureManager.js";
 
 export type TranscribeFromStreamRequiredParams = Required<{
@@ -72,7 +68,7 @@ export class TranscribeFromStream {
   private model: string;
   private frameSizeMs: number;
 
-  private client: SpeechClient;
+  private client: v2.SpeechClient;
   private sttStream: RecognizeStream | null;
 
   // debug
@@ -401,9 +397,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     );
 
     let asyncInitialization = async () => {
-      const displays = await MediaCapture.enumerateMediaCaptureTargets(
-        MediaCaptureTargetType.Screen
-      );
+      const displays = await MediaCaptureManager.enumerateMediaCaptureTargets();
       if (displays.length > 0) {
         this._captureDisplayId = displays[0].displayId;
       }
