@@ -53,7 +53,8 @@ import {
 import { VirtualAssistantConf } from "./useAssistantsStore.jsx";
 import { useMinutesAgendaStore } from "./useAgendaStore.jsx";
 import { processTopicAction } from "../action/TopicAction.js";
-import { IPCInvokeKeys } from "../../../common/constants.js";
+import { IPCInvokeKeys, IPCReceiverKeys } from "../../../common/constants.js";
+import { ScreenCapture } from "../../../common/content/screencapture.js";
 
 // === IDBKeyVal ===
 //  Custom storage object
@@ -101,7 +102,13 @@ type TopicManagerState = {
   topicSeeds: TopicSeed[];
 };
 
-export type MinutesStore = MinutesState & TopicManagerState;
+type ScreenCaptureState = {
+  capturedScreens: ScreenCapture[];
+};
+
+export type MinutesStore = MinutesState &
+  TopicManagerState &
+  ScreenCaptureState;
 
 const initMinutesState = (startTimestamp: number): MinutesStore => {
   return {
@@ -124,6 +131,9 @@ const initMinutesState = (startTimestamp: number): MinutesStore => {
     topicRes: null,
     topicPrompts: [],
     topicSeeds: [],
+
+    // ScreenCaptureState
+    capturedScreens: [],
   };
 };
 
@@ -133,7 +143,8 @@ export type MinutesDispatchStore = TopicManagerDispatch &
   TopicAIConfDispatch &
   TopicDispatch &
   DiscussionDispatch &
-  MinutesDispatch;
+  MinutesDispatch &
+  ScreenCaptureDispatch;
 
 type TopicManagerDispatch = {
   updateTopicSeeds: (props: {
@@ -193,6 +204,10 @@ type MinutesDispatch = {
   createNewMinutes: () => void;
   waitForHydration: () => Promise<void>;
   isNoMinutes: () => boolean;
+};
+
+type ScreenCaptureDispatch = {
+  addScreenCapture: (capture: ScreenCapture) => void;
 };
 
 // Zustand Store
@@ -763,6 +778,14 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
             topicSeeds: topicSeed,
           });
         },
+
+        // == ScreenCaptureDispatch ==
+        addScreenCapture: (capture) => {
+          if (!useVBStore.getState().allReady) return;
+          set({
+            capturedScreens: [...get().capturedScreens, capture],
+          });
+        },
       })),
       {
         name: minutesStartTimestamp.toString(),
@@ -777,6 +800,7 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
           topicAIConf: state.topicAIConf,
           topics: state.topics,
           assistants: state.assistants,
+          capturedScreens: state.capturedScreens,
         }),
         onRehydrateStorage: (state) => {
           return (state, error) => {
@@ -801,4 +825,13 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
     )
   );
 };
-//
+
+window.electron.on(
+  IPCReceiverKeys.ON_SCREEN_CAPTURED,
+  (event: any, response: ScreenCapture) => {
+    const minutesStore = useMinutesStore(
+      useVBStore.getState().startTimestamp
+    ).getState();
+    minutesStore.addScreenCapture(response);
+  }
+);
