@@ -8,6 +8,8 @@ import {
   MediaCaptureTargetType,
   MediaCaptureVideoFrame,
 } from "@voibo/desktop-media-capture";
+import { IPCReceiverKeys } from "../../common/constants.js";
+import { ScreenCapture } from "../../common/content/screencapture.js";
 
 export class MediaCaptureManager {
   static async enumerateMediaCaptureTargets(
@@ -19,6 +21,7 @@ export class MediaCaptureManager {
     return MediaCapture.enumerateMediaCaptureTargets(type);
   }
 
+  private _webContents: Electron.WebContents;
   private _capture: MediaCapture;
 
   private _desktopAudioBuffer: number[] = new Array(0);
@@ -28,12 +31,17 @@ export class MediaCaptureManager {
   private _imagePath: string;
 
   constructor({
+    webContents,
     desktopAudioBuffer,
     minutesFolderPath,
+    similarityThreshold,
   }: {
+    webContents: Electron.WebContents;
     desktopAudioBuffer: number[];
     minutesFolderPath: string;
+    similarityThreshold?: number;
   }) {
+    this._webContents = webContents;
     this._desktopAudioBuffer = desktopAudioBuffer;
     this._minutesFolderPath = minutesFolderPath;
     this._imagePath = this._minutesFolderPath;
@@ -62,14 +70,27 @@ export class MediaCaptureManager {
     });
 
     // screen capture
-    this._capture.on("video-frame", (frame: MediaCaptureVideoFrame) => {
+    this._capture.on("video-frame", async (frame: MediaCaptureVideoFrame) => {
       if (frame.isJpeg) {
-        const filePath = path.join(this._imagePath, `${frame.timestamp}.jpg`);
-        console.log("write image", filePath);
+        const frameBuffer = Buffer.from(frame.data);
         try {
-          fs.writeFileSync(filePath, Buffer.from(frame.data));
+          // save image
+          const filePath = path.join(this._imagePath, `${frame.timestamp}.jpg`);
+          fs.writeFileSync(filePath, frameBuffer);
+
+          // send image data to renderer
+          const screenCapture: ScreenCapture = {
+            timestamp: frame.timestamp,
+            width: frame.width,
+            height: frame.height,
+            filePath: filePath,
+          };
+          this._webContents.send(
+            IPCReceiverKeys.ON_SCREEN_CAPTURED,
+            screenCapture
+          );
         } catch (e) {
-          console.error(e);
+          console.error("Error processing video frame:", e);
         }
       }
     });
@@ -121,7 +142,7 @@ export class MediaCaptureManager {
       displayId: displayId,
       audioChannels: 1, // mono
       audioSampleRate: 16000, // 16kHz
-      frameRate: 0.5, // 0.5 frame per second
+      frameRate: 0.33, // 0.33 frame per second
       quality: MediaCaptureQuality.High,
       isElectron: true,
     };

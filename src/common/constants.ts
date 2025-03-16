@@ -32,6 +32,7 @@ export const IPCReceiverKeys = {
   RECEIVE_MESSAGE: "receiveMessage",
   ON_TRANSCRIBED_INTERIM: "onTranscribeInterim",
   ON_TRANSCRIBED: "onTranscribe",
+  ON_SCREEN_CAPTURED: "onScreenCapture",
   REQUESTED_TRANSCRIBE: "startTranscribe",
   PREPARE_TRANSCRIBE: "prepareTranscribe",
   ON_MIND_MAP_CREATED: "onMindMapCreated",

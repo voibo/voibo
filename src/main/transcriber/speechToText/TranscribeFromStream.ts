@@ -376,6 +376,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     this._sttParams = sttParams;
 
     this._capture = new MediaCaptureManager({
+      webContents: this._webContents,
       desktopAudioBuffer: this._desktopAudioBuffer,
       minutesFolderPath: getAudioFolderPath(),
     });
