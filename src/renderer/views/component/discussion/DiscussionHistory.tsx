@@ -31,11 +31,11 @@ import { processDiscussionAction } from "../../action/DiscussionAction.js";
 
 // スクリーンキャプチャのサムネイルを表示するコンポーネント
 const ScreenCaptureThumbnail = ({
-  timestamp,
-  duration,
+  timestampSec,
+  durationMSec,
 }: {
-  timestamp: number;
-  duration: number;
+  timestampSec: number;
+  durationMSec: number;
 }) => {
   const startTimestamp = useVBStore((state) => state.startTimestamp);
 
@@ -51,20 +51,20 @@ const ScreenCaptureThumbnail = ({
       console.log(
         "allCapturedScreens",
         screen.timestamp,
-        timestamp,
-        duration,
+        timestampSec,
+        durationMSec,
         startTimestamp
       );
-      const currentSec = startTimestamp / 1000 + timestamp;
+      const currentMSec = startTimestamp + timestampSec * 1000;
 
       return (
-        screen.timestamp >= currentSec &&
-        screen.timestamp < currentSec + duration / 1000
+        screen.timestamp >= currentMSec &&
+        screen.timestamp < currentMSec + durationMSec
       );
 
       //return true;
     });
-  }, [allCapturedScreens, timestamp, duration]);
+  }, [allCapturedScreens, timestampSec, durationMSec]);
 
   if (capturedScreens.length === 0) {
     return <></>;
@@ -166,8 +166,8 @@ export const useDiscussionHistory = (
                     return (
                       <Fragment key={`${index}_${xIndex}`}>
                         <ScreenCaptureThumbnail
-                          timestamp={Number(text.timestamp)}
-                          duration={text.length}
+                          timestampSec={Number(text.timestamp)}
+                          durationMSec={text.length}
                         />
                         <DiscussionSegmentText
                           key={`${index}_${xIndex}`}
