@@ -23,6 +23,7 @@ import {
 import { Button, Tooltip } from "@mui/material";
 import { secondsToHMS } from "../../../util.js";
 import { useVBStore } from "../../store/useVBStore.jsx";
+import { ScreenCaptureThumbnail } from "./ScreenCaptureThumbnail.jsx";
 import { processDiscussionAction } from "../../action/DiscussionAction.js";
 
 export const DiscussionSegmentText = (props: {
@@ -157,7 +158,7 @@ export const DiscussionSegmentText = (props: {
       </div>
     </div>
   ) : (
-    <span {...others}>
+    <div {...others}>
       <Tooltip placement="top" title={`${currentStartAt} - ${currentEndAt}`}>
         <span>
           {splitWithTerminalSymbol(currentText).map((data, index) => {
@@ -189,7 +190,7 @@ export const DiscussionSegmentText = (props: {
           })}
         </span>
       </Tooltip>
-    </span>
+    </div>
   );
 };
 
