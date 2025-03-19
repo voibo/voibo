@@ -350,7 +350,6 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
   private _desktopAudioBuffer: number[] = new Array(0);
   private _capture: MediaCaptureManager;
   private _captureIteration = 0;
-  private _captureDisplayId = 1;
   private _debug = false;
 
   // current transcriber
@@ -376,19 +375,11 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
     this._sttParams = sttParams;
 
     this._capture = new MediaCaptureManager({
+      ipcMain: this._ipcMain,
       webContents: this._webContents,
       desktopAudioBuffer: this._desktopAudioBuffer,
       minutesFolderPath: getAudioFolderPath(),
     });
-    /*
-    this._capture.on("error", (error: any) => {
-      console.error(error);
-    });
-    this._capture.on("audio-data", (data: any) => {
-      const float32Array = new Float32Array(data);
-      this._desktopAudioBuffer.push(...float32Array);
-    });
-    */
 
     // create an inputStream here and re-use it, instead of recreating it
     // each time on START_TRANSCRIBE.
@@ -397,18 +388,7 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
       this._requestDesktopBufferCallback.bind(this)
     );
 
-    let asyncInitialization = async () => {
-      const displays = await MediaCaptureManager.enumerateMediaCaptureTargets();
-      if (displays.length > 0) {
-        this._captureDisplayId = displays[0].displayId;
-      }
-
-      // only after assigning this._captureDisplayId (with await above),
-      // then call this._initialize() which will use this._captureDisplayId
-
-      this._initialize();
-    };
-    asyncInitialization();
+    this._initialize();
   }
 
   private _requestDesktopBufferCallback(webMicSampleCount: number) {
@@ -504,7 +484,6 @@ export class TranscribeFromStreamManager implements ITranscribeManager {
         this._desktopAudioBuffer.length = 0;
         this._capture.startCapture({
           currentTimestamp: timestamp,
-          displayId: this._captureDisplayId,
         });
 
         this._transcriber = new TranscribeFromStream({

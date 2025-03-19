@@ -38,7 +38,7 @@ import { VirtualAssistantManager } from "../assistant/VirtualAssistantManager.js
 import { useConfirmDialog } from "../common/useConfirmDialog.jsx";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
-import { TranscribeButton } from "./TranscribeButton.jsx";
+import { TranscribeController } from "./TranscribeController.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { useMinutesAssistantStore } from "../../store/useAssistantsStore.jsx";
 import { saveAs } from "file-saver";
@@ -115,7 +115,7 @@ export const HeaderMainComponent = () => {
       <Divider orientation="vertical" flexItem className="bg-white mx-2" />
 
       <div className="ml-4 mr-4 flex flew-row items-center justify-center">
-        <TranscribeButton />
+        <TranscribeController />
       </div>
     </div>
   );

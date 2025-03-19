@@ -24,6 +24,7 @@ export const IPCSenderKeys = {
   RE_TRANSCRIBE_ALL: "reTranscribeAll",
   DELETE_MINUTES: "deleteMinutes",
   CREATE_MINUTES: "createMinutes",
+  SCREEN_CAPTURE_TARGET_SELECTED: "screenCaptureTargetSelected",
 } as const;
 export type IPCSenderKeys = (typeof IPCSenderKeys)[keyof typeof IPCSenderKeys];
 
@@ -63,5 +64,8 @@ export const IPCInvokeKeys = {
   GET_CURRENT_TEAM: "getCurrentTeam",
   SET_TEAMS: "setTeams",
   GET_TEAMS: "getTeams",
+
+  // screen capture
+  ENUM_MEDIA_CAPTURE_TARGETS: "enumerateMediaCaptureTargets",
 } as const;
 export type IPCInvokeKeys = (typeof IPCInvokeKeys)[keyof typeof IPCInvokeKeys];
