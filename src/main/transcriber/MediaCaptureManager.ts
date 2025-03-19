@@ -109,11 +109,12 @@ export class MediaCaptureManager {
     });
 
     // screen capture target selected
-    this._ipcMain.on(
-      IPCSenderKeys.SCREEN_CAPTURE_TARGET_SELECTED,
-      (e, isDisplay: boolean, selectedId: number) => {
+    this._ipcMain.handle(
+      IPCInvokeKeys.SCREEN_CAPTURE_TARGET_SELECTED,
+      async (e, isDisplay: boolean, selectedId: number): Promise<boolean> => {
         this._capturingIsDisplay = isDisplay;
         this._capturingID = selectedId;
+        return true;
       }
     );
 

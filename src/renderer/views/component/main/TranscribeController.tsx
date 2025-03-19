@@ -15,9 +15,8 @@ limitations under the License.
 */
 import {
   Monitor,
-  RadioButtonChecked,
-  Videocam,
-  VideocamOffOutlined,
+  PhoneDisabled,
+  PhoneEnabled,
   VideocamOutlined,
   WebAsset,
 } from "@mui/icons-material";
@@ -66,38 +65,46 @@ export const TranscribeController = () => {
       });
   }, []);
 
-  useEffect(() => {
-    if (selectedCaptureTarget) {
-      window.electron.send(
-        IPCSenderKeys.SCREEN_CAPTURE_TARGET_SELECTED,
-        selectedCaptureTarget.isDisplay,
-        selectedCaptureTarget.isDisplay
-          ? selectedCaptureTarget.displayId
-          : selectedCaptureTarget.windowId
-      );
-    }
-  }, [selectedCaptureTarget]);
-
   // select capture target
   const [open, setOpen] = useState(false);
 
+  // NOTE: Tailwind css does not support dynamic class names
   return (
-    <div
-      className="flex items-center justify-center cursor-pointer"
-      onClick={!recording ? () => setOpen(true) : transcriber.stopTranscribe}
-    >
-      <div className="flex items-center justify-center rounded-full h-10 w-10 border-0">
-        {recording ? (
-          <RadioButtonChecked className="text-red-600 text-3xl" />
-        ) : (
-          <RadioButtonChecked className="text-emerald-400 text-3xl" />
-        )}
-      </div>
-
-      {selectedCaptureTarget && (
-        <div className=" text-white">
-          {makeCaptureTargetName(selectedCaptureTarget)}
-        </div>
+    <>
+      {recording ? (
+        <Button
+          className=" text-red-400 border-red-600 bg-red-600/20 border-2 hover:bg-red-600/50"
+          variant="outlined"
+          onClick={
+            !recording ? () => setOpen(true) : transcriber.stopTranscribe
+          }
+        >
+          <div className="flex items-center justify-center rounded-full h-10 w-10 border-0">
+            <PhoneDisabled className="text-red-600 text-3xl" />
+          </div>
+          {selectedCaptureTarget && (
+            <div className="ml-4 text-xs text-white">
+              {makeCaptureTargetName(selectedCaptureTarget)}
+            </div>
+          )}
+        </Button>
+      ) : (
+        <Button
+          className=" text-emerald-400 border-emerald-600 bg-emerald-600/20 border-2 hover:bg-emerald-600/50"
+          variant="outlined"
+          onClick={
+            !recording ? () => setOpen(true) : transcriber.stopTranscribe
+          }
+        >
+          <div className="flex items-center justify-center rounded-full h-10 w-10 border-0">
+            <PhoneEnabled className="text-emerald-400 text-3xl" />
+          </div>
+          {selectedCaptureTarget && (
+            <div className="ml-4 text-xs text-white">
+              {makeCaptureTargetName(selectedCaptureTarget)}
+            </div>
+          )}
+        </Button>
       )}
       <SelectCaptureTargetDialog
         open={open}
@@ -107,12 +114,16 @@ export const TranscribeController = () => {
         selectedCaptureTarget={selectedCaptureTarget}
         setSelectedCaptureTarget={setSelectedCaptureTarget}
       />
-    </div>
+    </>
   );
 };
 
+// CaptureTarget util function
+
+const DELIMITER = ":";
+
 const encodeCaptureTargetValue = (target: MediaCaptureTarget): string => {
-  return `${target.isDisplay}:${
+  return `${target.isDisplay}${DELIMITER}${
     target.isDisplay ? String(target.displayId) : String(target.windowId)
   }`;
 };
@@ -121,16 +132,13 @@ const decodeCaptureTargetValue = (
   value: string,
   captureTargets: MediaCaptureTarget[]
 ): MediaCaptureTarget | undefined => {
-  const [isDisplay, id] = value.split(":");
+  const [isDisplay, id] = value.split(DELIMITER);
   if (isDisplay === "true") {
     return captureTargets.find((target) => target.displayId === Number(id));
   } else {
     return captureTargets.find((target) => target.windowId === Number(id));
   }
 };
-
-// 最大表示文字数を定数で定義
-const MAX_NAME_LENGTH = 30;
 
 const makeCaptureTargetName = (target: MediaCaptureTarget) => {
   let icon: ReactNode;
@@ -141,15 +149,14 @@ const makeCaptureTargetName = (target: MediaCaptureTarget) => {
     fullName = target.title ?? "";
   } else {
     icon = <WebAsset className="mr-4 h-4 w-4" />;
-    fullName =
-      target.applicationName + "\u00A0\u00A0\u00A0\u00A0" + target.title;
+    fullName = target.applicationName + "\u00A0\u00A0" + target.title;
   }
 
   return (
     <div className="flex items-center">
       {icon}
       <span title={fullName} className="overflow-hidden text-ellipsis">
-        {truncateText(fullName, MAX_NAME_LENGTH)}
+        {truncateText(fullName, 30)}
       </span>
     </div>
   );
@@ -174,9 +181,14 @@ const SelectCaptureTargetDialog = (props: {
 
   const transcriber = useTranscribeStore((state) => state);
 
-  const handleChange = (e: SelectChangeEvent) => {
+  // close dialog
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(false);
+  };
+
+  const handleCaptureTargetSelected = (e: SelectChangeEvent) => {
     const target = decodeCaptureTargetValue(e.target.value, captureTargets);
-    console.log(target);
     if (target) {
       setSelectedCaptureTarget(target);
     }
@@ -186,8 +198,23 @@ const SelectCaptureTargetDialog = (props: {
     e.stopPropagation();
     if (selectedCaptureTarget) {
       console.log("start capture", selectedCaptureTarget);
-      transcriber.startTranscribe();
-      setOpen(false);
+
+      window.electron
+        .invoke(
+          IPCInvokeKeys.SCREEN_CAPTURE_TARGET_SELECTED,
+          selectedCaptureTarget.isDisplay,
+          selectedCaptureTarget.isDisplay
+            ? selectedCaptureTarget.displayId
+            : selectedCaptureTarget.windowId
+        )
+        .then(() => {
+          // start transcribe ;
+          transcriber.startTranscribe();
+        })
+        .finally(() => {
+          // close dialog
+          setOpen(false);
+        });
     }
   };
 
@@ -196,17 +223,10 @@ const SelectCaptureTargetDialog = (props: {
       .invoke(IPCInvokeKeys.ENUM_MEDIA_CAPTURE_TARGETS)
       .then((res: MediaCaptureTarget[]) => {
         if (res.length > 0) {
-          console.log("ENUM_MEDIA_CAPTURE_TARGETS", res);
           setCaptureTargets(res);
         }
       });
   }, [open]);
-
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("close");
-    setOpen(false);
-  };
 
   return (
     selectedCaptureTarget && (
@@ -224,7 +244,7 @@ const SelectCaptureTargetDialog = (props: {
                 <Select
                   value={encodeCaptureTargetValue(selectedCaptureTarget)}
                   label=""
-                  onChange={handleChange}
+                  onChange={handleCaptureTargetSelected}
                 >
                   {captureTargets.map((config: MediaCaptureTarget, index) => {
                     return (
@@ -239,10 +259,11 @@ const SelectCaptureTargetDialog = (props: {
                 </Select>
               </div>
               <Button
+                className="mt-2 text-white border-emerald-600 bg-emerald-600 hover:bg-emerald-600/75"
                 variant="outlined"
                 onClick={handleStartClick}
-                className="mt-2"
               >
+                <PhoneEnabled className="mr-2" />
                 start
               </Button>
             </FormControl>
