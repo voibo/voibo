@@ -186,7 +186,7 @@ export class MediaCaptureManager {
       windowId: undefined,
       audioChannels: 1, // mono
       audioSampleRate: 16000, // 16kHz
-      frameRate: 0.33, // 0.33 frame per second
+      frameRate: 0.2, // 1 frame per 5 second
       quality: MediaCaptureQuality.High,
       isElectron: true,
     };

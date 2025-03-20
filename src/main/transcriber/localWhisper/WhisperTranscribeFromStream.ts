@@ -10,7 +10,6 @@ import {
 } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { MediaCaptureManager } from "../MediaCaptureManager.js";
-import { MediaCaptureTargetType } from "@voibo/desktop-media-capture";
 
 export type WhisperTranscribeFromStreamParams = {
   webContents: Electron.WebContents;
@@ -86,7 +85,7 @@ export class WhisperTranscribeFromStream {
     currentEndMsec: number
   ) {
     console.log(
-      "_transcribed",
+      "transcribed",
       currentEndMsec,
       timestamp,
       lengthMsec,
@@ -142,7 +141,7 @@ export class WhisperTranscribeFromStream {
     });
 
     this.pythonProcess.stderr.on("data", (data: Buffer) => {
-      console.error("Python stderr:", data.toString());
+      console.error("Python:", data.toString());
     });
 
     this.pythonProcess.on("close", (code) => {
