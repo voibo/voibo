@@ -5,9 +5,58 @@ import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { Tooltip } from "@mui/material";
 import { secondsToHMS } from "../../../util.js";
 
-// スクリーンキャプチャのサムネイルを表示するコンポーネント
-
+// 単一のスクリーンキャプチャサムネイルを表示するコンポーネント
 export const ScreenCaptureThumbnail = ({
+  capturedScreen,
+  startTimestamp,
+  className = "w-12 h-auto",
+}: {
+  capturedScreen: { timestamp: number; filePath: string };
+  startTimestamp: number;
+  className?: string;
+}) => {
+  // サムネイルのクリックで該当のスクリーンキャプチャを表示
+  const { detailViewDialog, renderDetailViewDialog, handleClose } =
+    useDetailViewDialog();
+
+  return (
+    <>
+      <div className={className}>
+        <Tooltip
+          title={secondsToHMS(
+            (capturedScreen.timestamp - startTimestamp) / 1000
+          )}
+        >
+          <img
+            src={`file://${capturedScreen.filePath}`}
+            alt="Screen capture"
+            className="w-full object-contain border border-gray-300 rounded"
+            onClick={() => {
+              detailViewDialog({
+                content: (
+                  <img
+                    src={`file://${capturedScreen.filePath}`}
+                    alt="Screen capture"
+                    className="w-full object-contain"
+                  />
+                ),
+                onClose: handleClose,
+                dialogConf: {
+                  fullWidth: true,
+                  maxWidth: "lg",
+                },
+              });
+            }}
+          />
+        </Tooltip>
+      </div>
+      {renderDetailViewDialog()}
+    </>
+  );
+};
+
+// スクリーンキャプチャのサムネイルリストを表示するコンポーネント
+export const ScreenCaptureThumbnailList = ({
   timestampSec,
   durationMSec,
 }: {
@@ -42,42 +91,15 @@ export const ScreenCaptureThumbnail = ({
     );
   }
 
-  // サムネイルのクリックで該当のスクリーンキャプチャを表示
-  const { detailViewDialog, renderDetailViewDialog, handleClose } =
-    useDetailViewDialog();
-
   return (
     <div className="flex flex-col gap-1 mr-4">
-      {capturedScreens.map((frame, index) => (
-        <div className="w-12 h-auto" key={index}>
-          <Tooltip
-            title={secondsToHMS((frame.timestamp - startTimestamp) / 1000)}
-          >
-            <img
-              src={`file://${frame.filePath}`}
-              alt="Screen capture"
-              className="w-full object-contain border border-gray-300 rounded"
-              onClick={() => {
-                detailViewDialog({
-                  content: (
-                    <img
-                      src={`file://${frame.filePath}`}
-                      alt="Screen capture"
-                      className="w-full object-contain"
-                    />
-                  ),
-                  onClose: handleClose,
-                  dialogConf: {
-                    fullWidth: true,
-                    maxWidth: "lg",
-                  },
-                });
-              }}
-            />
-          </Tooltip>
-        </div>
+      {capturedScreens.map((screen, index) => (
+        <ScreenCaptureThumbnail
+          key={index}
+          capturedScreen={screen}
+          startTimestamp={startTimestamp}
+        />
       ))}
-      {renderDetailViewDialog()}
     </div>
   );
 };

@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { memo, useEffect, useState } from "react";
-import { TextField } from "@mui/material";
 import { Handle, Node, NodeProps, Position } from "@xyflow/react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import useClickHandler from "../../component/common/useClickHandler.jsx";
-import { Content } from "../../../../common/content/content.js";
-import { useMinutesContentStore } from "../../store/useContentStore.jsx";
-import { useVBStore } from "../../store/useVBStore.jsx";
-import { ContentNodeBaseParam, NodeBase } from "./NodeBase.jsx";
+import useClickHandler from "../../../component/common/useClickHandler.jsx";
+import { Content } from "../../../../../common/content/content.jsx";
+import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
+import { useVBStore } from "../../../store/useVBStore.jsx";
+import { ContentNodeBaseParam, NodeBase } from "../NodeBase.jsx";
+import { TextContentEditView, TextContentView } from "./TextContent.jsx";
+import { CapturedImageContentView } from "./CapturedImageContent.jsx";
 
 export function isContentNode(node: Node): node is ContentNode {
   return node.type === "content";
@@ -56,7 +55,7 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
     <>
       <NodeBase nodeProps={props}>
         <div
-          className={"p-4 rounded bg-white text-zinc-700"}
+          className={"p-0 rounded bg-white text-zinc-700"}
           onClick={clickHandler}
         >
           {editMode ? (
@@ -65,7 +64,10 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
               minutesStartTimestamp={startTimestamp}
             />
           ) : (
-            <ContentVisibleView content={content} />
+            <ContentVisibleView
+              content={content}
+              minutesStartTimestamp={startTimestamp}
+            />
           )}
         </div>
       </NodeBase>
@@ -108,48 +110,28 @@ const ContentEditView = (props: {
   );
 };
 
-const TextContentEditView = (props: {
-  minutesStartTimestamp: number;
+const ContentVisibleView = (props: {
   content: Content;
+  minutesStartTimestamp: number;
 }) => {
-  const { minutesStartTimestamp, content } = props;
-  // Content の編集
-  const [stateTempContent, setTempContent] = useState(content.content);
-
-  const handleContentChange = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
-  ) => {
-    useMinutesContentStore(minutesStartTimestamp)
-      .getState()
-      .setContent({
-        ...content,
-        content: stateTempContent,
-      });
-  };
-
-  return (
-    <div className="p-0 grid grid-cols-1 space-y-4">
-      <TextField
-        fullWidth
-        variant="outlined"
-        multiline
-        minRows={3}
-        size="small"
-        value={stateTempContent}
-        onChange={(event) => setTempContent(event.target.value)}
-        onBlur={handleContentChange}
-      ></TextField>
-    </div>
-  );
-};
-
-const ContentVisibleView = (props: { content: Content }) => {
-  const { content } = props;
-  return (
-    <Markdown remarkPlugins={[remarkGfm]} className={"markdown"}>
-      {content.content}
-    </Markdown>
-  );
+  const { content, minutesStartTimestamp } = props;
+  let contentView;
+  switch (content.type) {
+    case "text":
+      contentView = <TextContentView content={content} />;
+      break;
+    case "capturedImage":
+      contentView = (
+        <CapturedImageContentView
+          content={content}
+          minutesStartTimestamp={minutesStartTimestamp}
+        />
+      );
+      break;
+    default:
+      contentView = <></>;
+  }
+  return contentView;
 };
 
 export default memo(ContentNode, (prevProps, nextProps) => {

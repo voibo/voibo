@@ -36,7 +36,7 @@ import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
 } from "../../flowComponent/node/AssistantMessageNode.jsx";
-import { ContentNode } from "../../flowComponent/node/ContentNode.jsx";
+import { ContentNode } from "../../flowComponent/node/content/ContentNode.jsx";
 import { DiscussionNode } from "../../flowComponent/node/DisscussionNode.jsx";
 import { TopicHeaderNode } from "../../flowComponent/node/TopicHeaderNode.jsx";
 import {

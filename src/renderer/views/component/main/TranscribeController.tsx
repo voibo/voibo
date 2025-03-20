@@ -183,7 +183,7 @@ const SelectCaptureTargetDialog = (props: {
 
   // close dialog
   const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.preventDefault();
     setOpen(false);
   };
 
@@ -195,7 +195,7 @@ const SelectCaptureTargetDialog = (props: {
   };
 
   const handleStartClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
-    e.stopPropagation();
+    e.preventDefault();
     if (selectedCaptureTarget) {
       console.log("start capture", selectedCaptureTarget);
 

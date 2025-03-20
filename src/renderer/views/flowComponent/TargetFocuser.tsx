@@ -37,7 +37,7 @@ import { isTopicNode } from "./node/TopicNode.jsx";
 import { isAssistantMessageNode } from "./node/AssistantMessageNode.jsx";
 import { isDiscussionNode } from "./node/DisscussionNode.jsx";
 import { isTopicHeaderNode } from "./node/TopicHeaderNode.jsx";
-import { isContentNode } from "./node/ContentNode.jsx";
+import { isContentNode } from "./node/content/ContentNode.jsx";
 
 //export const StageTransitionOption = { duration: 100 }; // duration を入れると、then が効かなくなるので、使い方に注意
 

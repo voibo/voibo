@@ -13,14 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {
-  Fragment,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Bookmark } from "@mui/icons-material";
 import { Avatar, Badge } from "@mui/material";
 import { DiscussionSegment } from "../../../../common/discussion.jsx";
@@ -28,7 +21,7 @@ import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processDiscussionAction } from "../../action/DiscussionAction.js";
-import { ScreenCaptureThumbnail } from "./ScreenCaptureThumbnail.jsx";
+import { ScreenCaptureThumbnailList } from "./ScreenCaptureThumbnail.jsx";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
@@ -114,7 +107,7 @@ export const useDiscussionHistory = (
                         key={`${index}_${xIndex}`}
                         className="w-full flex flex-row"
                       >
-                        <ScreenCaptureThumbnail
+                        <ScreenCaptureThumbnailList
                           timestampSec={Number(text.timestamp)}
                           durationMSec={Number(text.length)}
                         />

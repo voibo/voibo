@@ -123,7 +123,7 @@ export class WhisperTranscribeFromStream {
       const lines = data.toString().split("\n");
       for (const line of lines) {
         if (line.trim()) {
-          console.log("Python output:", line);
+          //console.log("Python stdout:", line);
           try {
             const result = JSON.parse(line);
             const currentEndMsec = Number(result.end || 0) * 1_000;
@@ -142,7 +142,7 @@ export class WhisperTranscribeFromStream {
     });
 
     this.pythonProcess.stderr.on("data", (data: Buffer) => {
-      console.error("Python error:", data.toString());
+      console.error("Python stderr:", data.toString());
     });
 
     this.pythonProcess.on("close", (code) => {

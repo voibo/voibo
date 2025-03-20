@@ -27,7 +27,7 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
-import { Content, getDefaultContent } from "../../../common/content/content.js";
+import { Content, getBaseContent } from "../../../common/content/content.js";
 import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
   useVBReactflowStore,
@@ -38,7 +38,7 @@ import { useVBStore } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";
-import ContentNode from "./node/ContentNode.jsx";
+import ContentNode from "./node/content/ContentNode.jsx";
 import DiscussionNode from "./node/DisscussionNode.jsx";
 import TopicHeaderNode from "./node/TopicHeaderNode.jsx";
 import TopicNode from "./node/TopicNode.jsx";
@@ -46,6 +46,8 @@ import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
 import { HeaderMainComponent } from "../component/main/HeaderComponent.jsx";
+import { createTextContent } from "./node/content/TextContent.js";
+import { processContentAction } from "../action/ContentAction.js";
 
 const ZOOM_MIN = 0.001;
 
@@ -110,16 +112,18 @@ const VANodeStageCore = (props: {}) => {
       if (!type) {
         return;
       }
-      const position = reactFlow.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
 
-      const newContext: Content = getDefaultContent();
-      newContext.position = position;
-      newContext.width = 200;
-      newContext.content = "Dropped";
-      useMinutesContentStore(startTimestamp).getState().setContent(newContext);
+      processContentAction({
+        type: "addTextContent",
+        payload: {
+          position: reactFlow.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          }),
+          content: "Dropped",
+          width: 200,
+        },
+      });
     },
     [type, startTimestamp]
   );

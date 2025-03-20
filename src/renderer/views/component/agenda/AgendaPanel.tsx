@@ -16,7 +16,7 @@ limitations under the License.
 import { useEffect, useState } from "react";
 import { Add, ExpandLess, ExpandMore, ViewAgenda } from "@mui/icons-material";
 import { Button } from "@mui/material";
-import { getDefaultContent } from "../../../../common/content/content.js";
+import { getBaseContent } from "../../../../common/content/content.js";
 import { useDetailViewDialog } from "../common/useDetailViewDialog.jsx";
 import { AgendaEditView } from "./AgendaEditView.jsx";
 import { AgendaReadableView } from "./AgendaReadableView.jsx";
@@ -47,7 +47,7 @@ export const AgendaPanel = () => {
   });
 
   const handleAdd = () => {
-    const agenda = getDefaultContent();
+    const agenda = getBaseContent();
     setAgenda({
       ...agenda,
       type: "agenda",
