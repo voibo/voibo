@@ -267,7 +267,6 @@ const ScreenCaptureTimelineDialog = memo(
   }) => {
     const { images, startTimestamp, topic, handleClose } = props;
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const contentAction = processContentAction;
     // 選択状態を管理する配列
     const [selectedImages, setSelectedImages] = useState<boolean[]>(
       Array(images.length).fill(false)
@@ -283,7 +282,7 @@ const ScreenCaptureTimelineDialog = memo(
       const imagesToAdd = images.filter((_, index) => selectedImages[index]);
       if (imagesToAdd.length === 0) return;
 
-      contentAction({
+      processContentAction({
         type: "addCapturedImageContent",
         payload: {
           topicId: topic.id,

@@ -53,6 +53,13 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
 
   return content ? (
     <>
+      <Handle
+        id={`left-${props.id}`}
+        type="target"
+        position={Position.Left}
+        className="invisible"
+        isConnectable={false}
+      />
       <NodeBase nodeProps={props}>
         <div
           className={"p-0 rounded bg-white text-zinc-700"}
