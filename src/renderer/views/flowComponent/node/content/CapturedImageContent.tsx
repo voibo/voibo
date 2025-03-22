@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { TextField } from "@mui/material";
+import { useState, useCallback, useEffect } from "react";
+import { NodeResizer } from "@xyflow/react";
 import {
   Content,
   getBaseContent,
 } from "../../../../../common/content/content.js";
-import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
-import { ScreenCaptureThumbnail } from "../../../component/discussion/ScreenCaptureThumbnail.jsx";
 import { ScreenCapture } from "../../../../../common/content/screencapture.js";
+import { ScreenCaptureThumbnail } from "../../../component/screencapture/ScreenCaptureThumbnail.jsx";
+import { useVBStore } from "../../../store/useVBStore.jsx";
+import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
 
 export type CapturedImageContentParam = Partial<Content> & {
   frame: ScreenCapture;
@@ -45,17 +46,25 @@ export const createCapturedImageContent = (
 export const CapturedImageContentView = (props: {
   content: Content;
   minutesStartTimestamp: number;
+  openDialog: boolean;
 }) => {
-  const { content, minutesStartTimestamp } = props;
+  const { content, minutesStartTimestamp, openDialog } = props;
   // restore content from JSON of ScreenCapture
   try {
     let screenCapture: ScreenCapture = JSON.parse(content.content);
     return (
-      <ScreenCaptureThumbnail
-        capturedScreen={screenCapture}
-        startTimestamp={minutesStartTimestamp}
-        className="w-{200} h-auto p-0 hover:cursor-pointer"
-      />
+      <div
+        style={{
+          width: content.width ? `${content.width}px` : "300px",
+        }}
+      >
+        <ScreenCaptureThumbnail
+          capturedScreen={screenCapture}
+          startTimestamp={minutesStartTimestamp}
+          className="w-full h-auto p-0"
+          openDialog={openDialog}
+        />
+      </div>
     );
   } catch (e) {
     console.error("CapturedImageContentView: invalid content", content);
@@ -64,36 +73,24 @@ export const CapturedImageContentView = (props: {
 };
 
 export const CapturedImageContentEditView = (props: {
-  minutesStartTimestamp: number;
   content: Content;
+  minutesStartTimestamp: number;
 }) => {
-  const { minutesStartTimestamp, content } = props;
-  // Content の編集
-  const [stateTempContent, setTempContent] = useState(content.content);
+  const { content, minutesStartTimestamp } = props;
 
-  const handleContentChange = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
-  ) => {
-    useMinutesContentStore(minutesStartTimestamp)
-      .getState()
-      .setContent({
-        ...content,
-        content: stateTempContent,
-      });
-  };
-
-  return (
-    <div className="p-0 grid grid-cols-1 space-y-4">
-      <TextField
-        fullWidth
-        variant="outlined"
-        multiline
-        minRows={3}
-        size="small"
-        value={stateTempContent}
-        onChange={(event) => setTempContent(event.target.value)}
-        onBlur={handleContentChange}
-      ></TextField>
-    </div>
-  );
+  // ScreenCaptureオブジェクトの復元
+  try {
+    let screenCapture: ScreenCapture = JSON.parse(content.content);
+    return (
+      <ScreenCaptureThumbnail
+        capturedScreen={screenCapture}
+        startTimestamp={minutesStartTimestamp}
+        className="w-full h-auto p-0"
+        openDialog={false}
+      />
+    );
+  } catch (e) {
+    console.error("CapturedImageContentEditView: invalid content", content);
+    return <></>;
+  }
 };

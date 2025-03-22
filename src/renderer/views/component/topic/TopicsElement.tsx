@@ -17,7 +17,6 @@ import {
   AccessTime,
   CalendarMonthOutlined,
   Collections,
-  Delete,
   MoreHoriz,
   Person,
   Replay,
@@ -36,12 +35,11 @@ import { useVBStore } from "../../store/useVBStore.jsx";
 import { TopicAIConfigDialog } from "./TopicAIConfigDialog.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processTopicAction } from "../../action/TopicAction.js";
-import { ScreenCaptureThumbnail } from "../discussion/ScreenCaptureThumbnail.jsx";
+import { ScreenCaptureThumbnail } from "../screencapture/ScreenCaptureThumbnail.jsx";
 import { ScreenCapture } from "../../../../common/content/screencapture.js";
 
-import { Add, CheckBox, CheckBoxOutlineBlank } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
 import { Checkbox } from "@mui/material";
-import { createCapturedImageContent } from "../../flowComponent/node/content/CapturedImageContent.jsx";
 import { processContentAction } from "../../action/ContentAction.js";
 
 export const TopicsElement = (props: {
@@ -180,12 +178,8 @@ const ScreenCaptureTimeline = memo(
     let lastImage = <></>;
 
     if (images.length > 0) {
-      // ミドルイメージをクリック可能に変更 - レンダリングのみ、ダイアログ作成は行わない
       middleImage = (
-        <div
-          className="flex items-center justify-center text-xs text-black/50 cursor-pointer"
-          onClick={onShowTimeline}
-        >
+        <div className="flex items-center justify-center text-xs text-black/50 cursor-pointer">
           <div className="flex flex-col items-center">
             <Collections className="text-2xl text-black/30" />
             <div className="text-xs mt-1">{images.length}枚</div>
@@ -228,7 +222,7 @@ const ScreenCaptureTimeline = memo(
     );
 
     return (
-      <div className="mr-8 flex flex-col h-full">
+      <div className="mr-8 flex flex-col h-full" onClick={onShowTimeline}>
         <div className="flex flex-col items-center text-xs text-black/50">
           {clock(topic.seedData?.startTimestamp ?? 0)}
           <div className="border-l border-black/50 h-2"></div>

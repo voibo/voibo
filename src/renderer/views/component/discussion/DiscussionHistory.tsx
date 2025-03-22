@@ -21,7 +21,7 @@ import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processDiscussionAction } from "../../action/DiscussionAction.js";
-import { ScreenCaptureThumbnailList } from "./ScreenCaptureThumbnail.jsx";
+import { ScreenCaptureThumbnailList } from "../screencapture/ScreenCaptureThumbnail.jsx";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }

@@ -11,10 +11,12 @@ export const ScreenCaptureThumbnail = memo(
     capturedScreen,
     startTimestamp,
     className = "w-12 h-auto",
+    openDialog = false,
   }: {
     capturedScreen: { timestamp: number; filePath: string };
     startTimestamp: number;
     className?: string;
+    openDialog?: boolean;
   }) => {
     // サムネイルのクリックで該当のスクリーンキャプチャを表示
     const { detailViewDialog, renderDetailViewDialog, handleClose } =
@@ -34,15 +36,18 @@ export const ScreenCaptureThumbnail = memo(
 
     // クリックハンドラをメモ化
     const handleClick = useCallback(() => {
-      detailViewDialog({
-        content: dialogContent,
-        onClose: handleClose,
-        dialogConf: {
-          fullWidth: true,
-          maxWidth: "lg",
-        },
-      });
-    }, [dialogContent, detailViewDialog, handleClose]);
+      // openDialogがtrueの場合のみダイアログを開く
+      if (openDialog) {
+        detailViewDialog({
+          content: dialogContent,
+          onClose: handleClose,
+          dialogConf: {
+            fullWidth: true,
+            maxWidth: "lg",
+          },
+        });
+      }
+    }, [dialogContent, detailViewDialog, handleClose, openDialog]);
 
     // 時間表示をメモ化
     const timeDisplay = useMemo(
@@ -57,12 +62,17 @@ export const ScreenCaptureThumbnail = memo(
             <img
               src={`file://${capturedScreen.filePath}`}
               alt="Screen capture"
-              className="w-full object-contain border border-gray-300 rounded"
+              className={`w-full object-contain border border-gray-300 rounded ${
+                openDialog ? "cursor-pointer" : ""
+              }`}
               onClick={handleClick}
+              // openDialogがfalseの場合はポインタイベントを無効化
+              style={openDialog ? {} : { pointerEvents: "none" }}
             />
           </Tooltip>
         </div>
-        {renderDetailViewDialog()}
+        {/* openDialogがtrueの場合のみダイアログレンダリング関数を呼び出す */}
+        {openDialog && renderDetailViewDialog()}
       </>
     );
   }

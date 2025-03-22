@@ -13,15 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { memo, useEffect, useState } from "react";
-import { Handle, Node, NodeProps, Position } from "@xyflow/react";
+import { memo, useEffect, useState, useCallback } from "react";
+import { Handle, Node, NodeProps, NodeResizer, Position } from "@xyflow/react";
 import useClickHandler from "../../../component/common/useClickHandler.jsx";
 import { Content } from "../../../../../common/content/content.jsx";
 import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
 import { useVBStore } from "../../../store/useVBStore.jsx";
 import { ContentNodeBaseParam, NodeBase } from "../NodeBase.jsx";
 import { TextContentEditView, TextContentView } from "./TextContent.jsx";
-import { CapturedImageContentView } from "./CapturedImageContent.jsx";
+import {
+  CapturedImageContentEditView,
+  CapturedImageContentView,
+} from "./CapturedImageContent.jsx";
+import { useVBReactflowStore } from "../../../store/flow/useVBReactflowStore.jsx";
 
 export function isContentNode(node: Node): node is ContentNode {
   return node.type === "content";
@@ -51,8 +55,50 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
     }
   }, [props.selected]);
 
+  // resize handler
+  const handleResize = useCallback(
+    (_: any, params: any) => {
+      if (!content || !startTimestamp) return;
+
+      useMinutesContentStore(startTimestamp)
+        .getState()
+        .setContent({
+          ...content,
+          width: Math.max(getMinWidth(), params.width),
+        });
+    },
+    [content, props.id, startTimestamp]
+  );
+
+  const getMinWidth = () => {
+    if (!content) return 100;
+    return content.type === "capturedImage" ? 150 : 100;
+  };
+
+  const getMinHeight = () => {
+    if (!content) return 30;
+    return content.type === "capturedImage" ? 100 : 30;
+  };
+
   return content ? (
     <>
+      <NodeResizer
+        isVisible={editMode}
+        minWidth={getMinWidth()}
+        minHeight={getMinHeight()}
+        onResize={handleResize}
+        handleStyle={{
+          width: "8px",
+          height: "8px",
+          backgroundColor: "#3b82f6",
+          borderRadius: "50%",
+        }}
+        lineStyle={{
+          borderWidth: "1px",
+          borderStyle: "dashed",
+          borderColor: "#3b82f6",
+        }}
+      />
       <Handle
         id={`left-${props.id}`}
         type="target"
@@ -91,32 +137,6 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
   );
 };
 
-const ContentEditView = (props: {
-  content: Content;
-  minutesStartTimestamp: number;
-}) => {
-  const { minutesStartTimestamp } = props;
-
-  // Content の編集
-  let contentEditView;
-  switch (props.content.type) {
-    case "text":
-      contentEditView = (
-        <TextContentEditView
-          minutesStartTimestamp={minutesStartTimestamp}
-          content={props.content}
-        />
-      );
-      break;
-    default:
-      contentEditView = <></>;
-  }
-
-  return (
-    <div className="pt-2 grid grid-cols-1 space-y-4">{contentEditView}</div>
-  );
-};
-
 const ContentVisibleView = (props: {
   content: Content;
   minutesStartTimestamp: number;
@@ -132,6 +152,7 @@ const ContentVisibleView = (props: {
         <CapturedImageContentView
           content={content}
           minutesStartTimestamp={minutesStartTimestamp}
+          openDialog={false}
         />
       );
       break;
@@ -139,6 +160,37 @@ const ContentVisibleView = (props: {
       contentView = <></>;
   }
   return contentView;
+};
+
+const ContentEditView = (props: {
+  content: Content;
+  minutesStartTimestamp: number;
+}) => {
+  const { minutesStartTimestamp, content } = props;
+
+  let contentEditView;
+  switch (props.content.type) {
+    case "text":
+      contentEditView = (
+        <TextContentEditView
+          minutesStartTimestamp={minutesStartTimestamp}
+          content={props.content}
+        />
+      );
+      break;
+    case "capturedImage":
+      contentEditView = (
+        <CapturedImageContentEditView
+          content={content}
+          minutesStartTimestamp={minutesStartTimestamp}
+        />
+      );
+      break;
+    default:
+      contentEditView = <></>;
+  }
+
+  return <div className="grid grid-cols-1">{contentEditView}</div>;
 };
 
 export default memo(ContentNode, (prevProps, nextProps) => {
