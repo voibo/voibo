@@ -14,7 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { memo, useEffect, useState, useCallback } from "react";
-import { Handle, Node, NodeProps, NodeResizer, Position } from "@xyflow/react";
+import {
+  Handle,
+  Node,
+  NodeProps,
+  NodeResizer,
+  Position,
+  useReactFlow,
+} from "@xyflow/react";
 import useClickHandler from "../../../component/common/useClickHandler.jsx";
 import { Content } from "../../../../../common/content/content.jsx";
 import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
@@ -40,11 +47,13 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
   const content = useMinutesContentStore(startTimestamp)((state) =>
     state.getContent(props.data.id)
   );
+  const reactFlow = useVBReactflowStore.getState();
 
   // process
   const [editMode, setEditMode] = useState(false);
   const clickHandler = useClickHandler({
     onDoubleClick: () => {
+      reactFlow.deselectAll();
       setEditMode(true);
     },
   });
@@ -88,15 +97,14 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
         minHeight={getMinHeight()}
         onResize={handleResize}
         handleStyle={{
-          width: "8px",
-          height: "8px",
-          backgroundColor: "#3b82f6",
+          width: "15px",
+          height: "15px",
+          backgroundColor: "#ff0071",
           borderRadius: "50%",
         }}
         lineStyle={{
-          borderWidth: "1px",
-          borderStyle: "dashed",
-          borderColor: "#3b82f6",
+          borderWidth: "3px",
+          borderColor: "#ff0071",
         }}
       />
       <Handle
