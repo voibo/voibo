@@ -19,7 +19,10 @@ import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import { Content } from "../../../common/content/content.js";
 import { createTextContent } from "../flowComponent/node/content/TextContent.jsx";
 import { ScreenCapture } from "../../../common/content/screencapture.js";
-import { createCapturedImageContent } from "../flowComponent/node/content/CapturedImageContent.jsx";
+import {
+  CapturedImageContentParam,
+  createCapturedImageContent,
+} from "../flowComponent/node/content/CapturedImageContent.jsx";
 import {
   getLayoutParam,
   useVBReactflowStore,
@@ -34,20 +37,19 @@ export type ContentAction =
   | ActionBase<
       "addCapturedImageContent",
       {
-        frame: ScreenCapture;
+        frames: ScreenCapture[];
         topicId?: string;
         position?: { x: number; y: number };
         width?: number;
       }
     >;
 
-const DEFAULT_WIDTH = 200;
-const DEFAULT_POSITION = { x: 0, y: 0 };
-
 export const processContentAction = async (action: ContentAction) => {
   if (!useVBStore.getState().allReady || useVBStore.getState().isNoMinutes())
     return;
   const startTimestamp = useVBStore.getState().startTimestamp;
+
+  const layout = getLayoutParam();
 
   let newContext: Content;
   switch (action.type) {
@@ -59,39 +61,47 @@ export const processContentAction = async (action: ContentAction) => {
 
     case "addTextContent":
       newContext = createTextContent({
-        position: action.payload.position ?? DEFAULT_POSITION,
+        position: action.payload.position ?? layout.content.offset,
         content: action.payload.content ?? "",
-        width: action.payload.width ?? DEFAULT_WIDTH,
+        width: action.payload.width ?? layout.content.width,
       });
       useMinutesContentStore(startTimestamp).getState().setContent(newContext);
       break;
+
     case "addCapturedImageContent":
-      const layout = getLayoutParam();
-      let capturedImageContentPosition =
-        action.payload.position ?? layout.capturedImage.offset;
-      let capturedImageContentWidth =
-        action.payload.width ?? layout.capturedImage.width;
+      const configBase: Partial<CapturedImageContentParam> = {
+        position: action.payload.position ?? layout.content.offset,
+        width: action.payload.width ?? layout.content.width,
+      };
       if (action.payload.topicId) {
         const topicNode = useVBReactflowStore
           .getState()
           .topicNodes.find((node) => node.id === action.payload.topicId);
         if (topicNode) {
-          capturedImageContentPosition = {
+          configBase.position = {
             x:
               topicNode.position.x +
-              (topicNode.width ?? DEFAULT_WIDTH) +
-              layout.capturedImage.offset.x,
+              (topicNode.width ?? layout.content.width) +
+              layout.content.offset.x,
             y: topicNode.position.y,
           };
+          configBase.connectedMessageIds = [topicNode.id];
         }
-        console.log("topicNode", topicNode, capturedImageContentWidth);
+        console.log("topicNode", topicNode, configBase);
       }
-      newContext = createCapturedImageContent({
-        frame: action.payload.frame,
-        position: capturedImageContentPosition,
-        width: capturedImageContentWidth,
+      action.payload.frames.forEach((frame, index) => {
+        const config = { ...configBase, frame: frame };
+        config.position = {
+          x:
+            config.position!.x +
+            index * (layout.content.width + layout.content.offset.x),
+          y: config.position!.y + index * layout.content.offset.y,
+        };
+        newContext = createCapturedImageContent(config);
+        useMinutesContentStore(startTimestamp)
+          .getState()
+          .setContent(newContext);
       });
-      useMinutesContentStore(startTimestamp).getState().setContent(newContext);
       break;
     default:
       console.warn("processContentAction: unexpected default", action);

@@ -8,8 +8,11 @@ import { useMinutesContentStore } from "../../../store/useContentStore.jsx";
 import { ScreenCaptureThumbnail } from "../../../component/discussion/ScreenCaptureThumbnail.jsx";
 import { ScreenCapture } from "../../../../../common/content/screencapture.js";
 
+export type CapturedImageContentParam = Partial<Content> & {
+  frame: ScreenCapture;
+};
 export const createCapturedImageContent = (
-  props?: Partial<Content> & { frame: ScreenCapture }
+  props?: CapturedImageContentParam
 ): Content => {
   const content = getBaseContent();
   content.type = "capturedImage";
@@ -19,6 +22,15 @@ export const createCapturedImageContent = (
     }
     if (props.width) {
       content.width = props.width;
+    }
+    if (props.connectedMessageIds) {
+      content.connectedMessageIds = props.connectedMessageIds;
+    }
+    if (props.agendaIds) {
+      content.agendaIds = props.agendaIds;
+    }
+    if (props.groupIds) {
+      content.groupIds = props.groupIds;
     }
     //  construct content  JSON of ScreenCapture
     if (props.frame) {

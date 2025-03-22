@@ -282,14 +282,13 @@ const ScreenCaptureTimelineDialog = memo(
     const addToStage = useCallback(() => {
       const imagesToAdd = images.filter((_, index) => selectedImages[index]);
       if (imagesToAdd.length === 0) return;
-      imagesToAdd.forEach((image) => {
-        contentAction({
-          type: "addCapturedImageContent",
-          payload: {
-            topicId: topic.id,
-            frame: image,
-          },
-        });
+
+      contentAction({
+        type: "addCapturedImageContent",
+        payload: {
+          topicId: topic.id,
+          frames: imagesToAdd,
+        },
       });
 
       handleClose();
