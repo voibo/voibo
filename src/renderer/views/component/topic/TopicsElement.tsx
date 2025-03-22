@@ -39,6 +39,11 @@ import { processTopicAction } from "../../action/TopicAction.js";
 import { ScreenCaptureThumbnail } from "../discussion/ScreenCaptureThumbnail.jsx";
 import { ScreenCapture } from "../../../../common/content/screencapture.js";
 
+import { Add, CheckBox, CheckBoxOutlineBlank } from "@mui/icons-material";
+import { Checkbox } from "@mui/material";
+import { createCapturedImageContent } from "../../flowComponent/node/content/CapturedImageContent.jsx";
+import { processContentAction } from "../../action/ContentAction.js";
+
 export const TopicsElement = (props: {
   messageId: string;
   detailViewDialog: (props: DetailViewDialogState) => void;
@@ -262,6 +267,48 @@ const ScreenCaptureTimelineDialog = memo(
   }) => {
     const { images, startTimestamp, topic, handleClose } = props;
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const contentAction = processContentAction;
+    // 選択状態を管理する配列
+    const [selectedImages, setSelectedImages] = useState<boolean[]>(
+      Array(images.length).fill(false)
+    );
+
+    // 選択された画像の数
+    const selectedCount = useMemo(() => {
+      return selectedImages.filter(Boolean).length;
+    }, [selectedImages]);
+
+    // Stageに追加するためのヘルパー関数
+    const addToStage = useCallback(() => {
+      const imagesToAdd = images.filter((_, index) => selectedImages[index]);
+      if (imagesToAdd.length === 0) return;
+      imagesToAdd.forEach((image) => {
+        contentAction({
+          type: "addCapturedImageContent",
+          payload: {
+            topicId: topic.id,
+            frame: image,
+          },
+        });
+      });
+
+      handleClose();
+    }, [selectedImages, images, handleClose]);
+
+    // チェックボックスの状態変更ハンドラ
+    const handleCheckboxChange = (index: number) => {
+      setSelectedImages((prev) => {
+        const newState = [...prev];
+        newState[index] = !newState[index];
+        return newState;
+      });
+    };
+
+    // すべて選択/選択解除する関数
+    const toggleSelectAll = () => {
+      const allSelected = selectedImages.every(Boolean);
+      setSelectedImages(Array(images.length).fill(!allSelected));
+    };
 
     // 前後の画像に移動するための関数
     const goToPrevious = () => {
@@ -282,8 +329,22 @@ const ScreenCaptureTimelineDialog = memo(
       <div className="flex flex-col space-y-4 text-black/60 p-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">
-            {topic.title} - スクリーンキャプチャ ({images.length}枚)
+            {topic.title} - Screen Capture
           </h2>
+          <div className="flex items-center space-x-2">
+            <Button variant="outlined" onClick={toggleSelectAll}>
+              {selectedImages.every(Boolean) ? "Deselect all" : "Select all"}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={selectedCount === 0}
+              onClick={addToStage}
+              startIcon={<Add />}
+            >
+              Add on stage ({selectedCount})
+            </Button>
+          </div>
         </div>
 
         {/* メイン画像表示エリア */}
@@ -304,7 +365,7 @@ const ScreenCaptureTimelineDialog = memo(
             disabled={selectedIndex === 0}
             onClick={goToPrevious}
           >
-            前へ
+            Back
           </Button>
           <div className="text-center">
             <div className="text-lg">
@@ -319,30 +380,42 @@ const ScreenCaptureTimelineDialog = memo(
             disabled={selectedIndex === images.length - 1}
             onClick={goToNext}
           >
-            次へ
+            Next
           </Button>
         </div>
 
-        {/* サムネイルタイムライン */}
+        {/* サムネイルタイムライン - チェックボックス付き */}
         <div className="overflow-x-auto">
           <div className="flex space-x-2 py-2 min-w-min">
             {images.map((image, index) => (
               <div
                 key={image.timestamp}
                 className={`flex flex-col items-center ${
-                  index === selectedIndex
-                    ? "scale-110 border-2 border-blue-500"
-                    : ""
-                }`}
-                onClick={() => setSelectedIndex(index)}
+                  index === selectedIndex ? "scale-110" : ""
+                } ${
+                  selectedImages[index]
+                    ? "border-2 border-green-500"
+                    : "border border-gray-300"
+                } rounded p-1`}
               >
-                <img
-                  src={`file://${image.filePath}`}
-                  alt={`Thumbnail ${index + 1}`}
-                  className="w-24 h-auto object-cover cursor-pointer hover:opacity-80"
-                />
-                <div className="text-xs mt-1">
-                  {getRelativeTime(image.timestamp)}
+                <div className="w-full">
+                  <img
+                    src={`file://${image.filePath}`}
+                    alt={`Thumbnail ${index + 1}`}
+                    className="w-24 h-auto object-cover cursor-pointer hover:opacity-80"
+                    onClick={() => setSelectedIndex(index)}
+                  />
+                </div>
+                <div className="flex items-center mt-1 w-full">
+                  <Checkbox
+                    checked={selectedImages[index]}
+                    onChange={() => handleCheckboxChange(index)}
+                    size="small"
+                    className="p-0 mr-1"
+                  />
+                  <div className="text-xs truncate">
+                    {getRelativeTime(image.timestamp)}
+                  </div>
                 </div>
               </div>
             ))}

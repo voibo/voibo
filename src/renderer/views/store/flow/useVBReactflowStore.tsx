@@ -88,6 +88,13 @@ type LayoutParam = {
       y: number;
     };
   };
+  capturedImage: {
+    width: number;
+    offset: {
+      x: number;
+      y: number;
+    };
+  };
 };
 
 export const getLayoutParam = (): LayoutParam => {
@@ -106,6 +113,13 @@ export const getLayoutParam = (): LayoutParam => {
       },
     },
     assistant: {
+      width: 400,
+      offset: {
+        x: 100,
+        y: offsetY,
+      },
+    },
+    capturedImage: {
       width: 400,
       offset: {
         x: 100,

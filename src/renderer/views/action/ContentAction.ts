@@ -20,6 +20,10 @@ import { Content } from "../../../common/content/content.js";
 import { createTextContent } from "../flowComponent/node/content/TextContent.jsx";
 import { ScreenCapture } from "../../../common/content/screencapture.js";
 import { createCapturedImageContent } from "../flowComponent/node/content/CapturedImageContent.jsx";
+import {
+  getLayoutParam,
+  useVBReactflowStore,
+} from "../store/flow/useVBReactflowStore.jsx";
 
 export type ContentAction =
   | ActionBase<"removeContent", { contentId: string }>
@@ -31,6 +35,7 @@ export type ContentAction =
       "addCapturedImageContent",
       {
         frame: ScreenCapture;
+        topicId?: string;
         position?: { x: number; y: number };
         width?: number;
       }
@@ -43,6 +48,7 @@ export const processContentAction = async (action: ContentAction) => {
   if (!useVBStore.getState().allReady || useVBStore.getState().isNoMinutes())
     return;
   const startTimestamp = useVBStore.getState().startTimestamp;
+
   let newContext: Content;
   switch (action.type) {
     case "removeContent":
@@ -60,10 +66,30 @@ export const processContentAction = async (action: ContentAction) => {
       useMinutesContentStore(startTimestamp).getState().setContent(newContext);
       break;
     case "addCapturedImageContent":
+      const layout = getLayoutParam();
+      let capturedImageContentPosition =
+        action.payload.position ?? layout.capturedImage.offset;
+      let capturedImageContentWidth =
+        action.payload.width ?? layout.capturedImage.width;
+      if (action.payload.topicId) {
+        const topicNode = useVBReactflowStore
+          .getState()
+          .topicNodes.find((node) => node.id === action.payload.topicId);
+        if (topicNode) {
+          capturedImageContentPosition = {
+            x:
+              topicNode.position.x +
+              (topicNode.width ?? DEFAULT_WIDTH) +
+              layout.capturedImage.offset.x,
+            y: topicNode.position.y,
+          };
+        }
+        console.log("topicNode", topicNode, capturedImageContentWidth);
+      }
       newContext = createCapturedImageContent({
         frame: action.payload.frame,
-        position: action.payload.position ?? DEFAULT_POSITION,
-        width: action.payload.width ?? DEFAULT_WIDTH,
+        position: capturedImageContentPosition,
+        width: capturedImageContentWidth,
       });
       useMinutesContentStore(startTimestamp).getState().setContent(newContext);
       break;
