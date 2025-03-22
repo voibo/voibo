@@ -15,6 +15,7 @@ limitations under the License.
 */
 import { Handle, Node, NodeProps, Position } from "@xyflow/react";
 import { useDiscussionHistory } from "../../component/discussion/DiscussionHistory.jsx";
+import { memo } from "react";
 
 export function isDiscussionNode(node: Node): node is DiscussionNode {
   return node.type === "discussion";
@@ -24,7 +25,7 @@ export type DiscussionNodeParam = {};
 
 export type DiscussionNode = Node<DiscussionNodeParam, "discussion">;
 
-export default function DiscussionNode(props: NodeProps<DiscussionNode>) {
+const DiscussionNodeComponent = (props: NodeProps<DiscussionNode>) => {
   // FIXME
   // Zustand などで情報を管理しないと、結局のところ、このコンポーネントはリアルタイムには更新されない
   const [DiscussionHistory, scrollToBadge] = useDiscussionHistory();
@@ -47,4 +48,20 @@ export default function DiscussionNode(props: NodeProps<DiscussionNode>) {
       {DiscussionHistory}
     </div>
   );
-}
+};
+
+// メモ化したコンポーネントをエクスポート
+const DiscussionNode = memo(DiscussionNodeComponent, (prevProps, nextProps) => {
+  // 必要に応じてカスタムの比較ロジックを実装
+  // 同じIDを持つノードであれば再レンダリングしない
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.dragging === nextProps.dragging
+  );
+});
+
+// デバッグ用にdisplayNameを設定
+DiscussionNode.displayName = "DiscussionNode";
+
+export default DiscussionNode;

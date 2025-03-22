@@ -20,7 +20,7 @@ import {
   isBaseMessage,
 } from "@langchain/core/messages";
 import { z } from "zod";
-import { Content, getDefaultContent } from "./content.js";
+import { Content, getBaseContent } from "./content.js";
 
 // == Key of CustomField
 export const ATTACHED_MESSAGE_ID = "ATTACHED_MESSAGE_ID";
@@ -45,7 +45,7 @@ export interface Message extends Content {
 
 export function getDefaultMessage(): Message {
   return {
-    ...getDefaultContent(),
+    ...getBaseContent(),
     type: "message",
     speaker: "ai",
     isJSON: false,

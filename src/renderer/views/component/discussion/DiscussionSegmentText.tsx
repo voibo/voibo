@@ -157,7 +157,7 @@ export const DiscussionSegmentText = (props: {
       </div>
     </div>
   ) : (
-    <span {...others}>
+    <div {...others}>
       <Tooltip placement="top" title={`${currentStartAt} - ${currentEndAt}`}>
         <span>
           {splitWithTerminalSymbol(currentText).map((data, index) => {
@@ -189,7 +189,7 @@ export const DiscussionSegmentText = (props: {
           })}
         </span>
       </Tooltip>
-    </span>
+    </div>
   );
 };
 

@@ -10,7 +10,6 @@ import {
 } from "../mixingAudioDataStream.js";
 import { Segment } from "../../../common/discussion.js";
 import { MediaCaptureManager } from "../MediaCaptureManager.js";
-import { MediaCaptureTargetType } from "@voibo/desktop-media-capture";
 
 export type WhisperTranscribeFromStreamParams = {
   webContents: Electron.WebContents;
@@ -86,7 +85,7 @@ export class WhisperTranscribeFromStream {
     currentEndMsec: number
   ) {
     console.log(
-      "_transcribed",
+      "transcribed",
       currentEndMsec,
       timestamp,
       lengthMsec,
@@ -123,7 +122,7 @@ export class WhisperTranscribeFromStream {
       const lines = data.toString().split("\n");
       for (const line of lines) {
         if (line.trim()) {
-          console.log("Python output:", line);
+          //console.log("Python stdout:", line);
           try {
             const result = JSON.parse(line);
             const currentEndMsec = Number(result.end || 0) * 1_000;
@@ -142,7 +141,7 @@ export class WhisperTranscribeFromStream {
     });
 
     this.pythonProcess.stderr.on("data", (data: Buffer) => {
-      console.error("Python error:", data.toString());
+      console.error("Python:", data.toString());
     });
 
     this.pythonProcess.on("close", (code) => {
@@ -181,9 +180,7 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
   private _desktopAudioBuffer: number[] = new Array(0);
   private _capture: MediaCaptureManager;
   private _captureIteration = 0;
-  private _captureDisplayId = 1;
   private _debug = false;
-  private _currentTimestamp: number = 0;
 
   // current transcriber
   private _transcriber: WhisperTranscribeFromStream | null;
@@ -208,6 +205,7 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     this._params = params;
 
     this._capture = new MediaCaptureManager({
+      ipcMain: this._ipcMain,
       webContents: this._webContents,
       desktopAudioBuffer: this._desktopAudioBuffer,
       minutesFolderPath: this._getAudioFolderPath(),
@@ -225,23 +223,7 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     );
 
     // 初期化処理
-    let asyncInitialization = async () => {
-      // 画面キャプチャ対象のディスプレイ情報を取得
-      try {
-        const displays = await MediaCaptureManager.enumerateMediaCaptureTargets(
-          MediaCaptureTargetType.Screen
-        );
-        if (displays.length > 0) {
-          this._captureDisplayId = displays[0].displayId; // use the first display
-          console.log(`Using display ID: ${this._captureDisplayId}`);
-        }
-      } catch (error) {
-        console.error("Failed to enumerate media capture targets:", error);
-      }
-
-      this._initialize();
-    };
-    asyncInitialization();
+    this._initialize();
   }
 
   private _requestDesktopBufferCallback(webMicSampleCount: number) {
@@ -283,12 +265,10 @@ export class WhisperTranscribeFromStreamManager implements ITranscribeManager {
     this._ipcMain.on(IPCSenderKeys.START_TRANSCRIBE, (e, timestamp: number) => {
       console.log("[main] transcribe start", timestamp);
       try {
-        this._currentTimestamp = timestamp;
         this._desktopAudioBuffer.length = 0;
 
         this._capture.startCapture({
           currentTimestamp: timestamp,
-          displayId: this._captureDisplayId,
         });
 
         this._transcriber = new WhisperTranscribeFromStream({

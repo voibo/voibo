@@ -31,7 +31,7 @@ import { useMinutesGroupStore } from "../../store/useGroupStore.jsx";
 import { useVBReactflowStore } from "../../store/flow/useVBReactflowStore.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { AssistantMessageNode } from "./AssistantMessageNode.jsx";
-import { ContentNode } from "./ContentNode.jsx";
+import { ContentNode } from "./content/ContentNode.js";
 import { TopicNode } from "./TopicNode.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 

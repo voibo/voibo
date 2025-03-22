@@ -23,14 +23,16 @@ import { v4 as uuidv4 } from "uuid";
 export type ContentType =
   | "topic"
   | "message"
+  | "text"
   // reserved for future use
   | "agenda"
-  | "text"
   | "json"
-  | "image";
+  | "image"
+  | "capturedImage";
 
 export interface Content {
   id: string;
+
   type: ContentType;
   connectedMessageIds: string[];
   agendaIds: string[];
@@ -40,10 +42,11 @@ export interface Content {
   // node gui
   position: { x: number; y: number };
   width: number;
+  height?: number;
 }
 
-export function getDefaultContent(): Content {
-  return {
+export function getBaseContent(props?: Partial<Content>): Content {
+  const content: Content = {
     id: uuidv4(),
     type: "text",
     connectedMessageIds: [],
@@ -53,6 +56,32 @@ export function getDefaultContent(): Content {
     position: { x: 0, y: 0 },
     width: 0,
   };
+
+  // id, type以外のプロパティは、props で上書可能
+  // type は各派生の中で型ガードに使うので、props で上書きしない
+  if (props) {
+    if (props.connectedMessageIds) {
+      content.connectedMessageIds = props.connectedMessageIds;
+    }
+    if (props.agendaIds) {
+      content.agendaIds = props.agendaIds;
+    }
+    if (props.groupIds) {
+      content.groupIds = props.groupIds;
+    }
+
+    if (props.content) {
+      content.content = props.content;
+    }
+
+    if (props.position) {
+      content.position = props.position;
+    }
+    if (props.width) {
+      content.width = props.width;
+    }
+  }
+  return content;
 }
 
 export function isContent(obj: any): obj is Content {
@@ -74,6 +103,7 @@ export function isContent(obj: any): obj is Content {
     "text",
     "json",
     "image",
+    "capturedImage",
   ];
   if (!validContentTypes.includes(obj.type)) {
     return false;

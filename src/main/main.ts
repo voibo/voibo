@@ -27,6 +27,10 @@ import {
 import log from "electron-log/main.js";
 import * as os from "os";
 import * as process from "node:process";
+import {
+  installExtension,
+  REACT_DEVELOPER_TOOLS,
+} from "electron-devtools-installer";
 
 import path from "node:path";
 import { IPCInvokeKeys, IPCSenderKeys } from "../common/constants.js";
@@ -93,7 +97,22 @@ process.on("uncaughtException", (err) => {
 
 // ==== App ====
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (
+    process.env.NODE_ENV === "development" ||
+    process.env.DEBUG_PROD === "true"
+  ) {
+    try {
+      const name = await installExtension(REACT_DEVELOPER_TOOLS, {
+        forceDownload: true,
+        loadExtensionOptions: { allowFileAccess: true },
+      });
+      console.log(`Added Extension: ${name}`);
+    } catch (err) {
+      console.error("An error occurred installing React DevTools: ", err);
+    }
+  }
+
   // load the main store
   const mainStore = new MainStore({
     ipcMain,

@@ -8,7 +8,11 @@ import {
   MediaCaptureTargetType,
   MediaCaptureVideoFrame,
 } from "@voibo/desktop-media-capture";
-import { IPCReceiverKeys } from "../../common/constants.js";
+import {
+  IPCInvokeKeys,
+  IPCReceiverKeys,
+  IPCSenderKeys,
+} from "../../common/constants.js";
 import { ScreenCapture } from "../../common/content/screencapture.js";
 
 export class MediaCaptureManager {
@@ -21,6 +25,7 @@ export class MediaCaptureManager {
     return MediaCapture.enumerateMediaCaptureTargets(type);
   }
 
+  private _ipcMain: Electron.IpcMain;
   private _webContents: Electron.WebContents;
   private _capture: MediaCapture;
 
@@ -30,21 +35,29 @@ export class MediaCaptureManager {
   private _minutesFolderPath: string;
   private _imagePath: string;
 
+  private _capturingIsDisplay: boolean;
+  private _capturingID: number | null; // window ID or display ID
+
   constructor({
+    ipcMain,
     webContents,
     desktopAudioBuffer,
     minutesFolderPath,
     similarityThreshold,
   }: {
+    ipcMain: Electron.IpcMain;
     webContents: Electron.WebContents;
     desktopAudioBuffer: number[];
     minutesFolderPath: string;
     similarityThreshold?: number;
   }) {
+    this._ipcMain = ipcMain;
     this._webContents = webContents;
     this._desktopAudioBuffer = desktopAudioBuffer;
     this._minutesFolderPath = minutesFolderPath;
     this._imagePath = this._minutesFolderPath;
+    this._capturingID = null;
+    this._capturingIsDisplay = true;
 
     // initialize MediaCapture
     this._capture = new MediaCapture();
@@ -94,15 +107,45 @@ export class MediaCaptureManager {
         }
       }
     });
+
+    // screen capture target selected
+    this._ipcMain.handle(
+      IPCInvokeKeys.SCREEN_CAPTURE_TARGET_SELECTED,
+      async (e, isDisplay: boolean, selectedId: number): Promise<boolean> => {
+        this._capturingIsDisplay = isDisplay;
+        this._capturingID = selectedId;
+        return true;
+      }
+    );
+
+    // screen capture target list
+    ipcMain.handle(
+      IPCInvokeKeys.ENUM_MEDIA_CAPTURE_TARGETS,
+      async (): Promise<MediaCaptureTarget[]> => {
+        const result: MediaCaptureTarget[] = [];
+        result.push(
+          ...(await MediaCaptureManager.enumerateMediaCaptureTargets(
+            MediaCaptureTargetType.Screen
+          ))
+        );
+        result.push(
+          ...(
+            await MediaCaptureManager.enumerateMediaCaptureTargets(
+              MediaCaptureTargetType.Window
+            )
+          ).filter((target) => target.applicationName && target.title)
+        );
+        return result;
+      }
+    );
   }
 
-  public startCapture({
-    currentTimestamp,
-    displayId,
-  }: {
-    currentTimestamp: number;
-    displayId?: number;
-  }) {
+  public startCapture({ currentTimestamp }: { currentTimestamp: number }) {
+    if (this._capturingID === null) {
+      console.error("No capturing target selected");
+      return;
+    }
+
     // make folder for raw audio data
     const audioPath = path.join(
       this._minutesFolderPath,
@@ -139,13 +182,19 @@ export class MediaCaptureManager {
 
     // start
     const config: MediaCaptureConfig = {
-      displayId: displayId,
+      displayId: undefined,
+      windowId: undefined,
       audioChannels: 1, // mono
       audioSampleRate: 16000, // 16kHz
-      frameRate: 0.33, // 0.33 frame per second
+      frameRate: 0.2, // 1 frame per 5 second
       quality: MediaCaptureQuality.High,
       isElectron: true,
     };
+    if (this._capturingIsDisplay) {
+      config.displayId = this._capturingID;
+    } else {
+      config.windowId = this._capturingID;
+    }
     this._capture.startCapture(config);
   }
 

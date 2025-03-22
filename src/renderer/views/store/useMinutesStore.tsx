@@ -828,10 +828,10 @@ const useMinutesStoreCore = (minutesStartTimestamp: number) => {
 
 window.electron.on(
   IPCReceiverKeys.ON_SCREEN_CAPTURED,
-  (event: any, response: ScreenCapture) => {
+  (event: any, frame: ScreenCapture) => {
     const minutesStore = useMinutesStore(
       useVBStore.getState().startTimestamp
     ).getState();
-    minutesStore.addScreenCapture(response);
+    minutesStore.addScreenCapture(frame);
   }
 );

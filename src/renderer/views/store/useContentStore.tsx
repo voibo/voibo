@@ -27,6 +27,7 @@ import { createStore, del, get, set } from "idb-keyval";
 import { StateStorage } from "zustand/middleware";
 import { Content } from "../../../common/content/content.js";
 import { useVBStore } from "./useVBStore.jsx";
+import { useMinutesStore } from "./useMinutesStore.js";
 
 // === IDBKeyVal ===
 //  Custom storage object

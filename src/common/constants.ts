@@ -63,5 +63,9 @@ export const IPCInvokeKeys = {
   GET_CURRENT_TEAM: "getCurrentTeam",
   SET_TEAMS: "setTeams",
   GET_TEAMS: "getTeams",
+
+  // screen capture
+  ENUM_MEDIA_CAPTURE_TARGETS: "enumerateMediaCaptureTargets",
+  SCREEN_CAPTURE_TARGET_SELECTED: "screenCaptureTargetSelected",
 } as const;
 export type IPCInvokeKeys = (typeof IPCInvokeKeys)[keyof typeof IPCInvokeKeys];

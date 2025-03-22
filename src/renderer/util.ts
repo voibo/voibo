@@ -29,6 +29,19 @@ export function textChunk(text: string, size: number): string[] {
 }
 
 /**
+ * Text を maxLength で切り詰め、長すぎる場合には末尾に "..." を付加する。
+ * @param text
+ * @param maxLength
+ * @returns
+ */
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.substring(0, maxLength - 3) + "...";
+}
+
+/**
  * timestamp を YYYY/MM/DD HH:MM:SS 形式に変換する。
  * @param timestamp timestamp
  */

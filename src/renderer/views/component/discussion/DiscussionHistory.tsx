@@ -13,76 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {
-  Fragment,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Bookmark } from "@mui/icons-material";
 import { Avatar, Badge } from "@mui/material";
-import { DiscussionSegment } from "../../../../common/discussion.js";
+import { DiscussionSegment } from "../../../../common/discussion.jsx";
 import { DiscussionSegmentText } from "./DiscussionSegmentText.jsx";
 import { useVBStore } from "../../store/useVBStore.jsx";
 import { useMinutesStore } from "../../store/useMinutesStore.jsx";
 import { processDiscussionAction } from "../../action/DiscussionAction.js";
-
-// スクリーンキャプチャのサムネイルを表示するコンポーネント
-const ScreenCaptureThumbnail = ({
-  timestampSec,
-  durationMSec,
-}: {
-  timestampSec: number;
-  durationMSec: number;
-}) => {
-  const startTimestamp = useVBStore((state) => state.startTimestamp);
-
-  // 先にキャプチャスクリーンの配列全体を取得
-  const allCapturedScreens = useMinutesStore(startTimestamp)(
-    (state) => state.capturedScreens
-  );
-
-  // useMemoを使用してフィルタリング結果をメモ化
-  const capturedScreens = useMemo(() => {
-    return allCapturedScreens.filter((screen) => {
-      // 実際に使用したいフィルター条件
-      console.log(
-        "allCapturedScreens",
-        screen.timestamp,
-        timestampSec,
-        durationMSec,
-        startTimestamp
-      );
-      const currentMSec = startTimestamp + timestampSec * 1000;
-
-      return (
-        screen.timestamp >= currentMSec &&
-        screen.timestamp < currentMSec + durationMSec
-      );
-
-      //return true;
-    });
-  }, [allCapturedScreens, timestampSec, durationMSec]);
-
-  if (capturedScreens.length === 0) {
-    return <></>;
-  }
-
-  return (
-    <div className="mb-1">
-      {capturedScreens.map((latestCapture, index) => (
-        <img
-          key={index}
-          src={`file://${latestCapture.filePath}`}
-          alt="Screen capture"
-          className="w-24 h-auto object-contain border border-gray-300 rounded"
-        />
-      ))}
-    </div>
-  );
-};
+import { ScreenCaptureThumbnailList } from "../screencapture/ScreenCaptureThumbnail.jsx";
 
 export const useDiscussionHistory = (
   option: ScrollIntoViewOptions = { behavior: "smooth" }
@@ -164,10 +103,13 @@ export const useDiscussionHistory = (
                 <div className="px-2 pb-2">
                   {(value.segment.texts ?? []).map((text, xIndex) => {
                     return (
-                      <Fragment key={`${index}_${xIndex}`}>
-                        <ScreenCaptureThumbnail
+                      <div
+                        key={`${index}_${xIndex}`}
+                        className="w-full flex flex-row"
+                      >
+                        <ScreenCaptureThumbnailList
                           timestampSec={Number(text.timestamp)}
-                          durationMSec={text.length}
+                          durationMSec={Number(text.length)}
                         />
                         <DiscussionSegmentText
                           key={`${index}_${xIndex}`}
@@ -179,7 +121,7 @@ export const useDiscussionHistory = (
                           audioFilePath={`${audioFolder}${startTimestamp}/${text.audioSrc}`}
                           offsetSeconds={text.audioOffset}
                         />
-                      </Fragment>
+                      </div>
                     );
                   })}
                 </div>

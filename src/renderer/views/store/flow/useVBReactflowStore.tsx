@@ -36,7 +36,7 @@ import {
   AssistantMessageNode,
   AssistantMessageNodeParam,
 } from "../../flowComponent/node/AssistantMessageNode.jsx";
-import { ContentNode } from "../../flowComponent/node/ContentNode.jsx";
+import { ContentNode } from "../../flowComponent/node/content/ContentNode.jsx";
 import { DiscussionNode } from "../../flowComponent/node/DisscussionNode.jsx";
 import { TopicHeaderNode } from "../../flowComponent/node/TopicHeaderNode.jsx";
 import {
@@ -88,6 +88,13 @@ type LayoutParam = {
       y: number;
     };
   };
+  content: {
+    width: number;
+    offset: {
+      x: number;
+      y: number;
+    };
+  };
 };
 
 export const getLayoutParam = (): LayoutParam => {
@@ -99,13 +106,20 @@ export const getLayoutParam = (): LayoutParam => {
       zoom: 1.0,
     },
     topic: {
-      width: 600,
+      width: 800,
       offset: {
         x: 100,
         y: offsetY,
       },
     },
     assistant: {
+      width: 400,
+      offset: {
+        x: 100,
+        y: offsetY,
+      },
+    },
+    content: {
       width: 400,
       offset: {
         x: 100,
@@ -800,6 +814,7 @@ useVBReactflowStore.subscribe((current, pre) => {
       edges: [
         ...useVBReactflowStore.getState().topicEdges,
         ...useVBReactflowStore.getState().assistantEdges,
+        ...useVBReactflowStore.getState().contentEdges,
       ],
     });
   }
@@ -1384,23 +1399,48 @@ export const prepareAssistantNodeTo = (startTimestamp: number) => {
 
 let unsubscribeContentStore: (() => void) | null = null;
 export const prepareContentsNodeTo = (startTimestamp: number) => {
+  // 初期状態のContentNodesとEdgesを設定
+  const contentMap =
+    useMinutesContentStore(startTimestamp).getState().contentMap;
+  const contentNodes = Array.from(contentMap.values()).map((content) =>
+    makeContentNode({ content })
+  );
+
+  // TopicとContentの間のEdgeを生成
+  const topicContentEdges = generateTopicContentEdges(
+    contentMap,
+    startTimestamp
+  );
+
+  // ノードとエッジをセット
   useVBReactflowStore.setState({
-    contentNodes: Array.from(
-      useMinutesContentStore(startTimestamp).getState().contentMap.values()
-    ).map((content) => makeContentNode({ content })),
+    contentNodes: contentNodes,
+    contentEdges: topicContentEdges,
   });
 
   if (unsubscribeContentStore) unsubscribeContentStore();
   unsubscribeContentStore = useMinutesContentStore(startTimestamp).subscribe(
     (state) => state.contentMap,
-    (state) => {
+    (contentMap) => {
+      // ContentNodesの更新
+      const contentNodes = Array.from(contentMap.values()).map((content) =>
+        makeContentNode({ content })
+      );
+
+      // TopicとContentの間のEdgeを再生成
+      const topicContentEdges = generateTopicContentEdges(
+        contentMap,
+        startTimestamp
+      );
+
+      // 更新を反映
       useVBReactflowStore.setState({
-        contentNodes: Array.from(state.values()).map((content) =>
-          makeContentNode({ content })
-        ),
+        contentNodes: contentNodes,
+        contentEdges: topicContentEdges,
       });
     },
     {
+      // 既存の比較ロジック
       equalityFn: (a, b) => {
         return (
           a.size === b.size &&
@@ -1429,4 +1469,64 @@ export const prepareContentsNodeTo = (startTimestamp: number) => {
       },
     }
   );
+};
+
+// TopicとContentの間のEdgeを生成する関数
+const generateTopicContentEdges = (
+  contentMap: Map<string, Content>,
+  startTimestamp: number
+): Edge[] => {
+  const edges: Edge[] = [];
+  const topicNodes = useVBReactflowStore.getState().topicNodes;
+  const topics = useMinutesStore(startTimestamp).getState().topics;
+
+  // 各Contentに対して処理
+  Array.from(contentMap.values()).forEach((content) => {
+    // connectedMessageIdsがあるか確認
+    if (content.connectedMessageIds && content.connectedMessageIds.length > 0) {
+      // TopicIDと一致するものを探す
+      content.connectedMessageIds.forEach((messageId) => {
+        // TopicノードのIDと一致するか確認
+        const matchingTopic = topics.find((topic) => topic.id === messageId);
+        if (matchingTopic) {
+          // TopicNodeからContentNodeへのEdgeを作成
+          edges.push(
+            makeTopicContentEdge({
+              source: messageId, // Topic ID
+              target: content.id, // Content ID
+            })
+          );
+        }
+      });
+    }
+  });
+
+  return edges;
+};
+
+// TopicとContentの間のEdgeを作成する関数
+const makeTopicContentEdge = (props: {
+  source: string;
+  target: string;
+}): Edge => {
+  console.log("makeTopicContentEdge", props);
+  const { source, target } = props;
+  return {
+    id: `topic-to-content-${source}:${target}`,
+    source: source,
+    target: target,
+    deletable: true,
+    sourceHandle: `right-${source}`,
+    targetHandle: `left-${target}`,
+    style: {
+      strokeWidth: 2,
+      stroke: "#64748B", // slate-500
+      strokeDasharray: "5,5", // 破線スタイル
+    },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color: "#64748B",
+      strokeWidth: 1,
+    },
+  };
 };
