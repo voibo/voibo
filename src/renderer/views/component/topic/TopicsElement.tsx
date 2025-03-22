@@ -52,10 +52,9 @@ export const TopicsElement = (props: {
   );
   const capturedScreens = minutesStore((state) => state.capturedScreens);
 
-  if (!topic || topic.seedData == undefined) return <></>;
-
-  // トピック設定ダイアログを表示するハンドラ
   const handleClick = useCallback(() => {
+    if (!topic || topic.seedData === undefined) return;
+
     detailViewDialog({
       content: <TopicConfigDialog topic={topic} handleClose={handleClose} />,
       dialogConf: {
@@ -65,8 +64,9 @@ export const TopicsElement = (props: {
     });
   }, [topic, detailViewDialog, handleClose]);
 
-  // タイムラインダイアログを表示するためのコールバック
   const handleShowTimeline = useCallback(() => {
+    if (!topic || topic.seedData === undefined) return;
+
     const images = capturedScreens.filter(
       (screen) =>
         topic.seedData &&
@@ -92,6 +92,9 @@ export const TopicsElement = (props: {
       });
     }
   }, [capturedScreens, topic, startTimestamp, detailViewDialog, handleClose]);
+
+  // 早期リターンはすべてのフックの後
+  if (!topic || topic.seedData === undefined) return <></>;
 
   return (
     <div
