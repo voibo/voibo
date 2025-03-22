@@ -99,7 +99,7 @@ export const getLayoutParam = (): LayoutParam => {
       zoom: 1.0,
     },
     topic: {
-      width: 600,
+      width: 800,
       offset: {
         x: 100,
         y: offsetY,

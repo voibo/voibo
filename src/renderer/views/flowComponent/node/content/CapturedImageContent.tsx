@@ -42,7 +42,7 @@ export const CapturedImageContentView = (props: {
       <ScreenCaptureThumbnail
         capturedScreen={screenCapture}
         startTimestamp={minutesStartTimestamp}
-        className="w-{200} h-auto p-0"
+        className="w-{200} h-auto p-0 hover:cursor-pointer"
       />
     );
   } catch (e) {
