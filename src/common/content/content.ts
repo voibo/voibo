@@ -42,6 +42,7 @@ export interface Content {
   // node gui
   position: { x: number; y: number };
   width: number;
+  height?: number;
 }
 
 export function getBaseContent(props?: Partial<Content>): Content {

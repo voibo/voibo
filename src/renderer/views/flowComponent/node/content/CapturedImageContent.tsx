@@ -53,18 +53,12 @@ export const CapturedImageContentView = (props: {
   try {
     let screenCapture: ScreenCapture = JSON.parse(content.content);
     return (
-      <div
-        style={{
-          width: content.width ? `${content.width}px` : "300px",
-        }}
-      >
-        <ScreenCaptureThumbnail
-          capturedScreen={screenCapture}
-          startTimestamp={minutesStartTimestamp}
-          className="w-full h-auto p-0"
-          openDialog={openDialog}
-        />
-      </div>
+      <ScreenCaptureThumbnail
+        capturedScreen={screenCapture}
+        startTimestamp={minutesStartTimestamp}
+        className="w-full h-auto p-0"
+        openDialog={false}
+      />
     );
   } catch (e) {
     console.error("CapturedImageContentView: invalid content", content);

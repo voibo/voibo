@@ -30,9 +30,11 @@ import { ContentNodeBaseParam, NodeBase } from "../NodeBase.jsx";
 import { TextContentEditView, TextContentView } from "./TextContent.jsx";
 import {
   CapturedImageContentEditView,
+  CapturedImageContentParam,
   CapturedImageContentView,
 } from "./CapturedImageContent.jsx";
 import { useVBReactflowStore } from "../../../store/flow/useVBReactflowStore.jsx";
+import { ScreenCapture } from "../../../../../common/content/screencapture.js";
 
 export function isContentNode(node: Node): node is ContentNode {
   return node.type === "content";
@@ -69,12 +71,19 @@ const ContentNode = (props: NodeProps<ContentNode>) => {
     (_: any, params: any) => {
       if (!content || !startTimestamp) return;
 
-      useMinutesContentStore(startTimestamp)
-        .getState()
-        .setContent({
-          ...content,
-          width: Math.max(getMinWidth(), params.width),
-        });
+      let config: Content = { ...content };
+      const newWidth = Math.max(getMinWidth(), params.width);
+      config = {
+        ...content,
+        width: newWidth,
+      };
+      if (content.type === "capturedImage") {
+        let screenCapture: ScreenCapture = JSON.parse(content.content);
+        config.height = Math.round(
+          newWidth * (screenCapture.height / screenCapture.width)
+        );
+      }
+      useMinutesContentStore(startTimestamp).getState().setContent(config);
     },
     [content, props.id, startTimestamp]
   );
