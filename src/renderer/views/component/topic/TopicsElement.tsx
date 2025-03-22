@@ -26,7 +26,7 @@ import {
   TaskOutlined,
 } from "@mui/icons-material";
 import { Button, Chip } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { secondsToHMS } from "../../../util.js";
 import { Topic } from "../../../../common/content/topic.js";
 import { DetailViewDialogState } from "../common/useDetailViewDialog.jsx";
@@ -54,7 +54,8 @@ export const TopicsElement = (props: {
 
   if (!topic || topic.seedData == undefined) return <></>;
 
-  const handleClick = () => {
+  // トピック設定ダイアログを表示するハンドラ
+  const handleClick = useCallback(() => {
     detailViewDialog({
       content: <TopicConfigDialog topic={topic} handleClose={handleClose} />,
       dialogConf: {
@@ -62,7 +63,35 @@ export const TopicsElement = (props: {
         maxWidth: "lg",
       },
     });
-  };
+  }, [topic, detailViewDialog, handleClose]);
+
+  // タイムラインダイアログを表示するためのコールバック
+  const handleShowTimeline = useCallback(() => {
+    const images = capturedScreens.filter(
+      (screen) =>
+        topic.seedData &&
+        topic.seedData.startTimestamp * 1000 + startTimestamp <=
+          screen.timestamp &&
+        screen.timestamp < topic.seedData.endTimestamp * 1000 + startTimestamp
+    );
+
+    if (images.length > 0) {
+      detailViewDialog({
+        content: (
+          <ScreenCaptureTimelineDialog
+            images={images}
+            startTimestamp={startTimestamp}
+            topic={topic}
+            handleClose={handleClose}
+          />
+        ),
+        dialogConf: {
+          fullWidth: true,
+          maxWidth: "lg",
+        },
+      });
+    }
+  }, [capturedScreens, topic, startTimestamp, detailViewDialog, handleClose]);
 
   return (
     <div
@@ -73,6 +102,7 @@ export const TopicsElement = (props: {
         capturedScreens={capturedScreens}
         startTimestamp={startTimestamp}
         topic={topic}
+        onShowTimeline={handleShowTimeline}
       />
 
       <div className="flex flex-col">
@@ -114,88 +144,213 @@ export const TopicsElement = (props: {
   );
 };
 
-const ScreenCaptureTimeline = (props: {
-  capturedScreens: ScreenCapture[];
-  startTimestamp: number;
-  topic: Topic;
-}) => {
-  const { topic, capturedScreens, startTimestamp } = props;
+// ScreenCaptureTimelineコンポーネントを修正
+const ScreenCaptureTimeline = memo(
+  (props: {
+    capturedScreens: ScreenCapture[];
+    startTimestamp: number;
+    topic: Topic;
+    onShowTimeline?: () => void;
+  }) => {
+    const { topic, capturedScreens, startTimestamp, onShowTimeline } = props;
 
-  const images = capturedScreens.filter(
-    (screen) =>
-      topic.seedData &&
-      topic.seedData.startTimestamp * 1000 + startTimestamp <=
-        screen.timestamp &&
-      screen.timestamp < topic.seedData.endTimestamp * 1000 + startTimestamp
-  );
+    const images = useMemo(
+      () =>
+        capturedScreens.filter(
+          (screen) =>
+            topic.seedData &&
+            topic.seedData.startTimestamp * 1000 + startTimestamp <=
+              screen.timestamp &&
+            screen.timestamp <
+              topic.seedData.endTimestamp * 1000 + startTimestamp
+        ),
+      [capturedScreens, topic.seedData, startTimestamp]
+    );
 
-  let firstImage = <></>;
-  let middleImage = <></>;
-  let lastImage = <></>;
-  if (images.length > 0) {
-    middleImage = (
-      <div className="flex items-center justify-center text-xs text-black/50">
-        <Collections className="text-2xl text-black/30" />
+    let firstImage = <></>;
+    let middleImage = <></>;
+    let lastImage = <></>;
+
+    if (images.length > 0) {
+      // ミドルイメージをクリック可能に変更 - レンダリングのみ、ダイアログ作成は行わない
+      middleImage = (
+        <div
+          className="flex items-center justify-center text-xs text-black/50 cursor-pointer"
+          onClick={onShowTimeline}
+        >
+          <div className="flex flex-col items-center">
+            <Collections className="text-2xl text-black/30" />
+            <div className="text-xs mt-1">{images.length}枚</div>
+          </div>
+        </div>
+      );
+
+      // 画像処理コード...
+      if (images.length > 1) {
+        firstImage = (
+          <ScreenCaptureThumbnail
+            capturedScreen={images[0]}
+            startTimestamp={startTimestamp}
+            className="w-20 h-auto p-0 hover:cursor-pointer"
+          />
+        );
+        lastImage = (
+          <ScreenCaptureThumbnail
+            capturedScreen={images[images.length - 1]}
+            startTimestamp={startTimestamp}
+            className="w-20 h-auto p-0 hover:cursor-pointer"
+          />
+        );
+      } else {
+        firstImage = (
+          <ScreenCaptureThumbnail
+            capturedScreen={images[0]}
+            startTimestamp={startTimestamp}
+            className="w-20 h-auto p-0 hover:cursor-pointer"
+          />
+        );
+      }
+    }
+
+    const clock = (sec: number) => (
+      <div className="flex flex-row items-center">
+        <AccessTime sx={{ fontSize: "0.8rem" }} className="mr-2" />
+        {topic.seedData ? secondsToHMS(Math.ceil(sec)) : "--:--:--"}
       </div>
     );
-    if (images.length > 1) {
-      firstImage = (
-        <ScreenCaptureThumbnail
-          capturedScreen={images[0]}
-          startTimestamp={startTimestamp}
-          className="w-20 h-auto p-0 hover:cursor-pointer"
-        />
-      );
-      lastImage = (
-        <ScreenCaptureThumbnail
-          capturedScreen={images[images.length - 1]}
-          startTimestamp={startTimestamp}
-          className="w-20 h-auto p-0 hover:cursor-pointer"
-        />
-      );
-    } else {
-      firstImage = (
-        <ScreenCaptureThumbnail
-          capturedScreen={images[0]}
-          startTimestamp={startTimestamp}
-          className="w-20 h-auto p-0 hover:cursor-pointer"
-        />
-      );
-    }
+
+    return (
+      <div className="mr-8 flex flex-col h-full">
+        <div className="flex flex-col items-center text-xs text-black/50">
+          {clock(topic.seedData?.startTimestamp ?? 0)}
+          <div className="border-l border-black/50 h-2"></div>
+          {firstImage}
+        </div>
+
+        <div className="flex-grow flex justify-center">
+          <div className="border-l border-black/50 h-full min-h-2"></div>
+        </div>
+
+        {middleImage}
+
+        <div className="flex-grow flex justify-center">
+          <div className="border-l border-black/50 h-full min-h-2"></div>
+        </div>
+
+        <div className="flex flex-col items-center text-xs text-black/50">
+          {lastImage}
+          <div className="border-l border-black/50 h-2"></div>
+          {clock(topic.seedData?.endTimestamp ?? 0)}
+        </div>
+      </div>
+    );
   }
+);
 
-  const clock = (sec: number) => (
-    <div className="flex flex-row items-center">
-      <AccessTime sx={{ fontSize: "0.8rem" }} className="mr-2" />
-      {topic.seedData ? secondsToHMS(Math.ceil(sec)) : "--:--:--"}
-    </div>
-  );
-  return (
-    <div className="mr-8 flex flex-col h-full">
-      <div className="flex flex-col items-center text-xs text-black/50">
-        {clock(topic.seedData?.startTimestamp ?? 0)}
-        <div className="border-l border-black/50 h-4"></div>
-        {firstImage}
+ScreenCaptureTimeline.displayName = "ScreenCaptureTimeline";
+
+// スクリーンキャプチャタイムラインダイアログコンポーネント
+const ScreenCaptureTimelineDialog = memo(
+  (props: {
+    images: ScreenCapture[];
+    startTimestamp: number;
+    topic: Topic;
+    handleClose: () => void;
+  }) => {
+    const { images, startTimestamp, topic, handleClose } = props;
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
+    // 前後の画像に移動するための関数
+    const goToPrevious = () => {
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    };
+
+    const goToNext = () => {
+      setSelectedIndex((prev) => (prev < images.length - 1 ? prev + 1 : prev));
+    };
+
+    // 時間を表示する関数
+    const getRelativeTime = (timestamp: number) => {
+      const relativeSeconds = Math.floor((timestamp - startTimestamp) / 1000);
+      return secondsToHMS(relativeSeconds);
+    };
+
+    return (
+      <div className="flex flex-col space-y-4 text-black/60 p-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">
+            {topic.title} - スクリーンキャプチャ ({images.length}枚)
+          </h2>
+        </div>
+
+        {/* メイン画像表示エリア */}
+        <div className="border rounded-lg overflow-hidden bg-gray-100 flex justify-center">
+          <img
+            src={`file://${images[selectedIndex]?.filePath}`}
+            alt={`Screen capture at ${getRelativeTime(
+              images[selectedIndex]?.timestamp
+            )}`}
+            className="max-h-[60vh] object-contain"
+          />
+        </div>
+
+        {/* タイムスタンプと操作ボタン */}
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outlined"
+            disabled={selectedIndex === 0}
+            onClick={goToPrevious}
+          >
+            前へ
+          </Button>
+          <div className="text-center">
+            <div className="text-lg">
+              {getRelativeTime(images[selectedIndex]?.timestamp)}
+            </div>
+            <div className="text-sm">
+              {selectedIndex + 1} / {images.length}
+            </div>
+          </div>
+          <Button
+            variant="outlined"
+            disabled={selectedIndex === images.length - 1}
+            onClick={goToNext}
+          >
+            次へ
+          </Button>
+        </div>
+
+        {/* サムネイルタイムライン */}
+        <div className="overflow-x-auto">
+          <div className="flex space-x-2 py-2 min-w-min">
+            {images.map((image, index) => (
+              <div
+                key={image.timestamp}
+                className={`flex flex-col items-center ${
+                  index === selectedIndex
+                    ? "scale-110 border-2 border-blue-500"
+                    : ""
+                }`}
+                onClick={() => setSelectedIndex(index)}
+              >
+                <img
+                  src={`file://${image.filePath}`}
+                  alt={`Thumbnail ${index + 1}`}
+                  className="w-24 h-auto object-cover cursor-pointer hover:opacity-80"
+                />
+                <div className="text-xs mt-1">
+                  {getRelativeTime(image.timestamp)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+    );
+  }
+);
 
-      <div className="flex-grow flex justify-center">
-        <div className="border-l border-black/50 h-full"></div>
-      </div>
-
-      {middleImage}
-
-      <div className="flex-grow flex justify-center">
-        <div className="border-l border-black/50 h-full"></div>
-      </div>
-
-      <div className="flex flex-col items-center text-xs text-black/50">
-        {lastImage}
-        <div className="border-l border-black/50 h-4"></div>
-        {clock(topic.seedData?.endTimestamp ?? 0)}
-      </div>
-    </div>
-  );
-};
+ScreenCaptureTimelineDialog.displayName = "ScreenCaptureTimelineDialog";
 
 const Actions = (props: {
   actions:
