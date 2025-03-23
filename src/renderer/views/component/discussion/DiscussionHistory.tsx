@@ -75,7 +75,7 @@ export const useDiscussionHistory = (
 
   return [
     <div className="flex flex-row items-center bg-amber-600 rounded border border-amber-600">
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full">
         <div
           className="p-4 w-full h-40 min-w-[600px] overflow-y-scroll bg-amber-50 border border-t-0 rounded-b border-amber-300"
           id="left"
