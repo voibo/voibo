@@ -36,19 +36,21 @@ export const StageToolBar = () => {
 };
 
 const ContentsMakerButton = () => {
-  const [typeState, setType] = useDnD();
-  const onDragStart = (event: any, nodeType: string) => {
+  const { setType, setIsDragging } = useDnD();
+
+  const onMouseDown = (e: React.MouseEvent, nodeType: string) => {
+    e.preventDefault();
     setType(nodeType);
-    event.dataTransfer.setData("application/reactflow", nodeType);
-    event.dataTransfer.effectAllowed = "move";
+    setIsDragging(true);
+
+    document.body.style.cursor = "grabbing";
   };
 
   return (
     <Tooltip title="Drag to create new content" placement="right">
       <Button
         className="text-white min-w-0"
-        onDragStart={(event) => onDragStart(event, "input")}
-        draggable
+        onMouseDown={(e) => onMouseDown(e, "input")}
       >
         <NoteAdd className="text-white" />
       </Button>

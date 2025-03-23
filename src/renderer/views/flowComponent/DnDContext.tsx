@@ -19,25 +19,46 @@ limitations under the License.
 
 import { createContext, ReactNode, useContext, useState } from "react";
 
-// 型定義
-type DnDContextType = [
-  string | null,
-  React.Dispatch<React.SetStateAction<string | null>>
-];
+// 拡張された型定義
+type DnDContextType = {
+  type: string | null;
+  setType: React.Dispatch<React.SetStateAction<string | null>>;
+  position: { x: number; y: number } | null;
+  setPosition: React.Dispatch<
+    React.SetStateAction<{ x: number; y: number } | null>
+  >;
+  isDragging: boolean;
+  setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
+};
 
-// Context の初期値と型を設定
+// Contextの初期値と型を設定
 const DnDContext = createContext<DnDContextType | undefined>(undefined);
+
 export const DnDProvider = (props: { children: ReactNode }) => {
   const { children } = props;
   const [type, setType] = useState<string | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
   return (
-    <DnDContext.Provider value={[type, setType]}>
+    <DnDContext.Provider
+      value={{
+        type,
+        setType,
+        position,
+        setPosition,
+        isDragging,
+        setIsDragging,
+      }}
+    >
       {children}
     </DnDContext.Provider>
   );
 };
 
-// Context を安全に使用するためのカスタムフック
+// カスタムフックの更新
 export const useDnD = (): DnDContextType => {
   const context = useContext(DnDContext);
   if (context === undefined) {

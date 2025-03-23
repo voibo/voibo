@@ -24,7 +24,7 @@ import {
   Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
 import { Content, getBaseContent } from "../../../common/content/content.js";
@@ -47,6 +47,7 @@ import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
 import { HeaderMainComponent } from "../component/main/HeaderComponent.jsx";
 import { processContentAction } from "../action/ContentAction.js";
+import { NoteAdd } from "@mui/icons-material";
 
 const ZOOM_MIN = 0.001;
 
@@ -97,41 +98,74 @@ const VANodeStageCore = (props: {}) => {
   const reactFlow = useReactFlow();
 
   // DnD
-  const reactFlowWrapper = useRef(null);
-  const [type] = useDnD();
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { type, setType, isDragging, setIsDragging, setPosition, position } =
+    useDnD();
 
-  const onDragOver = useCallback((event: any) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event: any) => {
-      event.preventDefault();
-
-      // dataTransferからデータ取得を試みる
-      const nodeType =
-        event.dataTransfer.getData("application/reactflow") || type;
-
-      if (!nodeType) {
-        return;
+  // DnD: tracking mouse move
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && type) {
+        setPosition({ x: e.clientX, y: e.clientY });
       }
-
-      processContentAction({
-        type: "addTextContent",
-        payload: {
-          position: reactFlow.screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          }),
-          content: "Dropped",
-          width: 200,
-        },
-      });
     },
-    [type, startTimestamp, reactFlow]
+    [isDragging, type, setPosition]
   );
 
+  // DnD: mouse up
+  const onMouseUp = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && type && reactFlowWrapper.current) {
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        const position = reactFlow.screenToFlowPosition({
+          x: e.clientX - bounds.left,
+          y: e.clientY - bounds.top,
+        });
+
+        processContentAction({
+          type: "addTextContent",
+          payload: {
+            position,
+            content: "New content",
+            width: 200,
+          },
+        });
+
+        // reset state
+        setType(null);
+        setIsDragging(false);
+        setPosition(null);
+        document.body.style.cursor = "default";
+      }
+    },
+    [
+      isDragging,
+      type,
+      reactFlow,
+      setType,
+      setIsDragging,
+      setPosition,
+      startTimestamp,
+    ]
+  );
+
+  // DnD: global mouse event listener
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    } else {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging, onMouseMove, onMouseUp]);
+
+  // Viewport
   const viewPort = useVBReactflowStore((state) => state.lastViewport);
   const handleViewPortChange = (viewPort: Viewport) => {
     //console.log("handleViewPortChange", viewPort);
@@ -150,9 +184,6 @@ const VANodeStageCore = (props: {}) => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onDrop={onDrop}
-        onDragEnter={(e) => e.preventDefault()}
-        onDragOver={onDragOver}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodesDelete={onNodesDelete}
@@ -174,6 +205,25 @@ const VANodeStageCore = (props: {}) => {
           <CustomMiniMap />
         </div>
       </ReactFlow>
+
+      {isDragging && type && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            top: 0,
+            pointerEvents: "none",
+            zIndex: 1000,
+            opacity: 0.7,
+            transform: `translate(${position?.x}px, ${position?.y}px)`,
+          }}
+        >
+          <div className="bg-white p-2 rounded shadow">
+            <NoteAdd />
+          </div>
+        </div>
+      )}
+      {/* Tools */}
       <div className="absolute top-2 left-2 z-10">
         <HeaderMainComponent />
       </div>
