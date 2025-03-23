@@ -46,7 +46,6 @@ import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
 import { HeaderMainComponent } from "../component/main/HeaderComponent.jsx";
-import { createTextContent } from "./node/content/TextContent.js";
 import { processContentAction } from "../action/ContentAction.js";
 
 const ZOOM_MIN = 0.001;
@@ -109,7 +108,12 @@ const VANodeStageCore = (props: {}) => {
   const onDrop = useCallback(
     (event: any) => {
       event.preventDefault();
-      if (!type) {
+
+      // dataTransferからデータ取得を試みる
+      const nodeType =
+        event.dataTransfer.getData("application/reactflow") || type;
+
+      if (!nodeType) {
         return;
       }
 
@@ -125,7 +129,7 @@ const VANodeStageCore = (props: {}) => {
         },
       });
     },
-    [type, startTimestamp]
+    [type, startTimestamp, reactFlow]
   );
 
   const viewPort = useVBReactflowStore((state) => state.lastViewport);
@@ -147,6 +151,7 @@ const VANodeStageCore = (props: {}) => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDrop={onDrop}
+        onDragEnter={(e) => e.preventDefault()}
         onDragOver={onDragOver}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
@@ -175,7 +180,6 @@ const VANodeStageCore = (props: {}) => {
       <div className="absolute top-2 right-2 z-10">
         <AgendaPanel />
       </div>
-
       <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
         <StageToolBar />
       </div>

@@ -39,8 +39,10 @@ const ContentsMakerButton = () => {
   const [typeState, setType] = useDnD();
   const onDragStart = (event: any, nodeType: string) => {
     setType(nodeType);
+    event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
   };
+
   return (
     <Tooltip title="Drag to create new content" placement="right">
       <Button
