@@ -20,6 +20,7 @@ import {
   useVBReactflowStore,
 } from "../store/flow/useVBReactflowStore.jsx";
 import { useDnD } from "./DnDContext.jsx";
+import { DragCreateSupportNodeType } from "./VBNodeStage.jsx";
 
 export const StageToolBar = () => {
   const layout = useVBReactflowStore((state) => state.layout);
@@ -36,18 +37,16 @@ export const StageToolBar = () => {
 };
 
 const ContentsMakerButton = () => {
-  const [typeState, setType] = useDnD();
-  const onDragStart = (event: any, nodeType: string) => {
-    setType(nodeType);
-    event.dataTransfer.effectAllowed = "move";
+  const { startDrag } = useDnD();
+
+  const onDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startDrag(DragCreateSupportNodeType.Text);
   };
+
   return (
     <Tooltip title="Drag to create new content" placement="right">
-      <Button
-        className="text-white min-w-0"
-        onDragStart={(event) => onDragStart(event, "input")}
-        draggable
-      >
+      <Button className="text-white min-w-0" onMouseDown={onDragStart}>
         <NoteAdd className="text-white" />
       </Button>
     </Tooltip>

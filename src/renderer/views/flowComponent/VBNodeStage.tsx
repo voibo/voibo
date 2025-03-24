@@ -24,7 +24,7 @@ import {
   Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
 import { Content, getBaseContent } from "../../../common/content/content.js";
@@ -46,8 +46,8 @@ import { StageToolBar } from "./StageToolBar.jsx";
 import { TargetFocuser } from "./TargetFocuser.jsx";
 import { VBAction } from "../action/VBAction.js";
 import { HeaderMainComponent } from "../component/main/HeaderComponent.jsx";
-import { createTextContent } from "./node/content/TextContent.js";
 import { processContentAction } from "../action/ContentAction.js";
+import { NoteAdd } from "@mui/icons-material";
 
 const ZOOM_MIN = 0.001;
 
@@ -82,6 +82,11 @@ export type VANodeStageGUIState = {
   lastAction: VBAction | null;
 };
 
+export const DragCreateSupportNodeType = {
+  Text: "Text",
+  Image: "Image",
+} as const;
+
 const VANodeStageCore = (props: {}) => {
   const {
     nodes,
@@ -93,41 +98,72 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStop,
     onNodesDelete,
   } = useVBReactflowStore(useShallow(selector));
-  const startTimestamp = useVBStore((stat) => stat.startTimestamp);
-
   const reactFlow = useReactFlow();
 
   // DnD
-  const reactFlowWrapper = useRef(null);
-  const [type] = useDnD();
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { type, position, isDragging, setDragCallbacks } = useDnD();
 
-  const onDragOver = useCallback((event: any) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
+  useEffect(() => {
+    setDragCallbacks({
+      onDragEnd: (draggedType, finalPosition) => {
+        if (
+          !reactFlowWrapper.current ||
+          !finalPosition ||
+          !(draggedType in DragCreateSupportNodeType)
+        )
+          return;
 
-  const onDrop = useCallback(
-    (event: any) => {
-      event.preventDefault();
-      if (!type) {
-        return;
-      }
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        const flowPosition = reactFlow.screenToFlowPosition({
+          x: finalPosition.x - bounds.left,
+          y: finalPosition.y - bounds.top,
+        });
 
-      processContentAction({
-        type: "addTextContent",
-        payload: {
-          position: reactFlow.screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          }),
-          content: "Dropped",
-          width: 200,
-        },
-      });
-    },
-    [type, startTimestamp]
-  );
+        switch (draggedType) {
+          case DragCreateSupportNodeType.Text:
+            processContentAction({
+              type: "addTextContent",
+              payload: {
+                position: flowPosition,
+                content: "New content",
+                width: 200,
+              },
+            });
+            break;
+          case DragCreateSupportNodeType.Image:
+            break;
+        }
+      },
+    });
+  }, [reactFlow, setDragCallbacks]);
 
+  let dndPreview = <></>;
+  if (isDragging) {
+    switch (type) {
+      case DragCreateSupportNodeType.Text:
+        dndPreview = (
+          <div
+            style={{
+              position: "fixed",
+              left: 0,
+              top: 0,
+              pointerEvents: "none",
+              zIndex: 1000,
+              opacity: 0.7,
+              transform: `translate(${position?.x}px, ${position?.y}px)`,
+            }}
+          >
+            <div className="bg-white p-2 rounded shadow">
+              <NoteAdd />
+            </div>
+          </div>
+        );
+        break;
+    }
+  }
+
+  // Viewport
   const viewPort = useVBReactflowStore((state) => state.lastViewport);
   const handleViewPortChange = (viewPort: Viewport) => {
     //console.log("handleViewPortChange", viewPort);
@@ -146,8 +182,6 @@ const VANodeStageCore = (props: {}) => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodesDelete={onNodesDelete}
@@ -169,19 +203,22 @@ const VANodeStageCore = (props: {}) => {
           <CustomMiniMap />
         </div>
       </ReactFlow>
+
+      {/* Tools */}
       <div className="absolute top-2 left-2 z-10">
         <HeaderMainComponent />
       </div>
       <div className="absolute top-2 right-2 z-10">
         <AgendaPanel />
       </div>
-
       <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
         <StageToolBar />
       </div>
       <div className="absolute bottom-2 left-2 z-10">
         <TargetFocuser />
       </div>
+
+      {dndPreview}
     </div>
   );
 };
