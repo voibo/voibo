@@ -222,7 +222,7 @@ const ScreenCaptureTimeline = memo(
     );
 
     return (
-      <div className="mr-8 flex flex-col h-full" onClick={onShowTimeline}>
+      <div className="mr-10 flex flex-col h-full" onClick={onShowTimeline}>
         <div className="flex flex-col items-center text-xs text-black/50">
           {clock(topic.seedData?.startTimestamp ?? 0)}
           <div className="border-l border-black/50 h-2"></div>
