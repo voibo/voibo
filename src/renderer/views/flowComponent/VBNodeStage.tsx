@@ -24,17 +24,14 @@ import {
   Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AgendaPanel } from "../component/agenda/AgendaPanel.jsx";
-import { Content, getBaseContent } from "../../../common/content/content.js";
-import { useMinutesContentStore } from "../store/useContentStore.jsx";
 import {
   useVBReactflowStore,
   VBReactflowDispatchStore,
   VBReactflowState,
 } from "../store/flow/useVBReactflowStore.jsx";
-import { useVBStore } from "../store/useVBStore.jsx";
 import { CustomMiniMap } from "./CustomMiniMap.jsx";
 import { DnDProvider, useDnD } from "./DnDContext.jsx";
 import AssistantMessageNode from "./node/AssistantMessageNode.jsx";

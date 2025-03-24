@@ -83,6 +83,9 @@ export const processMinutesAction = async (action: MinutesAction) => {
       useMinutesContentStore(startTimestamp).getState().delete();
       useMinutesGroupStore(startTimestamp).getState().delete();
 
+      // main
+      window.electron.send(IPCSenderKeys.DELETE_MINUTES, startTimestamp);
+
       // open home
       await openHomeMenu(action.payload.navigate);
       break;
