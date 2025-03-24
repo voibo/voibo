@@ -82,6 +82,11 @@ export type VANodeStageGUIState = {
   lastAction: VBAction | null;
 };
 
+export const DragCreateSupportNodeType = {
+  Text: "Text",
+  Image: "Image",
+} as const;
+
 const VANodeStageCore = (props: {}) => {
   const {
     nodes,
@@ -93,8 +98,6 @@ const VANodeStageCore = (props: {}) => {
     onNodeDragStop,
     onNodesDelete,
   } = useVBReactflowStore(useShallow(selector));
-  const startTimestamp = useVBStore((stat) => stat.startTimestamp);
-
   const reactFlow = useReactFlow();
 
   // DnD
@@ -104,7 +107,12 @@ const VANodeStageCore = (props: {}) => {
   useEffect(() => {
     setDragCallbacks({
       onDragEnd: (draggedType, finalPosition) => {
-        if (!reactFlowWrapper.current || !finalPosition) return;
+        if (
+          !reactFlowWrapper.current ||
+          !finalPosition ||
+          !(draggedType in DragCreateSupportNodeType)
+        )
+          return;
 
         const bounds = reactFlowWrapper.current.getBoundingClientRect();
         const flowPosition = reactFlow.screenToFlowPosition({
@@ -112,17 +120,48 @@ const VANodeStageCore = (props: {}) => {
           y: finalPosition.y - bounds.top,
         });
 
-        processContentAction({
-          type: "addTextContent",
-          payload: {
-            position: flowPosition,
-            content: "New content",
-            width: 200,
-          },
-        });
+        switch (draggedType) {
+          case DragCreateSupportNodeType.Text:
+            processContentAction({
+              type: "addTextContent",
+              payload: {
+                position: flowPosition,
+                content: "New content",
+                width: 200,
+              },
+            });
+            break;
+          case DragCreateSupportNodeType.Image:
+            break;
+        }
       },
     });
   }, [reactFlow, setDragCallbacks]);
+
+  let dndPreview = <></>;
+  if (isDragging) {
+    switch (type) {
+      case DragCreateSupportNodeType.Text:
+        dndPreview = (
+          <div
+            style={{
+              position: "fixed",
+              left: 0,
+              top: 0,
+              pointerEvents: "none",
+              zIndex: 1000,
+              opacity: 0.7,
+              transform: `translate(${position?.x}px, ${position?.y}px)`,
+            }}
+          >
+            <div className="bg-white p-2 rounded shadow">
+              <NoteAdd />
+            </div>
+          </div>
+        );
+        break;
+    }
+  }
 
   // Viewport
   const viewPort = useVBReactflowStore((state) => state.lastViewport);
@@ -165,23 +204,6 @@ const VANodeStageCore = (props: {}) => {
         </div>
       </ReactFlow>
 
-      {isDragging && type && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            top: 0,
-            pointerEvents: "none",
-            zIndex: 1000,
-            opacity: 0.7,
-            transform: `translate(${position?.x}px, ${position?.y}px)`,
-          }}
-        >
-          <div className="bg-white p-2 rounded shadow">
-            <NoteAdd />
-          </div>
-        </div>
-      )}
       {/* Tools */}
       <div className="absolute top-2 left-2 z-10">
         <HeaderMainComponent />
@@ -195,6 +217,8 @@ const VANodeStageCore = (props: {}) => {
       <div className="absolute bottom-2 left-2 z-10">
         <TargetFocuser />
       </div>
+
+      {dndPreview}
     </div>
   );
 };

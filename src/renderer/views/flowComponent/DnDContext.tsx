@@ -26,8 +26,8 @@ import {
   useEffect,
 } from "react";
 
-// カスタマイズ可能なコールバックの型定義
 type DragStartCallback = (type: string) => void;
+
 type DragEndCallback = (
   type: string,
   position: { x: number; y: number } | null
@@ -38,20 +38,15 @@ type CallbacksType = {
   onDragEnd?: DragEndCallback;
 };
 
-// 拡張された型定義
 type DnDContextType = {
+  // read only
   type: string | null;
-  setType: React.Dispatch<React.SetStateAction<string | null>>;
   position: { x: number; y: number } | null;
-  setPosition: React.Dispatch<
-    React.SetStateAction<{ x: number; y: number } | null>
-  >;
   isDragging: boolean;
-  setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
-  // 新しいメソッド
+
+  // public utility functions
   startDrag: (nodeType: string) => void;
   endDrag: () => void;
-  // コールバック設定メソッド
   setDragCallbacks: (callbacks: Partial<CallbacksType>) => void;
 };
 
@@ -69,7 +64,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     onDragEnd: undefined,
   });
 
-  // グローバルイベントハンドラ
   const onMouseMove = useCallback(
     (e: MouseEvent) => {
       if (isDragging && type) {
@@ -82,12 +76,10 @@ export const DnDProvider = (props: { children: ReactNode }) => {
   const onMouseUp = useCallback(
     (e: MouseEvent) => {
       if (isDragging && type) {
-        // コールバックの実行
         if (callbacks.onDragEnd) {
           callbacks.onDragEnd(type, position);
         }
 
-        // 状態のリセット
         setType(null);
         setIsDragging(false);
         setPosition(null);
@@ -97,7 +89,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     [isDragging, type, position, callbacks]
   );
 
-  // ドラッグ開始メソッド
   const startDrag = useCallback(
     (nodeType: string) => {
       setType(nodeType);
@@ -111,7 +102,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     [callbacks]
   );
 
-  // ドラッグ終了メソッド
   const endDrag = useCallback(() => {
     if (isDragging && type && callbacks.onDragEnd) {
       callbacks.onDragEnd(type, position);
@@ -123,7 +113,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     document.body.style.cursor = "default";
   }, [isDragging, type, position, callbacks]);
 
-  // コールバック設定メソッド
   const setDragCallbacks = useCallback(
     (newCallbacks: Partial<CallbacksType>) => {
       setCallbacks((prev) => ({ ...prev, ...newCallbacks }));
@@ -131,7 +120,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     []
   );
 
-  // グローバルイベントの登録/解除
   useEffect(() => {
     if (isDragging) {
       window.addEventListener("mousemove", onMouseMove);
@@ -150,12 +138,12 @@ export const DnDProvider = (props: { children: ReactNode }) => {
   return (
     <DnDContext.Provider
       value={{
+        // read only
         type,
-        setType,
         position,
-        setPosition,
         isDragging,
-        setIsDragging,
+
+        // public utility functions
         startDrag,
         endDrag,
         setDragCallbacks,
@@ -166,7 +154,6 @@ export const DnDProvider = (props: { children: ReactNode }) => {
   );
 };
 
-// カスタムフックの更新
 export const useDnD = (): DnDContextType => {
   const context = useContext(DnDContext);
   if (context === undefined) {

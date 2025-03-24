@@ -20,6 +20,7 @@ import {
   useVBReactflowStore,
 } from "../store/flow/useVBReactflowStore.jsx";
 import { useDnD } from "./DnDContext.jsx";
+import { DragCreateSupportNodeType } from "./VBNodeStage.jsx";
 
 export const StageToolBar = () => {
   const layout = useVBReactflowStore((state) => state.layout);
@@ -40,7 +41,7 @@ const ContentsMakerButton = () => {
 
   const onDragStart = (e: React.MouseEvent) => {
     e.preventDefault();
-    startDrag("input");
+    startDrag(DragCreateSupportNodeType.Text);
   };
 
   return (
