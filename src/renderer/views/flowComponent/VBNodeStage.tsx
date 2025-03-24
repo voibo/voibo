@@ -99,71 +99,30 @@ const VANodeStageCore = (props: {}) => {
 
   // DnD
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { type, setType, isDragging, setIsDragging, setPosition, position } =
-    useDnD();
+  const { type, position, isDragging, setDragCallbacks } = useDnD();
 
-  // DnD: tracking mouse move
-  const onMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (isDragging && type) {
-        setPosition({ x: e.clientX, y: e.clientY });
-      }
-    },
-    [isDragging, type, setPosition]
-  );
+  useEffect(() => {
+    setDragCallbacks({
+      onDragEnd: (draggedType, finalPosition) => {
+        if (!reactFlowWrapper.current || !finalPosition) return;
 
-  // DnD: mouse up
-  const onMouseUp = useCallback(
-    (e: MouseEvent) => {
-      if (isDragging && type && reactFlowWrapper.current) {
         const bounds = reactFlowWrapper.current.getBoundingClientRect();
-        const position = reactFlow.screenToFlowPosition({
-          x: e.clientX - bounds.left,
-          y: e.clientY - bounds.top,
+        const flowPosition = reactFlow.screenToFlowPosition({
+          x: finalPosition.x - bounds.left,
+          y: finalPosition.y - bounds.top,
         });
 
         processContentAction({
           type: "addTextContent",
           payload: {
-            position,
+            position: flowPosition,
             content: "New content",
             width: 200,
           },
         });
-
-        // reset state
-        setType(null);
-        setIsDragging(false);
-        setPosition(null);
-        document.body.style.cursor = "default";
-      }
-    },
-    [
-      isDragging,
-      type,
-      reactFlow,
-      setType,
-      setIsDragging,
-      setPosition,
-      startTimestamp,
-    ]
-  );
-
-  // DnD: global mouse event listener
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-    } else {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [isDragging, onMouseMove, onMouseUp]);
+      },
+    });
+  }, [reactFlow, setDragCallbacks]);
 
   // Viewport
   const viewPort = useVBReactflowStore((state) => state.lastViewport);

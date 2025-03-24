@@ -17,7 +17,26 @@ limitations under the License.
  * https://reactflow.dev/examples/interaction/drag-and-drop
  */
 
-import { createContext, ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+
+// カスタマイズ可能なコールバックの型定義
+type DragStartCallback = (type: string) => void;
+type DragEndCallback = (
+  type: string,
+  position: { x: number; y: number } | null
+) => void;
+
+type CallbacksType = {
+  onDragStart?: DragStartCallback;
+  onDragEnd?: DragEndCallback;
+};
 
 // 拡張された型定義
 type DnDContextType = {
@@ -29,9 +48,13 @@ type DnDContextType = {
   >;
   isDragging: boolean;
   setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
+  // 新しいメソッド
+  startDrag: (nodeType: string) => void;
+  endDrag: () => void;
+  // コールバック設定メソッド
+  setDragCallbacks: (callbacks: Partial<CallbacksType>) => void;
 };
 
-// Contextの初期値と型を設定
 const DnDContext = createContext<DnDContextType | undefined>(undefined);
 
 export const DnDProvider = (props: { children: ReactNode }) => {
@@ -41,6 +64,88 @@ export const DnDProvider = (props: { children: ReactNode }) => {
     null
   );
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [callbacks, setCallbacks] = useState<CallbacksType>({
+    onDragStart: undefined,
+    onDragEnd: undefined,
+  });
+
+  // グローバルイベントハンドラ
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && type) {
+        setPosition({ x: e.clientX, y: e.clientY });
+      }
+    },
+    [isDragging, type]
+  );
+
+  const onMouseUp = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && type) {
+        // コールバックの実行
+        if (callbacks.onDragEnd) {
+          callbacks.onDragEnd(type, position);
+        }
+
+        // 状態のリセット
+        setType(null);
+        setIsDragging(false);
+        setPosition(null);
+        document.body.style.cursor = "default";
+      }
+    },
+    [isDragging, type, position, callbacks]
+  );
+
+  // ドラッグ開始メソッド
+  const startDrag = useCallback(
+    (nodeType: string) => {
+      setType(nodeType);
+      setIsDragging(true);
+      document.body.style.cursor = "grabbing";
+
+      if (callbacks.onDragStart) {
+        callbacks.onDragStart(nodeType);
+      }
+    },
+    [callbacks]
+  );
+
+  // ドラッグ終了メソッド
+  const endDrag = useCallback(() => {
+    if (isDragging && type && callbacks.onDragEnd) {
+      callbacks.onDragEnd(type, position);
+    }
+
+    setType(null);
+    setIsDragging(false);
+    setPosition(null);
+    document.body.style.cursor = "default";
+  }, [isDragging, type, position, callbacks]);
+
+  // コールバック設定メソッド
+  const setDragCallbacks = useCallback(
+    (newCallbacks: Partial<CallbacksType>) => {
+      setCallbacks((prev) => ({ ...prev, ...newCallbacks }));
+    },
+    []
+  );
+
+  // グローバルイベントの登録/解除
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    } else {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging, onMouseMove, onMouseUp]);
 
   return (
     <DnDContext.Provider
@@ -51,6 +156,9 @@ export const DnDProvider = (props: { children: ReactNode }) => {
         setPosition,
         isDragging,
         setIsDragging,
+        startDrag,
+        endDrag,
+        setDragCallbacks,
       }}
     >
       {children}
