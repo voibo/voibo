@@ -3,7 +3,7 @@
   "description": "Collaborative Meeting Intelligence Platform",
   "author": "(c) 2024 Voibo",
   "license": "Apache-2.0",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "main": "dist/main.mjs",
   "type": "module",
   "scripts": {
