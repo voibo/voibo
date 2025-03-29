@@ -9,7 +9,7 @@
 - **User-Centric Interaction**: Users can select any node to call an AI assistant, promoting seamless collaboration with AI.
 - **Extensibility**: Supports a wide range of assistants, from simple prompt-based AI to integrations with external services.
 
-https://github.com/user-attachments/assets/c12b1b09-1bb4-4b3b-8417-6b5fa735fd7e
+https://github.com/user-attachments/assets/0f69abb4-596c-4356-8248-c4f72de81d3a
 
 ## Basic Usage
 
