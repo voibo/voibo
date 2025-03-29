@@ -9,7 +9,7 @@
 - **ユーザー主導の操作性**: 任意のノードを選択し、AI アシスタントを呼び出すことで AI との協働を促進。
 - **拡張性**: シンプルなプロンプト型 AI から外部サービスとの統合まで、幅広いアシスタントの利用を可能に。
 
-https://github.com/user-attachments/assets/c12b1b09-1bb4-4b3b-8417-6b5fa735fd7e
+https://github.com/user-attachments/assets/0f69abb4-596c-4356-8248-c4f72de81d3a
 
 ## 基本的な使い方
 
