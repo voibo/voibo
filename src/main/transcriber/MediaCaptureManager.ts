@@ -109,6 +109,7 @@ export class MediaCaptureManager {
     });
 
     // screen capture target selected
+    this._ipcMain.removeHandler(IPCInvokeKeys.SCREEN_CAPTURE_TARGET_SELECTED);
     this._ipcMain.handle(
       IPCInvokeKeys.SCREEN_CAPTURE_TARGET_SELECTED,
       async (e, isDisplay: boolean, selectedId: number): Promise<boolean> => {
@@ -119,7 +120,8 @@ export class MediaCaptureManager {
     );
 
     // screen capture target list
-    ipcMain.handle(
+    this._ipcMain.removeHandler(IPCInvokeKeys.ENUM_MEDIA_CAPTURE_TARGETS);
+    this._ipcMain.handle(
       IPCInvokeKeys.ENUM_MEDIA_CAPTURE_TARGETS,
       async (): Promise<MediaCaptureTarget[]> => {
         const result: MediaCaptureTarget[] = [];
