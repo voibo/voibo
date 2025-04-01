@@ -57,7 +57,7 @@ At the same time, please consider supporting Voibo by sharing it on social media
 
 ## Community
 
-[Discord](https://discord.gg/h7W8jrtk)
+[Discord](https://discord.gg/d9HRhQtDFw)
 
 ## Vision
 
