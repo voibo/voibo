@@ -50,6 +50,35 @@ $ npm install
 $ npm start
 ```
 
+## Initial Setup
+
+最初にメイン画面の右上にある歯車アイコンをクリックして、少なくとも以下の環境設定を行って下さい。
+
+### Audio Devices
+
+<img src="https://github.com/user-attachments/assets/c55cf08f-8e09-488a-a7bf-738bcfe89a62" width="400" />
+
+マイクにユーザーの音声を入力するバイスを設定して下さい。
+Voibo は音声・画面をキャプチャする独自機能をもつため、仮想デバイスアプリ等を用意しなくとも Google Chrome など別アプリで再生される音声をそのまま処理することができます。
+
+### Transcriber
+
+<img src="https://github.com/user-attachments/assets/9292aed4-8795-4578-b272-8901a0645850" width="400" />
+
+#### Google Speech-to-Text
+
+[Google 社 Speech to Text](https://cloud.google.com/speech-to-text)を利用してストリーム方式で音声認識を行う Transcriber です。
+
+1. Google Cloud Console にて Speech to Text API が利用できるサービスアカウントを用意し、そのサービスアカウントの鍵を JSON 形式でローカルに保存してください。具体的な操作方法は Google 社のコンテンツを確認して下さい。
+1. 保存した JSON 形式の鍵ファイルの絶対パスを、Credential JSON Path に入力してください。
+
+### Keys
+
+<img src="https://github.com/user-attachments/assets/7ffdd05f-ace7-4d19-901c-5f61a56ee421" width="400" />
+
+Topic 生成や各種 Assistant に利用される LLM の API キーを設定します。
+現時点では OpenAI 社の API Key は必ず設定して下さい。具体的な取得方法は OpenAI 社のコンテンツを確認して下さい。
+
 ## Contribution
 
 コードを提供したい方は、CONTRIBUTING.md をご覧ください。

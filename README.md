@@ -50,6 +50,35 @@ $ npm install
 $ npm start
 ```
 
+## Initial Setup
+
+Click on the gear icon in the upper right corner of the main screen to configure at least the following settings.
+
+### Audio Devices
+
+<img src="https://github.com/user-attachments/assets/c55cf08f-8e09-488a-a7bf-738bcfe89a62" width="400" />
+
+Set up the device that will input the user's voice to the microphone.
+Voibo has its own audio and screen capture functionality, so you can process audio played from other applications like Google Chrome without needing to set up virtual device applications.
+
+### Transcriber
+
+<img src="https://github.com/user-attachments/assets/9292aed4-8795-4578-b272-8901a0645850" width="400" />
+
+#### Google Speech-to-Text
+
+This is a Transcriber that uses [Google Speech to Text](https://cloud.google.com/speech-to-text) for streaming speech recognition.
+
+1. Prepare a service account that can use the Speech to Text API in Google Cloud Console, and save the service account key locally in JSON format. For detailed instructions, please check Google's documentation.
+1. Enter the absolute path of the saved JSON key file in the Credential JSON Path field.
+
+### Keys
+
+<img src="https://github.com/user-attachments/assets/7ffdd05f-ace7-4d19-901c-5f61a56ee421" width="400" />
+
+Set up LLM API keys used for Topic generation and various Assistants.
+Currently, an OpenAI API Key is required. For specific instructions on how to obtain it, please check OpenAI's documentation.
+
 ## Contribution
 
 For those who'd like to contribute code, see our CONTRIBUTING.md.
