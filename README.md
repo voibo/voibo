@@ -50,6 +50,49 @@ $ npm install
 $ npm start
 ```
 
+## Initial Setup
+
+Click on the gear icon in the upper right corner of the main screen to configure at least the following settings.
+
+### Audio Devices
+
+<img src="https://github.com/user-attachments/assets/c55cf08f-8e09-488a-a7bf-738bcfe89a62" width="400" />
+
+Set up the device that will input the user's voice to the microphone.
+Voibo has its own audio and screen capture functionality, so you can process audio played from other applications like Google Chrome without needing to set up virtual device applications.
+
+### Transcriber
+
+<img src="https://github.com/user-attachments/assets/9292aed4-8795-4578-b272-8901a0645850" width="400" />
+
+You'll need to configure at least one of the following options.
+
+#### Google Speech-to-Text
+
+This Transcriber uses [Google Speech to Text](https://cloud.google.com/speech-to-text) for streaming speech recognition.
+
+❗Google will charge API usage fees based on the amount of transcription used.
+
+1. Prepare a service account that can use the Speech to Text API in Google Cloud Console, and save the service account key locally in JSON format. For detailed instructions, please check Google's documentation.
+1. Enter the absolute path of the saved JSON key file in the Credential JSON Path field.
+
+#### mlx whisper large v3 turbo
+
+This is a Transcriber that leverages [voibo/mlx_whisper_stream](https://github.com/voibo/mlx_whisper_stream), a Python-based tool designed specifically for streaming speech recognition on macOS with Apple Silicon. No additional payment for transcribe is required!
+
+1. Set up [voibo/mlx_whisper_stream](https://github.com/voibo/mlx_whisper_stream) according to the README.md in the repository.
+2. Enter the absolute path of the mlx_whisper_stream repository root directory (e.g., /Users/your_account/Document/GitHub/mlx_whisper_stream) in the Whisper Exec Path field.
+
+### Keys
+
+<img src="https://github.com/user-attachments/assets/7ffdd05f-ace7-4d19-901c-5f61a56ee421" width="400" />
+
+Set up LLM API keys used for Topic generation and various Assistants.
+
+❗According to your contract with each LLM Provider, you will be charged usage fees from the respective companies based on your API usage.
+
+Currently, an OpenAI API Key is required. For specific instructions on how to obtain it, please check OpenAI's documentation.
+
 ## Contribution
 
 For those who'd like to contribute code, see our CONTRIBUTING.md.
@@ -57,7 +100,7 @@ At the same time, please consider supporting Voibo by sharing it on social media
 
 ## Community
 
-[Discord](https://discord.gg/h7W8jrtk)
+[Discord](https://discord.gg/d9HRhQtDFw)
 
 ## Vision
 

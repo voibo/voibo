@@ -3,7 +3,7 @@
   "description": "Collaborative Meeting Intelligence Platform",
   "author": "(c) 2024 Voibo",
   "license": "Apache-2.0",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/main.mjs",
   "type": "module",
   "scripts": {
@@ -78,7 +78,6 @@
     "@types/file-saver": "^2.0.7",
     "@types/wav": "^1.0.4",
     "@voibo/desktop-media-capture": "^2.1.10",
-    "@voibo/voibo-plugin": "file:plugin",
     "@xyflow/react": "^12.4.4",
     "copy-webpack-plugin": "^12.0.2",
     "dayjs": "^1.11.13",
