@@ -43,7 +43,7 @@ import {
 import { ITranscribeManager } from "./transcriber/ITranscribeManager.js";
 import { TranscribeFromStreamManager } from "./transcriber/speechToText/TranscribeFromStream.js";
 
-import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
+// import { PluginFunctions, pluginManager } from "@voibo/voibo-plugin";
 import { VBMainConf } from "../common/electronStore.js";
 import { MainStore } from "./store/mainStore.js";
 import { getMinutesFolderPath } from "./common/pathUtil.js";
@@ -60,15 +60,15 @@ crashReporter.start({
 console.log("Crash damp is here:", app.getPath("crashDumps"));
 
 // load plugins
-
+/*
 async function loadPlugins() {
   const pluginPath = path.resolve(
     process.cwd(),
     "./examples/plugins/test-plugin/dist/index.mjs"
   );
-
-  await import(/* webpackIgnore: true */ pluginPath);
-
+*/
+// await import(/* webpackIgnore: true */ pluginPath);
+/*
   for (const p of pluginManager.plugins()) {
     console.debug("loaded plugin:", p.name);
     if (p.hasFunction(PluginFunctions.testA)) {
@@ -76,6 +76,7 @@ async function loadPlugins() {
     }
   }
 }
+*/
 
 // Prototype
 
@@ -142,7 +143,7 @@ app.whenReady().then(async () => {
     },
   });
 
-  loadPlugins();
+  //loadPlugins();
 
   const getWhisperPath = (): string => {
     return mainStore.getConfig().WHISPER_EXEC_PATH;
