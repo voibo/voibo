@@ -1,6 +1,7 @@
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import { Readable } from "stream";
 import path from "path";
+import fs from "fs";
 import { IPCReceiverKeys, IPCSenderKeys } from "../../../common/constants.js";
 import { save } from "../../server-util.js";
 import { ITranscribeManager } from "../ITranscribeManager.js";
@@ -113,7 +114,17 @@ export class WhisperTranscribeFromStream {
 
     // Spawn the python process that uses Silero VAD + MLX Whisper
     const pythonScriptPath = this.pythonScriptPath;
-    this.pythonProcess = spawn(`${pythonScriptPath}/venv/bin/python3`, [
+    const venvPythonPath = `${pythonScriptPath}/venv/bin/python3`;
+    const pythonCommand = fs.existsSync(venvPythonPath)
+      ? venvPythonPath
+      : "python3";
+
+    console.log(
+      "Python command:",
+      pythonCommand,
+      `${pythonScriptPath}/mlx_whisper_stream.py`
+    );
+    this.pythonProcess = spawn(pythonCommand, [
       `${pythonScriptPath}/mlx_whisper_stream.py`,
     ]);
 

@@ -81,6 +81,7 @@ This Transcriber uses [Google Speech to Text](https://cloud.google.com/speech-to
 This is a Transcriber that leverages [voibo/mlx_whisper_stream](https://github.com/voibo/mlx_whisper_stream), a Python-based tool designed specifically for streaming speech recognition on macOS with Apple Silicon. No additional payment for transcribe is required!
 
 1. Set up [voibo/mlx_whisper_stream](https://github.com/voibo/mlx_whisper_stream) according to the README.md in the repository.
+   ❗ Make sure to use `venv` otherwise Voibo will not call the Python process properly.
 2. Enter the absolute path of the mlx_whisper_stream repository root directory (e.g., /Users/your_account/Document/GitHub/mlx_whisper_stream) in the Whisper Exec Path field.
 
 ### Keys
