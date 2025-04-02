@@ -12,7 +12,7 @@
     "run:electron": "wait-on ./dist/index.html ./dist/main.mjs && electronmon .",
     "build:webpack:dev": "cross-env NODE_ENV=\"development\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
     "build:webpack:release": "cross-env NODE_ENV=\"production\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress",
-    "build:electron:windows": "electron-builder",
+    "build:electron:windows": "electron-builder --win --x64",
     "build:electron:mac": "electron-builder --mac --arm64",
     "watch:webpack": "cross-env NODE_ENV=\"development\" NODE_OPTIONS=--max-old-space-size=4096 webpack --progress --watch",
     "release:mac": "run-s clean build:webpack:release build:electron:mac",
@@ -21,7 +21,8 @@
     "clean:electron": "rimraf built",
     "add-license": "node scripts/add-license.cjs",
     "dev:debug": "ELECTRON_ENABLE_LOGGING=true ELECTRON_ENABLE_STACK_DUMPING=true npm run clean:webpack && run-p watch:webpack run:electron:debug",
-    "run:electron:debug": "wait-on ./dist/index.html ./dist/main.mjs && electronmon --inspect=9229 ."
+    "run:electron:debug": "wait-on ./dist/index.html ./dist/main.mjs && electronmon --inspect=9229 .",
+    "get-release-notes-prompt": "node scripts/get-release-notes-prompt.cjs"
   },
   "keywords": [],
   "electronmon": {
@@ -145,7 +146,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "resources/icon.ico"
     }
   },
   "imports": {
